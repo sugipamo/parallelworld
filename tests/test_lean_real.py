@@ -154,3 +154,28 @@ def test_kernel_drawn_checks_with_real_lean(tmp_path):
     with pytest.raises(KernelError):
         other = k.ground_at(k.claim("p")["h"], "x", "Bool → Bool", "fun f => True", "fun b => b")
         k.sample_model(other["m"], "echo {0}", str(repo))
+
+
+def test_formal_claim_using_a_definition_from_gamma(tmp_path):
+    """A named specification lives in Gamma; claims refer to it instead of translating a sentence."""
+    from pw.lean_gate import LEAN_DIR
+    lean_dir = tmp_path / "lean"
+    shutil.copytree(LEAN_DIR, lean_dir, ignore=shutil.ignore_patterns(".lake", "PWCheck"))
+    with open(lean_dir / "Gamma.lean", "a") as fh:
+        fh.write("\nnamespace Spec\n/-- stays within [lo, hi] whenever lo ≤ hi -/\n"
+                 "def Bounded (f : Nat → Nat → Nat → Nat) : Prop :=\n"
+                 "  ∀ x lo hi, lo ≤ hi → lo ≤ f x lo hi ∧ f x lo hi ≤ hi\nend Spec\n")
+    gate = LeanGate(str(lean_dir))
+    assert gate.gamma() != LeanGate().gamma()             # a different Gamma, and the proofs say so
+    k = Kernel(str(tmp_path / "e.db"), gate=gate)
+    c = k.claim_formal("clamp.py::clamp", FN, "Spec.Bounded", gloss="clamp stays within [lo, hi]")
+    a = k.attach_model(c["h"], CLAMP)
+    r = k.prove("holds", [a["f"]], "show ∀ x lo hi, lo ≤ hi → lo ≤ min (max x lo) hi ∧ min (max x lo) hi ≤ hi\n"
+                                   "intro x lo hi h\nomega")
+    assert r["accepted"] and r["gamma"] == gate.gamma(), r
+    assert k.infer(c["h"])["lo"] == pytest.approx(0.875)
+
+    r = k.reject_object(c["p"], "fun x lo hi => hi + 1", "intro h\nhave := (h 0 0 0 (Nat.le_refl 0)).2\nexact absurd this (by decide)")
+    assert r["accepted"], r
+    assert not k.reject_object(c["p"], CLAMP, "intro h\nexact absurd (h 0 0 0 (Nat.le_refl 0)).2 (by decide)")["accepted"]   # clamp does satisfy it
+    assert not LeanGate().check("holds", [("Prop", "Spec.Bounded (fun x lo hi => lo)")], "trivial")["ok"]  # unknown in the default Gamma

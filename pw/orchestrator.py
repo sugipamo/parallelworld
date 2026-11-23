@@ -2,7 +2,12 @@
 
     python -m pw.orchestrator tasks.json [--dry-run] [--model claude-opus-5-5]
 
-tasks.json: [{"name": "parser", "prompt": "...", "requires": ["<claim text>", ...]}, ...]
+tasks.json: [{"name": "parser", "prompt": "...", "requires": [<claim>, ...]}, ...]
+A required claim is best given formally, so that nothing has to be translated:
+    {"subject": "clamp.py::clamp", "type": "Nat → Nat → Nat → Nat", "predicate": "Spec.Bounded",
+     "gloss": "clamp stays within [lo, hi]"}
+where the predicate may use definitions from Gamma (--lean-dir). A plain string is also accepted
+and is treated as a natural-language claim the worker must formalize.
 A task's branch is reported mergeable only if every required claim has lo >= --threshold.
 """
 import argparse
@@ -13,24 +18,40 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 
 from .kernel import Kernel
-from .lean_gate import LeanGate
+from .lean_gate import LEAN_DIR, LeanGate
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 WORKER_RULES = """
 You are one of several parallel workers. Shared knowledge lives in the `pw` MCP server.
 - Before relying on anything another worker may have established, call `status` / `infer`.
-- For each claim listed under "Required claims", call `claim` with the EXACT text, then gather
-  evidence with `observe_command` (the kernel runs the check; you do not report results yourself).
-- Where a claim has precise mathematical content, connect it to Lean with `ground_at` (subject,
-  object, predicate), try `prove`, support the model with `sample_model`, and try to break it
-  with `check_model` on edge cases.
-  A failed proof proves nothing; do not treat it as evidence.
+- Gather evidence for every required claim with `observe_command` (the kernel runs the check;
+  you do not report results yourself).
+- A required claim given with an id (H:...) is FORMAL: its predicate is fixed. Write the code,
+  give a Lean term modelling it with `model`, prove `holds`, support the model with
+  `sample_model`, and try to break it with `check_model` on edge cases.
+- A required claim given only as a sentence, and any claim of your own: register it with
+  `claim`, connect it with `ground_at` (subject, object, predicate), prove it, check the model
+  the same way, and show the predicate is not vacuous with `reject_object`.
+- A failed proof proves nothing; do not treat it as evidence.
 - If `status` shows another worker's specification or object that you believe is the same as
   yours, try `pred_iff` / `obj_eq`. Only prove what is true: different code is usually a
   different object even when it meets the same specification.
 - Never state probabilities. Commit your work on the current branch when done.
 """
+
+
+def required(kernel, task):
+    """[(H id, description)] for a task, registering formal claims on the way."""
+    out = []
+    for c in task.get("requires", []):
+        if isinstance(c, str):
+            out.append((kernel.claim(c)["h"], c))
+        else:
+            h = kernel.claim_formal(c["subject"], c["type"], c["predicate"], c.get("gloss", ""))["h"]
+            out.append((h, f'{h} (formal): {c["subject"]} satisfies `{c["predicate"]}` : ({c["type"]}) → Prop'
+                           + (f' — {c["gloss"]}' if c.get("gloss") else "")))
+    return out
 
 
 def run_task(task, args, repo):
@@ -39,9 +60,10 @@ def run_task(task, args, repo):
     cfg_path = os.path.join(repo, ".pw", f"mcp-{name}.json")
     cfg = {"mcpServers": {"pw": {
         "command": sys.executable, "args": ["-m", "pw.mcp_server"],
-        "env": {"PW_DB": args.db, "PW_AGENT": name, "PW_WORKDIR": wt, "PYTHONPATH": ROOT},
+        "env": {"PW_DB": args.db, "PW_AGENT": name, "PW_WORKDIR": wt, "PYTHONPATH": ROOT,
+                "PW_LEAN_DIR": args.lean_dir},
     }}}
-    prompt = task["prompt"] + "\n\nRequired claims:\n" + "\n".join(f"- {c}" for c in task.get("requires", []))
+    prompt = task["prompt"] + "\n\nRequired claims:\n" + "\n".join(f"- {d}" for _, d in task["_required"])
     cmd = [
         "claude", "-p", prompt, "--model", args.model,
         "--append-system-prompt", WORKER_RULES,
@@ -79,11 +101,17 @@ def main():
         "mcp__pw", "Read", "Glob", "Grep", "Edit", "Write",
         "Bash(git add:*)", "Bash(git commit:*)", "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)",
     ], help="tools workers may use without prompting; checks run through the kernel, not Bash")
+    ap.add_argument("--lean-dir", default=LEAN_DIR, help="Lean project whose Gamma.lean holds the shared definitions")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
+    args.lean_dir = os.path.abspath(args.lean_dir)
     args.db = os.path.join(os.path.abspath(args.repo), ".pw", "events.db")
     with open(args.tasks) as fh:
         tasks = json.load(fh)
+
+    kernel = Kernel(args.db, gate=LeanGate(args.lean_dir), actor="orchestrator")
+    for task in tasks:
+        task["_required"] = required(kernel, task)
 
     with ThreadPoolExecutor(args.parallel) as pool:
         for name, rc, out in pool.map(lambda t: run_task(t, args, os.path.abspath(args.repo)), tasks):
@@ -91,11 +119,10 @@ def main():
     if args.dry_run:
         return
 
-    kernel = Kernel(args.db, gate=LeanGate())
     for task in tasks:
         verdicts = []
-        for text in task.get("requires", []):
-            b = kernel.infer(kernel.claim(text)["h"])
+        for h, text in task["_required"]:
+            b = kernel.infer(h)
             verdicts.append((b["lo"] >= args.threshold, b["lo"], b["hi"], text))
         ok = all(v[0] for v in verdicts)
         print(f"{'MERGEABLE' if ok else 'HOLD     '} pw/{task['name']}")

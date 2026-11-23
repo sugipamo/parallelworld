@@ -259,3 +259,52 @@ def test_random_checks_raise_the_lower_bound(k):
     assert lows == pytest.approx([0.75 * n1 / (0.75 * n1 + 0.25) for n1 in (2, 6, 21)])   # 0.857, 0.947, 0.984
     k._record(m, "sampled_check", "disagree", "draw-x", {"args": [99], **spec})
     approx(k.infer(m), 0.0, 0.0)
+
+
+def test_formal_claim_has_no_specification_hypothesis(k):
+    """Stated as a predicate, a claim needs no translation: only the model link is uncertain."""
+    c = k.claim_formal("f.py::f", T, "fun f => ∀ n, n ≤ f n", gloss="f never decreases its input")
+    assert k.claim_formal("f.py::f", T, "fun f => ∀ n, n ≤ f n")["h"] == c["h"]
+    approx(k.infer(c["h"]), 0.5, 0.5)
+    with pytest.raises(KernelError):
+        k.ground_at(c["h"], "f.py::f", T, "fun f => True", "fun n => n")     # its meaning is fixed
+    a = k.attach_model(c["h"], "fun n => n + 1", subject_version="f.py::f@abc")
+    assert a["p"] == c["p"]
+    st = k.state()
+    assert [x for x in st.atoms if x[0] == "G"] == [] and st.links == [((a["m"],), c["h"], a["f"])]
+    k.prove("holds", [a["f"]], "intro n; omega")
+    approx(k.infer(c["h"]), 0.75 + 0.25 * 0.5, 0.75 + 0.25 * 0.5)            # a point: nothing else is unknown
+    for i in range(20):
+        k._record(a["m"], "sampled_check", "agree", f"d{i}", {"args": [i], **k.catalog["sampling"]})
+    m = 0.75 * 21 / (0.75 * 21 + 0.25)
+    assert k.infer(c["h"])["lo"] == pytest.approx(m + (1 - m) * 0.5)         # the claim follows the model
+    assert k.status()["claims"][0]["formal"]
+
+
+def test_specification_that_excludes_something_is_better_supported(k):
+    h = k.claim("f never decreases its input")["h"]
+    g = k.ground_at(h, "f.py::f", T, "fun f => ∀ n, n ≤ f n", "fun n => n + 1")
+    approx(k.infer(g["g"]), 0.8, 0.8)
+    r = k.reject_object(g["p"], "fun n => 0", "intro h; exact absurd (h 1) (by decide)")
+    assert r["accepted"] and k.state().algebra.nonvacuous() == {g["p"]}
+    approx(k.infer(g["g"]), 0.8 / (0.8 + 0.2 * 0.7), 0.8 / (0.8 + 0.2 * 0.7))
+    k.reject_object(g["p"], "fun n => n - 1", "x")                            # a second counterexample adds nothing
+    approx(k.infer(g["g"]), 0.8 / (0.8 + 0.2 * 0.7), 0.8 / (0.8 + 0.2 * 0.7))
+    # the rejected object, used as a model elsewhere, makes that proposition false
+    other = k.ground_at(k.claim("z never decreases its input")["h"], "z.py::z", T, "fun f => ∀ n, n ≤ f n", "fun n => 0")
+    approx(k.infer(other["f"]), 0.0, 0.0)
+
+
+def test_two_authors_reaching_the_same_specification_support_it(tmp_path):
+    def worker(name):
+        return Kernel(str(tmp_path / "e.db"), gate=FakeGate(), actor=name)
+    a, b = worker("a"), worker("b")
+    h = a.claim("f never decreases its input")["h"]
+    ga = a.ground_at(h, "f.py::f", T, "fun f => ∀ n, n ≤ f n", "fun n => n + 1")
+    approx(a.infer(ga["g"]), 0.8, 0.8)
+    a.ground_at(h, "f.py::f", T, "fun f => ∀ n, n ≤ f n", "fun n => n + 1")           # same author again: nothing
+    approx(a.infer(ga["g"]), 0.8, 0.8)
+    gb = b.ground_at(h, "f.py::f", T, "fun f => ∀ n, f n ≥ n", "fun n => n + 1")       # different text
+    approx(a.infer(ga["g"]), 0.8, 0.8)                                               # not yet known to agree
+    b.prove("pred_iff", [ga["p"], gb["p"]], "intro f; exact Iff.rfl")
+    assert a.infer(ga["g"])["lo"] > 0.8 and a.infer(gb["g"])["lo"] > 0.8

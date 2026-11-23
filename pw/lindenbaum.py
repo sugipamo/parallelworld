@@ -24,11 +24,12 @@ Relation          meaning in the algebra
   pred_iff P1 P2    [P1] = [P2]   in the fibre over A   ("same specification")
   pred_implies      [P1] <= [P2]  in the fibre over A   ("refines")
   obj_eq a1 a2      a1 = a2                             ("same object")
+  pred_rejects P a  [P(a)] = bottom, hence [P] is not top in its fibre ("not vacuous")
 """
 
 RELATIONS = {
     "holds": "F", "not": "F", "iff": "FF", "implies": "FF", "contradiction": "FF",
-    "pred_iff": "PP", "pred_implies": "PP", "obj_eq": "OO",
+    "pred_iff": "PP", "pred_implies": "PP", "obj_eq": "OO", "pred_rejects": "PO",
 }
 _EQUATIONS = ("iff", "pred_iff", "obj_eq")
 
@@ -101,6 +102,10 @@ class Lindenbaum:
         for rel, ids in self.relations:
             if rel in ("holds", "not", "implies", "contradiction"):
                 out.add((rel, tuple(self.find(f) for f in ids)))
+            elif rel == "pred_rejects":
+                for f, p in self.props.items():
+                    if p["pred"] and (self.find(p["pred"]), self.find(p["obj"])) == tuple(map(self.find, ids)):
+                        out.add(("not", (self.find(f),)))
             elif rel == "pred_implies":
                 lo, hi = (self.find(p) for p in ids)
                 for f1, p1 in self.props.items():
@@ -114,3 +119,7 @@ class Lindenbaum:
     def decided(self):
         """Classes Lean has identified with top or bottom: constants, not unknowns."""
         return {ids[0] for rel, ids in self.order() if rel in ("holds", "not")}
+
+    def nonvacuous(self):
+        """Predicate classes with a verified counterexample: specifications that exclude something."""
+        return {self.find(ids[0]) for rel, ids in self.relations if rel == "pred_rejects"}

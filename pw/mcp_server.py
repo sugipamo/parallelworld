@@ -1,6 +1,7 @@
 """MCP server exposing the kernel to Claude Code workers (stdio).
 
-Env: PW_DB (event log path), PW_AGENT (actor name), PW_WORKDIR (where checks run).
+Env: PW_DB (event log path), PW_AGENT (actor name), PW_WORKDIR (where checks run),
+PW_LEAN_DIR (the Lean project holding Gamma; defaults to this repository's lean/).
 Workers never supply probabilities: priors and likelihoods come from the catalog.
 """
 import os
@@ -11,10 +12,10 @@ except ImportError:  # mcp 1.x
     from mcp.server.fastmcp import FastMCP
 
 from .kernel import Kernel, KernelError, subject_id
-from .lean_gate import GateError, LeanGate
+from .lean_gate import LEAN_DIR, GateError, LeanGate
 
 mcp = FastMCP("pw")
-_kernel = Kernel(os.environ.get("PW_DB", ".pw/events.db"), gate=LeanGate())
+_kernel = Kernel(os.environ.get("PW_DB", ".pw/events.db"), gate=LeanGate(os.environ.get("PW_LEAN_DIR", LEAN_DIR)))
 
 
 def _safe(fn, *a, **kw):
@@ -36,8 +37,28 @@ def _workdir():
 
 
 @mcp.tool()
+def model(h: str, object: str) -> dict:
+    """For a FORMAL claim (one given to you as a predicate; `status` marks it formal): state
+    that the Lean term `object` models the claim's code. The claim's predicate and type are
+    already fixed. Returns ids of the model hypothesis M and the proposition F = predicate(object);
+    then prove `holds [F]` and support M with sample_model."""
+    st = _kernel.state()
+    if h not in st.formal:
+        return {"error": f"{h} is not a formal claim; use ground_at"}
+    return _safe(_kernel.attach_model, h, object, subject_id(st.formal[h]["subject"], _workdir()))
+
+
+@mcp.tool()
+def reject_object(p: str, object: str, proof: str) -> dict:
+    """Show that specification `p` is not vacuous: give a Lean term `object` (of p's type) that
+    should NOT satisfy it, and tactics proving `¬ p object`. Use this for specifications you
+    wrote yourself with ground_at; a specification that excludes nothing says nothing."""
+    return _safe(_kernel.reject_object, p, object, proof)
+
+
+@mcp.tool()
 def ground_at(h: str, subject: str, type: str, predicate: str, object: str) -> dict:
-    """State that claim `h` says: the code `subject` has a property. Give
+    """For a claim in natural language: state that claim `h` says the code `subject` has a property. Give
       subject    what the claim is about, as "path::name", e.g. "clamp.py::clamp"
       object     a Lean term of type `type` modelling that code's behaviour
       predicate  a Lean term of type `type -> Prop` stating the property

@@ -67,6 +67,8 @@ class State:
         self.links = []      # (guards, h, f): if every guard holds, claim h is true iff proposition f is
         self.models = {}     # M id -> {"subject", "obj"}
         self.retracted = {}  # eid -> justification
+        self.formal = {}     # H id -> {"subject", "pred"} for claims stated as a predicate
+        self.authors = {}    # G id -> actors who stated that connection
         self.evidence = {}   # eid -> dict
         self.proofs = []     # proof events as recorded
         self.algebra = Lindenbaum()
@@ -78,6 +80,13 @@ class State:
         if typ == "claim":
             self.atoms[p["h"]] = {"kind": "H", "text": p["text"]}
             self.prior[p["h"]] = p["prior"]
+            if p.get("pred"):
+                self.formal[p["h"]] = {"subject": p["subject"], "pred": p["pred"]["id"]}
+                self.algebra.add_pred(p["pred"]["id"], p["pred"]["type"], p["pred"]["text"])
+        elif typ == "object":
+            self.algebra.add_obj(p["id"], p["type"], p["text"])
+        elif typ == "concur":
+            self.authors.setdefault(p["g"], set()).add(p["by"])
         elif typ == "ground":
             pred, obj = p.get("pred"), p.get("obj")
             if pred:
@@ -87,9 +96,12 @@ class State:
                 self.atoms[p["f"]] = {"kind": "F", "text": p["lean"]}
                 self.prior[p["f"]] = self.prior[p["h"]]
             self.algebra.add_prop(p["f"], p["lean"], pred and pred["id"], obj and obj["id"])
-            self.atoms[p["g"]] = {"kind": "G", "text": f'{p["h"]} means {p["f"]}'}
-            self.prior[p["g"]] = p["prior"]
-            guards = (p["g"],)
+            guards = ()
+            if p.get("g"):
+                self.atoms[p["g"]] = {"kind": "G", "text": f'{p["h"]} means {p["f"]}'}
+                self.prior[p["g"]] = p["prior"]
+                self.authors.setdefault(p["g"], set()).add(p.get("by", "anon"))
+                guards = (p["g"],)
             if p.get("m"):
                 if p["m"] not in self.atoms:
                     self.atoms[p["m"]] = {"kind": "M", "text": f'{obj["id"]} models {p["subject"]}'}
@@ -182,6 +194,61 @@ class Kernel:
                 self._append(con, st, "claim", {"h": h, "text": text, "prior": prior})
         return {"h": h}
 
+    def claim_formal(self, subject, typ, predicate, gloss="", prior=None):
+        """Register a claim that is *defined* as: the code `subject` satisfies `predicate : typ -> Prop`.
+
+        Nothing is translated, so there is no specification hypothesis to doubt. What the
+        predicate means is settled by Gamma, where its definitions were reviewed. The only
+        uncertain link left is whether a Lean object models the code (attach_model).
+        """
+        typ, predicate = _norm(typ), _norm(predicate)
+        self._screen(typ)
+        self._screen(predicate)
+        pred = {"id": "P:" + _sha(typ, predicate), "type": typ, "text": predicate}
+        h = "H:" + _sha("formal", subject, pred["id"])
+        with self._tx() as (con, st):
+            if h not in st.atoms:
+                self._append(con, st, "claim", {
+                    "h": h, "text": _norm(gloss) or f"{subject} satisfies {predicate}",
+                    "prior": self.catalog["priors"]["claim"] if prior is None else prior,
+                    "subject": subject, "pred": pred,
+                })
+        return {"h": h, "p": pred["id"]}
+
+    def attach_model(self, h, obj, subject_version=None, model_prior=None):
+        """For a formal claim: state that Lean object `obj` models the claim's code.
+        Introduces only the model hypothesis M; if M holds, the claim is true iff predicate(obj) is."""
+        st = self.state()
+        if h not in st.formal:
+            raise KernelError(f"{h} is not a formal claim; use ground_at")
+        pred = dict(st.algebra.preds[st.formal[h]["pred"]], id=st.formal[h]["pred"])
+        obj = _norm(obj)
+        self._screen(obj)
+        subject = subject_version or st.formal[h]["subject"]
+        ob = {"id": "O:" + _sha(pred["type"], obj), "type": pred["type"], "text": obj}
+        lean = f"((({pred['text']}) : ({pred['type']}) → Prop) (({obj}) : ({pred['type']})))"
+        f, m = "F:" + _sha(lean), "M:" + _sha(subject, ob["id"])
+        with self._tx() as (con, st):
+            if not any(l == ((m,), h, f) for l in st.links):
+                self._append(con, st, "ground", {
+                    "h": h, "f": f, "lean": lean, "pred": pred, "obj": ob, "subject": subject, "m": m,
+                    "model_prior": self.catalog["priors"]["model"] if model_prior is None else model_prior,
+                })
+        return {"m": m, "f": f, "p": pred["id"], "o": ob["id"]}
+
+    def reject_object(self, p, obj, proof):
+        """Show a specification is not vacuous: Lean verifies that `obj` does NOT satisfy predicate `p`."""
+        st = self.state()
+        if st.algebra.kind(p) != "P":
+            raise KernelError(f"unknown specification {p}")
+        typ, obj = st.algebra.preds[p]["type"], _norm(obj)
+        self._screen(obj)
+        o = "O:" + _sha(typ, obj)
+        with self._tx() as (con, st):
+            if st.algebra.kind(o) is None:
+                self._append(con, st, "object", {"id": o, "type": typ, "text": obj})
+        return {**self.prove("pred_rejects", [p, o], proof), "o": o}
+
     def ground(self, h, lean, prior=None):
         """One connection hypothesis G: claim `h` means the closed Lean proposition `lean`."""
         lean = _norm(lean)
@@ -219,8 +286,12 @@ class Kernel:
         with self._tx() as (con, st):
             if h not in st.atoms:
                 raise KernelError(f"unknown claim {h}")
+            if h in st.formal:
+                raise KernelError(f"{h} is a formal claim: its meaning is fixed; use attach_model")
             if g not in st.atoms:
-                self._append(con, st, "ground", {"g": g, "h": h, "f": f, "lean": lean, **extra})
+                self._append(con, st, "ground", {"g": g, "h": h, "f": f, "lean": lean, "by": self.actor, **extra})
+            elif self.actor not in st.authors[g]:
+                self._append(con, st, "concur", {"g": g, "by": self.actor})
         out = {"g": g, "f": f}
         if "m" in extra:
             out.update(m=extra["m"], p=extra["pred"]["id"], o=extra["obj"]["id"])
@@ -476,10 +547,30 @@ class Kernel:
             t = st.rep(e["target"])
             if t in comp:
                 blocks.setdefault((t, e["block"]), []).append(e)
+        # What the formal layer itself shows about a specification hypothesis G:
+        #   its predicate excludes something (a verified counterexample), and
+        #   more than one author connected the same claim to the same specification.
+        derived, nonvacuous = self.catalog["derived"], alg.nonvacuous()
+        spec_of = lambda f: alg.find(alg.props[f]["pred"]) if alg.props[f]["pred"] else alg.find(f)
+        for gs, h, f in st.links:
+            g = next((x for x in gs if x[0] == "G"), None)
+            if g is None or g not in comp:
+                continue
+            if spec_of(f) in nonvacuous:
+                blocks.setdefault((g, "shared"), []).append({"kind": "nonvacuous", "likelihood": derived["nonvacuous"]})
+            agreeing = set()
+            for gs2, h2, f2 in st.links:
+                if h2 == h and gs2[0][0] == "G" and spec_of(f2) == spec_of(f):
+                    agreeing |= st.authors.get(gs2[0], set())
+            if len(agreeing) > 1:
+                blocks.setdefault((g, "shared"), []).append(
+                    {"kind": "concurrence", "likelihood": derived["independent_formalization"]})
         choices = []
         for (t, _), evs in sorted(blocks.items()):
             items = [((e["likelihood"][0],) * 2, (e["likelihood"][1],) * 2) for e in evs if "likelihood" in e]
             draws = [e for e in evs if e["kind"] == "sampled_check"]
+            if not items and not draws:
+                continue
             if any(e["outcome"] == "disagree" for e in draws):
                 items.append(((0, 0), (1, 1)))          # a counterexample refutes a universal hypothesis
             elif draws:
@@ -519,12 +610,14 @@ class Kernel:
                 entry = {"h": a, "text": info["text"], "lo": b["lo"], "hi": b["hi"]}
             except KernelError as e:
                 entry = {"h": a, "text": info["text"], "error": str(e)}
+            entry["formal"] = a in st.formal
             entry["means"] = []
             for gs, h, f in st.links:
                 if h == a:
                     p = alg.props[f]
                     entry["means"].append({
-                        "g": gs[0], "m": gs[1] if len(gs) > 1 else None, "f": f,
+                        "g": next((x for x in gs if x[0] == "G"), None),
+                        "m": next((x for x in gs if x[0] == "M"), None), "f": f,
                         "proposition_class": alg.find(f),
                         "specification_class": p["pred"] and alg.find(p["pred"]),
                         "object_class": p["obj"] and alg.find(p["obj"]),
