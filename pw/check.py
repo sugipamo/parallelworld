@@ -2,6 +2,7 @@
 
     python -m pw.check [--repo DIR] [--db PATH] [--lean-dir DIR] [--threshold 0.9]
 
+If the repository has a pw-facts.json, the facts declared there are the ones that stand.
 No model is consulted: readers and stored checks are run again, stored proofs are tried again, and
 Lean-verified relations are read off. Exit status is 1 unless every decision is current or was
 carried over mechanically, and no two decisions contradict each other.
@@ -12,6 +13,9 @@ import sys
 
 from .kernel import Kernel
 from .lean_gate import LEAN_DIR, LeanGate
+
+
+FACTS = "pw-facts.json"      # a project's list of facts and the places that state them
 
 
 def show(report, threshold):
@@ -28,6 +32,22 @@ def show(report, threshold):
             continue
         ok = d["state"] in ("current", "re-established") and d["lo"] >= threshold
         bad |= not ok
+        if "fact" in d:
+            print(f"{'ok  ' if ok else 'FAIL'} {d['state']:<15} [{d['lo']:.3f}, {d['hi']:.3f}] {d['h']} fact: {d['fact']}")
+            if not ok or len({p["reads as"] for p in d["places"]}) > 1:
+                for p in d["places"]:
+                    print(f"       {p['at']} reads as {p['reads as'][:100]}" + ("" if p["by"] == "reader" else f"   (stated, {p['m']})"))
+            for u in d.get("unread", []):
+                print(f"       {u['at']}: {u['why'][:160]}")
+            if d["state"] == "violated":
+                print("       the places do not say the same thing (verified by Lean); which one is right is for a person to say")
+            elif d["state"] == "stale":
+                print("       read the place(s) again: python -m pw.maintain")
+            elif not ok and d["state"] in ("current", "re-established"):
+                print(f"       the places agree, but stated readings are not supported well enough (threshold {threshold}): python -m pw.confirm")
+            if "error" in d:
+                print(f"       {d['error'][:300]}")
+            continue
         print(f"{'ok  ' if ok else 'FAIL'} {d['state']:<15} [{d['lo']:.3f}, {d['hi']:.3f}] {d['h']} {d['subject'].split('@')[0]} satisfies {d['spec']}")
         if d["state"] == "stale":
             print("       the file changed since an agent read it; it has to be read again (python -m pw.maintain)")
@@ -58,6 +78,8 @@ def main():
     args = ap.parse_args()
     repo = os.path.abspath(args.repo)
     kernel = Kernel(args.db or os.path.join(repo, ".pw", "events.db"), gate=LeanGate(args.lean_dir), actor="check")
+    if os.path.exists(os.path.join(repo, FACTS)):
+        kernel.sync_facts(os.path.join(repo, FACTS))
     sys.exit(1 if show(kernel.recheck(repo), args.threshold) else 0)
 
 

@@ -18,26 +18,29 @@ import os
 import subprocess
 import sys
 
-from .check import show
+from .check import FACTS, show
 from .kernel import Kernel, _sha
 from .lean_gate import LEAN_DIR, LeanGate
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-PROMPT = """Some files changed, and the decisions below were tied to them only by an agent's reading of the
-earlier version. Read each file as it is now and state it again. Do not change any file.
+PROMPT = """Some content changed or was never read, and what it says has to be stated (again). Do not change any file.
 
-For each decision:
-1. Read the file. Write its content, as far as the decision is concerned, as a Lean term of the
-   given type, and state it with `model(h, object)`. Leave out setup, call and domains unless the
-   file is code you can call. Be faithful to the file, not to the decision: write what is there.
-2. Prove `holds [F]` for the proposition F that `model` returns. If the file as it is now does not
-   satisfy the specification, prove `not [F]` instead.
-3. In your final message say, for each decision, whether it still holds.
-
-Decisions:
+For each item below, read the place named and write what it says as a Lean term of the given type.
+Write what that place itself says. Do not consult other files, other sections or the code to fill it
+in or to correct it: if the place does not say it, or says something unexpected, write that.
 """
 
+DECISIONS = """
+Decisions (a file must satisfy a specification). State the content with `model(h, object)`, leaving out
+setup, call and domains unless the file is code you can call. Then prove `holds [F]` for the proposition
+`model` returns, or `not [F]` if the file as it is now does not satisfy the specification.
+"""
+
+PLACES = """
+Facts (one thing stated in several places). State what the place says with `read_place(h, place, object)`.
+Nothing has to be proved: the kernel compares the places itself.
+"""
 
 def main():
     ap = argparse.ArgumentParser()
@@ -50,26 +53,35 @@ def main():
     repo = os.path.abspath(args.repo)
     kernel = Kernel(os.path.join(repo, ".pw", "events.db"), gate=LeanGate(args.lean_dir), actor="maintain")
 
+    if os.path.exists(os.path.join(repo, FACTS)):
+        kernel.sync_facts(os.path.join(repo, FACTS))
     report = kernel.recheck(repo)
-    todo = [d for d in report["decisions"] if d["state"] in ("stale", "unsupported") and not d.get("natural_language")]
-    if todo:
+    decisions = [d for d in report["decisions"] if d["state"] in ("stale", "unsupported") and "subject" in d]
+    places = [(d, u["at"]) for d in report["decisions"] if "fact" in d
+              for u in d.get("unread", []) if "has no reader" in u["why"] or "read" in u["why"]]
+    st = kernel.state()
+    places = [(d, at) for d, at in places if not next(p for p in st.facts[d["h"]]["places"] if p["at"] == at)["reader"]]
+    if decisions or places:
         dirty = subprocess.run(["git", "status", "--porcelain"], cwd=repo, capture_output=True, text=True).stdout.strip()
         if dirty:
             show(report, args.threshold)
             sys.exit("\nCommit the changes first: an agent reads the files as they are committed.")
-        st = kernel.state()
-        lines = []
-        for d in todo:
-            pred = st.algebra.preds[st.formal[d["h"]]["pred"]]
-            old = [st.algebra.objs[st.models[x]["obj"]]["text"] for gs, hh, _ in st.links if hh == d["h"] for x in gs if x[0] == "M"]
-            lines.append(f'- {d["h"]}: {d["subject"].split("@")[0]} must satisfy `{pred["text"]}` — {d["text"]}\n'
-                         f'  type of the term: {pred["type"]}\n'
-                         + (f'  the earlier version was read as: {old[-1]}\n' if old else ""))
-        name = "maintain-" + _sha(report["tree"], *[d["h"] for d in todo])[:6]
+        prompt = PROMPT
+        if decisions:
+            prompt += DECISIONS
+            for d in decisions:
+                pred = st.algebra.preds[st.formal[d["h"]]["pred"]]
+                prompt += (f'- {d["h"]}: {d["subject"].split("@")[0]} must satisfy `{pred["text"]}` — {d["text"]}\n'
+                           f'  type of the term: {pred["type"]}\n')
+        if places:
+            prompt += PLACES
+            for d, at in places:
+                prompt += f'- {d["h"]}, place `{at}`: {d["text"]} — a term of type {st.facts[d["h"]]["type"]}\n'
+        name = "maintain-" + _sha(report["tree"], *[d["h"] for d in decisions], *[at for _, at in places])[:6]
         tasks = os.path.join(repo, ".pw", f"tasks-{name}.json")
         with open(tasks, "w") as fh:
-            json.dump([{"name": name, "prompt": PROMPT + "\n".join(lines), "requires": []}], fh, ensure_ascii=False)
-        print(f"{len(todo)} decision(s) need a file read again; asking an agent ({name})", flush=True)
+            json.dump([{"name": name, "prompt": prompt, "requires": []}], fh, ensure_ascii=False)
+        print(f"{len(decisions)} decision(s) and {len(places)} place(s) need reading; asking an agent ({name})", flush=True)
         subprocess.run([sys.executable, "-m", "pw.orchestrator", tasks, "--repo", repo, "--lean-dir", args.lean_dir,
                         "--model", args.model, "--budget", str(args.budget), "--parallel", "1"],
                        cwd=ROOT, capture_output=True, text=True)

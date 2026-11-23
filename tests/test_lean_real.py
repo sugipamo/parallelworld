@@ -403,3 +403,61 @@ def test_a_statement_settled_by_unfolding_alone_is_accepted(gate):
     assert not gate.check("holds", [("Prop", "(fun n => n = 14) 16")], "rfl")["ok"]
     assert gate.check("not", [("Prop", "(fun n => n = 14) 16")], "decide")["ok"]
     assert not gate.check("holds", [("Prop", "(1 : Nat) = 2")], "exact sorryAx _")["ok"]
+
+
+def test_a_fact_stated_in_several_places(tmp_path):
+    """No place is the truth: the decision is that they all say the same thing."""
+    from pw.kernel import reader
+    k = Kernel(str(tmp_path / "e.db"), gate=LeanGate())
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    doc = "# Spec\n\n## Model\n\nThe default class is `{a}`.\n\n## Changes\n\n| 9 | classes | `{b}` (default) |\n"
+    code = 'class K:\n    def __init__(self, dependence="{c}"):\n        self.d = dependence\n'
+    def write(a, b, c):
+        (repo / "doc.md").write_text(doc.format(a=a, b=b))
+        (repo / "k.py").write_text(code.format(c=c))
+    git = lambda *a: subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=repo, check=True, capture_output=True)
+    write("pqd", "pqd", "pqd"); git("init", "-q"); git("add", "-A"); git("commit", "-qm", "v1")
+    cwd = str(repo)
+    places = ["doc.md::Model", "doc.md::Changes",
+              {"at": "k.py::K.__init__", "reader": reader('lean_string(re.search(r\'dependence="(\\w+)"\', part).group(1))', "text")}]
+    h = k.claim_fact("default dependence class", "String", places)["h"]
+    assert k.claim_fact("default dependence class", "String", places)["h"] == h
+
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "stale" and [u["at"] for u in r["unread"]] == ["doc.md::Model", "doc.md::Changes"], r
+    assert r["places"] == [{"at": "k.py::K.__init__", "reads as": '"pqd"', "m": r["places"][0]["m"], "by": "reader"}]
+    with pytest.raises(KernelError):
+        k.read_place(h, "doc.md::Model", "14", cwd=cwd)                     # not a value of the fact's type
+    with pytest.raises(KernelError):
+        k.read_place(h, "doc.md::Elsewhere", '"pqd"', cwd=cwd)              # not one of its places
+    a = k.read_place(h, "doc.md::Model", '"pqd"', cwd=cwd)
+    b = k.read_place(h, "doc.md::Changes", '"pqd"', cwd=cwd)
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "current" and 0.7 < r["lo"] < 0.9, r               # they agree, on two agents' word
+    k.sign_off(a["m"], "reviewer"); k.sign_off(b["m"], "reviewer")
+    assert k.recheck(cwd)["decisions"][0]["lo"] > 0.9                      # now on a person's word; three readings must all be right
+
+    # one place changes its mind
+    write("frechet", "pqd", "pqd"); git("commit", "-qam", "the model section now says frechet")
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "stale" and [u["at"] for u in r["unread"]] == ["doc.md::Model"], r
+    k.read_place(h, "doc.md::Model", '"frechet"', cwd=cwd)
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "violated" and r["hi"] < 0.3, r
+    assert {p["at"]: p["reads as"] for p in r["places"]} == {"doc.md::Model": '"frechet"', "doc.md::Changes": '"pqd"', "k.py::K.__init__": '"pqd"'}
+
+    # everything follows: the fact changed, and no decision had to be rewritten
+    write("frechet", "frechet", "frechet"); git("commit", "-qam", "the rest follows")
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "stale" and [u["at"] for u in r["unread"]] == ["doc.md::Changes"], r     # the code was read mechanically
+    k.read_place(h, "doc.md::Changes", '"frechet"', cwd=cwd)
+    assert k.recheck(cwd)["decisions"][0]["state"] in ("current", "re-established")
+
+    # the list of facts lives in a file; what is no longer declared no longer stands
+    import json
+    (repo / "pw-facts.json").write_text(json.dumps([{"name": "largest", "type": "Nat", "places": [
+        {"at": "k.py", "reader": "str(len(data.splitlines()))"}]}]))
+    k.sync_facts(str(repo / "pw-facts.json"))
+    rep = k.recheck(cwd)["decisions"]
+    assert [(d["fact"], d["state"]) for d in rep] == [("largest", "current")] and rep[0]["places"][0]["reads as"] == "3"

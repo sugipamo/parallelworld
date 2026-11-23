@@ -273,6 +273,7 @@ class State:
         self.formal = {}     # H id -> {"subject", "pred"} for claims stated as a predicate
         self.authors = {}    # G id -> actors who stated that connection
         self.withdrawn = {}  # H id -> why the decision no longer stands
+        self.facts = {}      # H id -> {"name", "type", "places": [{"at", "reader"}], "value", "readings": [(place, M)]}
         self.notes = {}      # G id -> what its author says the formalization leaves out and adds
         self.evidence = {}   # eid -> dict
         self.proofs = []     # proof events as recorded
@@ -285,11 +286,26 @@ class State:
         if typ == "claim":
             self.atoms[p["h"]] = {"kind": "H", "text": p["text"]}
             self.prior[p["h"]] = p["prior"]
+            if p.get("fact"):
+                self.facts[p["h"]] = dict(p["fact"], readings=[])
             if p.get("pred"):
                 self.formal[p["h"]] = {"subject": p["subject"], "pred": p["pred"]["id"]}
                 self.algebra.add_pred(p["pred"]["id"], p["pred"]["type"], p["pred"]["text"])
         elif typ == "object":
             self.algebra.add_obj(p["id"], p["lean_type"], p["text"])
+        elif typ == "reading":
+            self.algebra.add_obj(p["obj"]["id"], p["obj"]["type"], p["obj"]["text"])
+            if p["m"] not in self.atoms:
+                self.atoms[p["m"]] = {"kind": "M", "text": f'{p["subject"]} reads as {p["obj"]["id"]}'}
+                self.prior[p["m"]] = p["model_prior"]
+                self.models[p["m"]] = {"subject": p["subject"], "obj": p["obj"]["id"], "binding": p.get("binding")}
+            self.facts[p["h"]]["readings"].append((p["place"], p["m"]))
+        elif typ == "agree":
+            if p["f"] not in self.atoms:
+                self.atoms[p["f"]] = {"kind": "F", "text": p["lean"]}
+                self.prior[p["f"]] = self.prior[p["h"]]
+            self.algebra.add_prop(p["f"], p["lean"])
+            self.links.append((tuple(p["guards"]), p["h"], p["f"]))
         elif typ == "withdraw":
             self.withdrawn[p["h"]] = p["justification"]
         elif typ == "concur":
@@ -473,6 +489,135 @@ class Kernel:
         subject = st.formal[h]["subject"]
         return self.attach_model(h, self.read(subject, rd, cwd), subject_version=subject_id(subject, cwd),
                                  binding=rd, model_prior=self.catalog["priors"]["derived"])
+
+    # ---- facts: one thing, said in several places -----------------------------
+    def claim_fact(self, name, typ, places, value=None, gloss=""):
+        """Declare that the listed places all state the same fact, a value of Lean type `typ`.
+
+        Each place is `path` or `path::part`, optionally with a reader that computes the value
+        from the content; a place without one has to be read by an agent or a person. The
+        decision is that all places read as the same value (and as `value`, if one is given).
+        No place is privileged: when they differ, which one is right is for a person to say.
+        """
+        typ = _norm(typ)
+        self._screen(typ)
+        places = [{"at": p, "reader": None} if isinstance(p, str) else {"at": p["at"], "reader": p.get("reader")} for p in places]
+        if not places:
+            raise KernelError("a fact needs at least one place")
+        if value is not None:
+            value = _norm(value)
+            self._screen(value)
+            self._well_typed((typ, value))
+        fact = {"name": name, "type": typ, "places": places, "value": value}
+        h = "H:" + _sha("fact", json.dumps(fact, sort_keys=True, ensure_ascii=False))
+        with self._tx() as (con, st):
+            if h not in st.atoms:
+                self._append(con, st, "claim", {
+                    "h": h, "text": _norm(gloss) or f"the same {name} is stated in {len(places)} place(s)",
+                    "prior": self.catalog["priors"]["claim"], "fact": fact})
+        return {"h": h}
+
+    def read_place(self, h, place, obj=None, cwd=None):
+        """Record how one place of a fact reads, for its content as it is now. Without `obj`
+        the place's reader computes it."""
+        st = self.state()
+        if h not in st.facts:
+            raise KernelError(f"{h} is not a fact")
+        fact = st.facts[h]
+        decl = next((p for p in fact["places"] if p["at"] == place), None)
+        if decl is None:
+            raise KernelError(f"{place} is not a place of this fact; its places are {[p['at'] for p in fact['places']]}")
+        if cwd is None or locate(place, cwd) is None:
+            raise KernelError(f"{place} is not there")
+        how = decl["reader"] if obj is None else None
+        if obj is None:
+            if how is None:
+                raise KernelError(f"{place} has no reader; state what it says")
+            obj = self.read(place, how, cwd)
+        obj = _norm(obj)
+        self._screen(obj)
+        self._well_typed((fact["type"], obj))
+        version = subject_id(place, cwd)
+        ob = {"id": "O:" + _sha(fact["type"], obj), "type": fact["type"], "text": obj}
+        m = self._model_id(version, ob, how, None)
+        with self._tx() as (con, st):
+            if (place, m) not in st.facts[h]["readings"]:
+                self._append(con, st, "reading", {
+                    "h": h, "place": place, "subject": version, "m": m, "obj": ob, "binding": how,
+                    "model_prior": self.catalog["priors"]["derived" if how else "model"]})
+        return {"m": m, "o": ob["id"], "read as": obj}
+
+    def _agreement(self, h, guards, terms):
+        """The proposition that the present readings agree; stated once, then settled by Lean."""
+        st = self.state()
+        fact = st.facts[h]
+        t = fact["type"]
+        parts = [f"((({terms[0]}) : {t}) = (({x}) : {t}))" for x in terms[1:]]
+        if fact["value"] is not None:
+            parts.append(f"((({terms[0]}) : {t}) = (({fact['value']}) : {t}))")
+        lean = " ∧ ".join(parts) or "True"
+        f = "F:" + _sha(lean)
+        new = (tuple(guards), h, f) not in st.links
+        if new:
+            with self._tx() as (con, st):
+                self._append(con, st, "agree", {"h": h, "f": f, "lean": lean, "guards": list(guards)})
+        st = self.state()
+        if st.rep(f) not in st.algebra.decided():
+            if not any(self.prove("holds", [f], tac)["accepted"] for tac in ("rfl", "decide", "simp")):
+                any(self.prove("not", [f], tac)["accepted"] for tac in ("decide", "simp"))
+        st = self.state()
+        verdict = next((rel for rel, ids in st.algebra.order() if rel in ("holds", "not") and ids[0] == st.rep(f)), None)
+        return verdict, new
+
+    def _recheck_fact(self, h, cwd, current):
+        st = self.state()
+        fact = st.facts[h]
+        entry = {"h": h, "fact": fact["name"], "text": st.atoms[h]["text"], "places": []}
+        guards, unread, reread = [], [], False
+        for decl in fact["places"]:
+            at, now = decl["at"], subject_id(decl["at"], cwd)
+            seen = [m for p, m in fact["readings"] if p == at]
+            have = [m for m in seen if st.models[m]["subject"] == now]
+            if not have and decl["reader"]:
+                try:
+                    have = [self.read_place(h, at, cwd=cwd)["m"]]
+                    reread = reread or bool(seen)
+                except KernelError as e:
+                    unread.append({"at": at, "why": str(e)})
+                    continue
+            elif not have:
+                unread.append({"at": at, "why": "it changed since it was read" if seen else "nobody has read it yet"})
+                continue
+            guards.append(have[-1])
+            st = self.state()
+            entry["places"].append({"at": at, "reads as": st.algebra.objs[st.models[have[-1]]["obj"]]["text"], "m": have[-1],
+                                    "by": "reader" if st.models[have[-1]]["binding"] else "stated"})
+        if unread:
+            entry.update(state="stale", unread=unread)
+        else:
+            verdict, new = self._agreement(h, guards, [p["reads as"] for p in entry["places"]])
+            entry["state"] = {"holds": "re-established" if new and reread else "current", "not": "violated"}.get(verdict, "uncovered")
+        try:
+            b = self.infer(h, current=current)
+            entry.update(lo=b["lo"], hi=b["hi"])
+        except KernelError as e:
+            entry.update(lo=0.0, hi=1.0, error=str(e))
+        return entry
+
+    def sync_facts(self, path):
+        """Make the standing facts those declared in a file (a JSON list of
+        {"name", "type", "places", "value"?}); facts no longer declared are withdrawn."""
+        with open(path, encoding="utf-8") as fh:
+            declared = json.load(fh)
+        keep = set()
+        for d in declared:
+            places = [p if isinstance(p, str) else {"at": p["at"], "reader": reader(p["reader"], p.get("format", "text"))} for p in d["places"]]
+            keep.add(self.claim_fact(d["name"], d["type"], places, d.get("value"), d.get("gloss", ""))["h"])
+        st = self.state()
+        for h in st.facts:
+            if h not in keep and h not in st.withdrawn:
+                self.withdraw(h, f"no longer declared in {os.path.basename(path)}")
+        return keep
 
     def sign_off(self, m, who, confirmed=True):
         """A person has compared a stated reading (a model or a connection) with the thing itself."""
@@ -979,10 +1124,13 @@ class Kernel:
             except KernelError as e:
                 entry.update(lo=0.0, hi=1.0, error=str(e))
             report.append(entry)
+        for h in [x for x in self.state().facts if x not in self.state().withdrawn]:
+            current = {**current, **{p["at"]: subject_id(p["at"], cwd) for p in self.state().facts[h]["places"]}}
+            report.append(self._recheck_fact(h, cwd, current))
         # A claim in natural language can only be held by the commands recorded for it: run them again.
         st = self.state()
         for h, info in st.atoms.items():
-            if info["kind"] != "H" or h in st.formal or h in st.withdrawn:
+            if info["kind"] != "H" or h in st.formal or h in st.facts or h in st.withdrawn:
                 continue
             commands = sorted({(e["kind"], e["command"]) for e in st.evidence.values() if e["target"] == h and "tree" in e})
             if not commands:
@@ -1028,7 +1176,8 @@ class Kernel:
         blurs the picture. Pass the result as `current` to `infer`.
         """
         st = self.state()
-        bases = {info["subject"].split("@")[0] for info in st.models.values()} | {f["subject"] for f in st.formal.values()}
+        bases = ({info["subject"].split("@")[0] for info in st.models.values()} | {f["subject"] for f in st.formal.values()}
+                 | {p["at"] for f in st.facts.values() for p in f["places"]})
         found = {b: subject_id(b, cwd) for b in bases}
         return {b: v for b, v in found.items() if "@" in v}     # code that is not here is left alone
 

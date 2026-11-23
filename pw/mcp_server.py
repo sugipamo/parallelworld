@@ -66,6 +66,15 @@ def model(h: str, object: str, setup: str = "", call: str = "", domains: list[st
 
 
 @mcp.tool()
+def read_place(h: str, place: str, object: str) -> dict:
+    """For a FACT (one thing stated in several places): state what one of its places says, as a
+    Lean term of the fact's type, e.g. object "\"pqd\"" or "[\"a\", \"b\"]" or "14". `place` is exactly
+    as listed for the fact, e.g. "docs/spec.md::3. Model". Write what that place itself says, for
+    its content as it is now. The kernel compares the places; you prove nothing."""
+    return _safe(lambda: _kernel.read_place(h, place, object, cwd=_workdir()))
+
+
+@mcp.tool()
 def reject_object(p: str, object: str, proof: str) -> dict:
     """Show that specification `p` is not vacuous: give a Lean term `object` (of p's type) that
     should NOT satisfy it, and tactics proving `¬ p object`. Use this for specifications you

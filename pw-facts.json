@@ -1,0 +1,86 @@
+[
+ {
+  "name": "default dependence class",
+  "type": "String",
+  "gloss": "the name of the copula class used by default for evidence on one target",
+  "places": [
+   "docs/spec.md::3. モデル",
+   "docs/spec.md::2. v0.1 からの変更",
+   "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則",
+   {
+    "at": "pw/kernel.py::Kernel.__init__",
+    "reader": "lean_string(re.search(r'dependence=\"(\\w+)\"', part).group(1))"
+   }
+  ]
+ },
+ {
+  "name": "axioms a proof may depend on",
+  "type": "List String",
+  "gloss": "the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+  "places": [
+   "docs/spec.md::5. Lean Gate",
+   {
+    "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+    "reader": "\"[\" + \", \".join(lean_string(x) for x in sorted(re.findall(r'\"([^\"]+)\"', part))) + \"]\""
+   }
+  ]
+ },
+ {
+  "name": "largest component inference solves",
+  "type": "Nat",
+  "gloss": "the largest number of atoms in a connected component that inference still solves",
+  "places": [
+   "docs/spec.md::7. 未解決",
+   {
+    "at": "pw/kernel.py::Kernel.__init__",
+    "reader": "re.search(r'max_atoms=(\\d+)', part).group(1)"
+   }
+  ]
+ },
+ {
+  "name": "names of the MCP tools",
+  "type": "List String",
+  "gloss": "the names of the MCP tools offered to workers, sorted alphabetically",
+  "places": [
+   "docs/spec.md::4. 操作（MCPツール）",
+   {
+    "at": "pw/mcp_server.py",
+    "reader": "\"[\" + \", \".join(lean_string(x) for x in sorted(re.findall(r\"@mcp\\.tool\\(\\)\\ndef (\\w+)\\(\", data))) + \"]\""
+   }
+  ]
+ },
+ {
+  "name": "default threshold, in thousandths",
+  "type": "Nat",
+  "gloss": "the lower bound a decision must reach by default",
+  "places": [
+   {
+    "at": "pw/orchestrator.py::main",
+    "reader": "str(permille(re.search(r'\"--threshold\", type=float, default=([0-9.]+)', part).group(1)))"
+   },
+   {
+    "at": "pw/check.py::main",
+    "reader": "str(permille(re.search(r'\"--threshold\", type=float, default=([0-9.]+)', part).group(1)))"
+   },
+   {
+    "at": "pw/maintain.py::main",
+    "reader": "str(permille(re.search(r'\"--threshold\", type=float, default=([0-9.]+)', part).group(1)))"
+   }
+  ]
+ },
+ {
+  "name": "Lean version",
+  "type": "String",
+  "gloss": "the Lean version Gamma is pinned to",
+  "places": [
+   {
+    "at": "lean/lean-toolchain",
+    "reader": "lean_string(data.strip().split(':v')[-1])"
+   },
+   {
+    "at": "experiments/selfcheck/lean/lean-toolchain",
+    "reader": "lean_string(data.strip().split(':v')[-1])"
+   }
+  ]
+ }
+]
