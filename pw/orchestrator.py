@@ -8,7 +8,10 @@ A required claim is best given formally, so that nothing has to be translated:
      "gloss": "clamp stays within [lo, hi]"}
 where the predicate may use definitions from Gamma (--lean-dir). A plain string is also accepted
 and is treated as a natural-language claim the worker must formalize.
-A task's branch is reported mergeable only if every required claim has lo >= --threshold.
+Optional per task: "base" (branch to start the worktree from) and "depends_on" (names of tasks
+whose required claims this task builds on).
+A task's branch is reported mergeable only if every required claim has lo >= --threshold and,
+when it depends on other tasks, the conjunction with their claims does too (assume-guarantee).
 """
 import argparse
 import json
@@ -33,7 +36,12 @@ You are one of several parallel workers. Shared knowledge lives in the `pw` MCP 
 - A required claim given only as a sentence, and any claim of your own: register it with
   `claim`, connect it with `ground_at` (subject, object, predicate), prove it, check the model
   the same way, and show the predicate is not vacuous with `reject_object`.
-- A failed proof proves nothing; do not treat it as evidence.
+- A failed proof proves nothing; do not treat it as evidence. If a claim is false, show it:
+  prove `not [F]` for a faithful model, or find the input where model and code part ways.
+- Claims listed under "Depends on" belong to other workers. Check them with `infer` before you
+  rely on them and again before you finish. If the lower bound is low, do not build on the
+  claim silently: prefer code that stays correct if the claim fails, and say in your final
+  message whether you relied on it.
 - If `status` shows another worker's specification or object that you believe is the same as
   yours, try `pred_iff` / `obj_eq`. Only prove what is true: different code is usually a
   different object even when it meets the same specification.
@@ -64,6 +72,8 @@ def run_task(task, args, repo):
                 "PW_LEAN_DIR": args.lean_dir},
     }}}
     prompt = task["prompt"] + "\n\nRequired claims:\n" + "\n".join(f"- {d}" for _, d in task["_required"])
+    if task["_depends"]:
+        prompt += "\n\nDepends on (claims owned by other workers):\n" + "\n".join(f"- {d}" for _, d in task["_depends"])
     cmd = [
         "claude", "-p", prompt, "--model", args.model,
         "--append-system-prompt", WORKER_RULES,
@@ -77,7 +87,8 @@ def run_task(task, args, repo):
     with open(cfg_path, "w") as fh:
         json.dump(cfg, fh)
     if not os.path.isdir(wt):
-        subprocess.run(["git", "worktree", "add", "-b", f"pw/{name}", wt], cwd=repo, check=True)
+        subprocess.run(["git", "worktree", "add", "-b", f"pw/{name}", wt, *filter(None, [task.get("base")])],
+                       cwd=repo, check=True)
     r = subprocess.run(cmd, cwd=wt, capture_output=True, text=True)
     with open(os.path.join(repo, ".pw", f"worker-{name}.json"), "w") as fh:
         fh.write(r.stdout)
@@ -112,6 +123,9 @@ def main():
     kernel = Kernel(args.db, gate=LeanGate(args.lean_dir), actor="orchestrator")
     for task in tasks:
         task["_required"] = required(kernel, task)
+    by_name = {t["name"]: t for t in tasks}
+    for task in tasks:
+        task["_depends"] = [c for d in task.get("depends_on", []) for c in by_name[d]["_required"]]
 
     with ThreadPoolExecutor(args.parallel) as pool:
         for name, rc, out in pool.map(lambda t: run_task(t, args, os.path.abspath(args.repo)), tasks):
@@ -124,6 +138,11 @@ def main():
         for h, text in task["_required"]:
             b = kernel.infer(h)
             verdicts.append((b["lo"] >= args.threshold, b["lo"], b["hi"], text))
+        if task["_depends"]:
+            hs = [h for h, _ in task["_required"] + task["_depends"]]
+            b = kernel.infer(" & ".join(hs))
+            verdicts.append((b["lo"] >= args.threshold, b["lo"], b["hi"],
+                             "together with what it depends on: " + ", ".join(h for h, _ in task["_depends"])))
         ok = all(v[0] for v in verdicts)
         print(f"{'MERGEABLE' if ok else 'HOLD     '} pw/{task['name']}")
         for good, lo, hi, text in verdicts:
