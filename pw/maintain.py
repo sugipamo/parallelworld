@@ -130,6 +130,9 @@ def main():
     ap.add_argument("--second-model", default="claude-sonnet-5-5",
                     help='a different model for a second, blind reading where the first stands alone; "" for none')
     ap.add_argument("--budget", type=float, default=3.0)
+    ap.add_argument("--again", action="store_true",
+                    help="ask about places that do not stand even where a reader already answered "
+                         "(after making a fact's description more precise: the earlier answers were to another question)")
     args = ap.parse_args()
     repo = os.path.abspath(args.repo)
     kernel = Kernel(os.path.join(repo, LOG), gate=LeanGate(args.lean_dir), actor="maintain")
@@ -143,12 +146,12 @@ def main():
     def unchecked(report):
         """Computed places no blind reader has looked at: is the pattern reading the thing asked?"""
         return [(d, p["at"]) for d in report["decisions"] if "fact" in d for p in d["places"]
-                if p["by"] == "reader" and not p["stands"] and not p["read blind as"]
-                and not any(x["model"] == args.model for x in p["declined"])]
+                if p["by"] == "reader" and not p["stands"]
+                and (args.again or not (p["read blind as"] or any(x["model"] == args.model for x in p["declined"])))]
 
     decisions = [d for d in report["decisions"] if d["state"] in ("stale", "unsupported") and "subject" in d]
     unread = [(d, u["at"]) for d in report["decisions"] if "fact" in d for u in d.get("unread", [])
-              if needs_agent(d, u) and not any(x["model"] == args.model for x in u.get("declined", []))]
+              if needs_agent(d, u) and (args.again or not any(x["model"] == args.model for x in u.get("declined", [])))]
     if decisions or unread or unchecked(report):
         dirty = subprocess.run(["git", "status", "--porcelain", "--", ".", f":(exclude){LOG}"], cwd=repo, capture_output=True, text=True).stdout.strip()
         if dirty:

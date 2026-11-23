@@ -109,7 +109,7 @@
  {
   "name": "Lean version",
   "type": "String",
-  "gloss": "the Lean version Gamma is pinned to",
+  "gloss": "the version of Lean that the Lean projects in this repository and its CI are pinned to, as a bare version number without a leading v",
   "places": [
    {
     "at": "lean/lean-toolchain",

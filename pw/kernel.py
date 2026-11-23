@@ -488,7 +488,7 @@ class Kernel:
         self.db_path = db_path
         self.gate = gate
         self.actor = actor or os.environ.get("PW_AGENT", "anon")
-        self.max_atoms = max_atoms
+        self.max_atoms = max_atoms     # the largest connected component, in atoms, that infer still solves
         if catalog is None:
             with open(CATALOG_PATH) as fh:
                 catalog = json.load(fh)
