@@ -230,6 +230,7 @@ def serve():
         except Refused as e:
             return {"error": str(e)}
         keep({"fact": fact, "place": place})
+        facts[fact]["places"].append(at)
         return {"kept": at}
 
     @mcp.tool()
@@ -256,6 +257,7 @@ def serve():
         if len({p["at"] for p in kept}) < 2:
             return {"error": "a thing stated in one place has nothing to disagree with; give at least two different places"}
         keep({"new": {"name": name, "type": type, "gloss": " ".join(gloss.split())}, "places": kept})
+        facts[name] = {"type": type, "places": [p["at"] for p in kept]}      # further places can be added to it
         return {"kept": name, "the places agree": _agree(kept)}
 
     mcp.run()

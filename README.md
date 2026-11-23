@@ -14,12 +14,13 @@
 - `pw/check.py` — 立っている決定を、いまのファイルに当て直す（言語モデルなし）
 - `pw/maintain.py` — 当て直しで残った失効を、エージェントに読み直させる
 - `pw/confirm.py` — エージェントの読みを、根拠の一文と並べて人が確認する
+- `pw/discover.py` — 宣言に漏れている箇所と、まだ宣言されていない事実をエージェントに探させる
 - `pw-facts.json` — このプロジェクトの事実と、それを述べている箇所の一覧
 - `pw-log.jsonl` — 記録（読み、証明、人の確認）。追記式のテキストで、リポジトリに含める
 - `pw-rules.json` — 読みが成り立つ条件の表と、読み手に求める測定の基準
 - `pw-calibration.json` — 読み手の測定結果
 
-実験の記録: [依存のある並列タスク](experiments/dependency/RESULTS.md)、[自己適用](experiments/selfcheck/RESULTS.md)、[過去の決定との矛盾](experiments/decisions/RESULTS.md)、[自然言語の決定の形式化](experiments/nl/RESULTS.md)、[コードでないファイル](experiments/artifacts/RESULTS.md)、[散文](experiments/prose/RESULTS.md)、[事実と箇所](experiments/facts/RESULTS.md)、[読み手の測定](experiments/calibration/RESULTS.md)
+実験の記録: [依存のある並列タスク](experiments/dependency/RESULTS.md)、[自己適用](experiments/selfcheck/RESULTS.md)、[過去の決定との矛盾](experiments/decisions/RESULTS.md)、[自然言語の決定の形式化](experiments/nl/RESULTS.md)、[コードでないファイル](experiments/artifacts/RESULTS.md)、[散文](experiments/prose/RESULTS.md)、[事実と箇所](experiments/facts/RESULTS.md)、[読み手の測定](experiments/calibration/RESULTS.md)、[箇所の探索](experiments/discovery/RESULTS.md)
 
 ## 動かす
 
@@ -33,6 +34,7 @@ python -m pw.check --repo . --verify               # 加えて、記録にある
 python -m pw.maintain --repo .                     # 上に加えて、変わったファイルをエージェントに読み直させる（課金あり）
 python -m pw.confirm --repo .                      # エージェントの読みのうち、誰も確認していないものを一覧する
 python -m pw.calibrate --repo .                    # 値をわざと書き換えた本文を目隠しの読み手に読ませ、読みの正答率を測る（課金あり）
+python -m pw.discover --repo . --apply            # 宣言に漏れている箇所と新しい事実を探させ、pw-facts.json に書き込む（課金あり）
 ```
 
 `prove` には `lean/lean-toolchain` と同じ版の Lean 4 が必要。`lake` が PATH にないときは `PW_LAKE` でパスを渡す。
