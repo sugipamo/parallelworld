@@ -154,6 +154,7 @@ def test_kernel_drawn_checks_with_real_lean(tmp_path):
     with pytest.raises(KernelError):
         other = k.ground_at(k.claim("p")["h"], "x", "Bool → Bool", "fun f => True", "fun b => b")
         k.sample_model(other["m"], "echo {0}", str(repo))
+    assert "disagree" not in str(k.sample_model(good["m"], template, str(repo), n=5, seed=3, domains=["nat"] * 3)["disagreements"])
 
 
 def test_formal_claim_using_a_definition_from_gamma(tmp_path):

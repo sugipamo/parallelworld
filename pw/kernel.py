@@ -13,10 +13,12 @@ import itertools
 import json
 import os
 import random
+import re
 import sqlite3
 import subprocess
 import time
 from contextlib import contextmanager
+from fractions import Fraction
 
 import numpy as np
 
@@ -25,6 +27,50 @@ from .credal import COPULAS, CredalSet, exchangeable_agreement, joint_likelihood
 from .lindenbaum import RELATIONS, Lindenbaum
 
 CATALOG_PATH = os.path.join(os.path.dirname(__file__), "catalog.json")
+
+
+def _unit(rng, bound):
+    d = rng.choice((1, 2, 3, 4, 5, 8, 10))
+    return Fraction(rng.randint(0, d), d)
+
+
+# How an argument of a model is drawn. Each entry: (random source, bound) -> value.
+DOMAINS = {
+    "nat": lambda rng, b: rng.randint(0, b),                      # natural number 0..bound
+    "int": lambda rng, b: rng.randint(-b, b),                     # integer -bound..bound
+    "unit": _unit,                                                # rational in [0, 1]
+    "pos": lambda rng, b: Fraction(rng.randint(1, 4 * b), 4),     # positive rational up to bound
+    "units": lambda rng, b: tuple(_unit(rng, b) for _ in range(rng.randint(1, 4))),  # non-empty list of rationals in [0, 1]
+}
+
+
+def _values(text):
+    """What an output says, apart from how it is written: numbers as exact rationals
+    (3/4, 0.75 and Fraction(3, 4) are the same value; 0.0 is 0), everything else as words."""
+    text = re.sub(r"fraction\((-?\d+),\s*(\d+)\)", r"\1/\2", text.lower())
+    out = []
+    for tok in re.findall(r"-?\d+(?:\.\d+(?:e-?\d+)?|/\d+)?|[a-z_]+", text):
+        try:
+            out.append(Fraction(tok))
+        except (ValueError, ZeroDivisionError):
+            out.append(tok)
+    return out
+
+
+def _lean(v):
+    if isinstance(v, tuple):
+        return "([" + ", ".join(_lean(x) for x in v) + "] : List ℚ)"
+    if isinstance(v, Fraction):
+        return f"({v.numerator}/{v.denominator} : ℚ)"
+    return str(v) if v >= 0 else f"({v})"
+
+
+def _python(v):
+    if isinstance(v, tuple):
+        return "[" + ", ".join(_python(x) for x in v) + "]"
+    if isinstance(v, Fraction):
+        return f"Fraction({v.numerator}, {v.denominator})"
+    return str(v)
 
 
 class KernelError(Exception):
@@ -364,7 +410,7 @@ class Kernel:
             if r.returncode != 0:
                 return "command failed: " + (r.stdout + r.stderr)[-500:]
             code = " ".join(r.stdout.split())
-            out.append((code.lower() == value.lower(), value, code))
+            out.append((_values(code) == _values(value), value, code))
         return out
 
     def observe_model(self, m, lean_args, command, cwd, timeout=300):
@@ -384,41 +430,47 @@ class Kernel:
                            source=f"args:{_sha(_norm(lean_args))}@cmd:{_sha(command)}@{_tree(cwd)}")
         return {**out, "outcome": "agree" if same else "disagree", "lean": lean, "code": code}
 
-    def sample_model(self, m, command, cwd, n=10, bound=15, seed=None, timeout=300):
+    def sample_model(self, m, command, cwd, n=10, bound=15, seed=None, timeout=300, domains=None):
         """Random checks of model hypothesis M. The kernel draws the inputs itself.
 
-        `command` is a shell template with {0}, {1}, ... for the arguments; it must print
-        what the real code returns. Arguments are drawn uniformly: Nat from 0..bound, Int
-        from -bound..bound. Because the draws are random they are exchangeable, and each
-        further agreement raises the lower probability of M (see credal.exchangeable_agreement).
-        What gets supported is agreement on almost all inputs *under this distribution*.
+        `command` is a shell template with {0}, {1}, ... for the arguments, written as Python
+        literals; it must print what the real code returns, in the form Lean's `toString` gives.
+        `domains` names the distribution of each argument (see DOMAINS); by default Nat and Int
+        arguments are read off the object's type. Because the draws are random they are
+        exchangeable, and each further agreement raises the lower probability of M (see
+        credal.exchangeable_agreement). What gets supported is agreement on almost all inputs
+        *under this distribution*.
         """
         obj = self._model(m)
-        domains = [t.strip() for t in obj["type"].split("→")][:-1]
-        if not domains or any(d not in ("Nat", "Int") for d in domains):
-            raise KernelError(f"can only draw Nat and Int arguments, not {obj['type']}")
+        if domains is None:
+            types = [t.strip() for t in obj["type"].split("→")][:-1]
+            if not types or any(t not in ("Nat", "Int", "ℕ", "ℤ") for t in types):
+                raise KernelError(f"name a domain for each argument of {obj['type']}: {sorted(DOMAINS)}")
+            domains = ["nat" if t in ("Nat", "ℕ") else "int" for t in types]
+        if any(d not in DOMAINS for d in domains):
+            raise KernelError(f"domains must be among {sorted(DOMAINS)}")
         spec = self.catalog["sampling"]
         rng = random.Random(seed)
-        draws = sorted({tuple(rng.randint(0 if d == "Nat" else -bound, bound) for d in domains) for _ in range(n)})
-        lean_args = [" ".join(str(v) if v >= 0 else f"({v})" for v in d) for d in draws]
+        draws = sorted({tuple(DOMAINS[d](rng, bound) for d in domains) for _ in range(n)}, key=repr)
+        lean_args = [" ".join(_lean(v) for v in d) for d in draws]
         commands = []
         for d in draws:
             c = command
             for i, v in enumerate(d):
-                c = c.replace("{%d}" % i, str(v))
+                c = c.replace("{%d}" % i, _python(v))
             commands.append(c)
         res = self._compare(obj, lean_args, commands, cwd, timeout)
         if isinstance(res, str):
             return {"error": res}
-        tree, dist = _tree(cwd), f"uniform {' × '.join(domains)} within {bound}"
+        tree, dist = _tree(cwd), f"{' × '.join(domains)} within {bound}"
         new, disagreements = 0, []
-        for d, (same, lean, code) in zip(draws, res):
+        for d, args, (same, lean, code) in zip(draws, lean_args, res):
             r = self._record(m, "sampled_check", "agree" if same else "disagree",
-                             f"draw:{d}@cmd:{_sha(command)}@{tree}",
-                             {"args": list(d), "distribution": dist, **spec})
+                             f"draw:{args}@cmd:{_sha(command)}@{tree}",
+                             {"args": args, "distribution": dist, **spec})
             new += not r["duplicate"]
             if not same:
-                disagreements.append({"args": list(d), "lean": lean, "code": code})
+                disagreements.append({"args": args, "lean": lean, "code": code})
         return {"drawn": len(draws), "new": new, "agree": len(draws) - len(disagreements),
                 "disagreements": disagreements, "distribution": dist}
 

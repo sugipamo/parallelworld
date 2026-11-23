@@ -309,3 +309,11 @@ def test_two_authors_reaching_the_same_specification_support_it(tmp_path):
     approx(a.infer(ga["g"]), 0.8, 0.8)                                               # not yet known to agree
     b.prove("pred_iff", [ga["p"], gb["p"]], "intro f; exact Iff.rfl")
     assert a.infer(ga["g"])["lo"] > 0.8 and a.infer(gb["g"])["lo"] > 0.8
+
+
+def test_outputs_are_compared_by_value_not_by_spelling():
+    from pw.kernel import _values
+    assert _values("(Fraction(1, 6), 0.0, 1)") == _values("(1/6, 0, 1)")
+    assert _values("[0.75, True]") == _values("[3/4, true]")
+    assert _values("0.30000000000000004") != _values("3/10")     # a float that is not the exact value
+    assert _values("5") != _values("6") and _values("-2") == _values("-2.0")

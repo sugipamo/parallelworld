@@ -71,13 +71,17 @@ def ground_at(h: str, subject: str, type: str, predicate: str, object: str) -> d
 
 
 @mcp.tool()
-def sample_model(m: str, command: str, n: int = 10) -> dict:
-    """Support a model hypothesis M with random checks. The kernel draws `n` inputs itself
-    (Nat and Int arguments only), evaluates the Lean object on each, and runs `command` with
-    {0}, {1}, ... replaced by the arguments; the command must print what the real code returns,
-    e.g. python3 -c "from clamp import clamp; print(clamp({0}, {1}, {2}))".
+def sample_model(m: str, command: str, n: int = 10, domains: list[str] | None = None) -> dict:
+    """Support a model hypothesis M with random checks. The kernel draws `n` inputs itself,
+    evaluates the Lean object on each, and runs `command` with {0}, {1}, ... replaced by the
+    arguments as Python literals. The command must print what the real code returns, in the
+    form Lean's `toString` gives (rationals as 3/4, pairs as (a, b), lists as [a, b]), e.g.
+    python3 -c "from clamp import clamp; print(clamp({0}, {1}, {2}))".
+    `domains` names how each argument is drawn: "nat", "int", "unit" (rational in [0, 1],
+    substituted as Fraction(a, b)), "pos" (positive rational), "units" (non-empty list of
+    rationals in [0, 1]). It may be omitted when all arguments are Nat or Int.
     Every agreement raises confidence in M; a single disagreement refutes it."""
-    return _safe(_kernel.sample_model, m, command, _workdir(), n)
+    return _safe(_kernel.sample_model, m, command, _workdir(), n, domains=domains)
 
 
 @mcp.tool()

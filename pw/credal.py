@@ -9,6 +9,8 @@
 Computing the coherent range of one event from constraints on others is de
 Finetti's fundamental theorem of probability; it is a linear program.
 """
+import math
+
 import numpy as np
 from scipy.optimize import linprog
 
@@ -72,8 +74,8 @@ def exchangeable_agreement(k, mean, min_concentration):
     without that bound random checks cannot raise the lower probability at all.
     mean = 1/2, s = 2 is the uniform prior and gives Laplace's 1 / (k + 1).
     """
-    s = float(min_concentration)
-    hi = float(np.prod([(s * mean + i) / (s + i) for i in range(k)]))
+    s = min_concentration
+    hi = math.prod((s * mean + i) / (s + i) for i in range(k))
     return mean ** k, hi
 
 

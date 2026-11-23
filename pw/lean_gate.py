@@ -50,7 +50,7 @@ class GateError(Exception):
 
 class LeanGate:
     def __init__(self, lean_dir=LEAN_DIR, timeout=300):
-        self.lean_dir = lean_dir
+        self.lean_dir = os.path.abspath(lean_dir)
         self.timeout = timeout
 
     def screen(self, text):
@@ -134,7 +134,7 @@ class LeanGate:
             lake = self._lake()
         except GateError as e:
             return {"ok": False, "reason": str(e)}
-        src = f"import Gamma\n\ndef pw_obj : ({typ}) := ({obj})\n\n" + "".join(f"#eval pw_obj {a}\n" for a in args_list)
+        src = f"import Gamma\n\ndef pw_obj : ({typ}) := ({obj})\n\n" + "".join(f"#eval IO.println (toString (pw_obj {a}))\n" for a in args_list)
         work = os.path.join(self.lean_dir, "PWCheck")
         os.makedirs(work, exist_ok=True)
         path = os.path.join(work, "PWEval_" + hashlib.sha256(src.encode()).hexdigest()[:16] + ".lean")
