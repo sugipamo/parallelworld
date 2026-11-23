@@ -1,13 +1,33 @@
 [
-  {"name": "copulas",
-   "prompt": "This repository is a knowledge kernel; you are auditing part of its own mathematics. `COPULAS` in pw/credal.py gives, for each class of copulas, the range of the probability that several pieces of evidence are all observed. Do not change pw/credal.py. Establish the required claim. The function to model takes a non-empty list p of probabilities and returns the triple (lower end under 'frechet', value under 'independent', upper end under 'pqd'), i.e. COPULAS['frechet'](p, p)[0], COPULAS['independent'](p, p)[0], COPULAS['pqd'](p, p)[1] with p = numpy.array(<list of fractions.Fraction>, dtype=object) so that the arithmetic is exact. Draw inputs with domains [\"units\"]. Lean here has Mathlib.",
-   "requires": [{"subject": "pw/credal.py::COPULAS", "type": "List ℚ → ℚ × ℚ × ℚ", "predicate": "Spec.NestedCopulaBounds",
-                 "gloss": "for probabilities, Frechet lower bound <= product <= minimum: the copula classes nest"}]},
-  {"name": "exchange",
-   "prompt": "This repository is a knowledge kernel; you are auditing part of its own mathematics. `exchangeable_agreement(k, mean, min_concentration)` in pw/credal.py returns (lo, hi), bounds on the probability that k random checks all agree although the hypothesis is false. Do not change pw/credal.py. Establish the required claim. Call the function with fractions.Fraction arguments so that the arithmetic is exact, and draw inputs with domains [\"nat\", \"unit\", \"pos\"]. Lean here has Mathlib.",
-   "requires": [{"subject": "pw/credal.py::exchangeable_agreement", "type": "ℕ → ℚ → ℚ → ℚ × ℚ", "predicate": "Spec.AgreementBounds",
-                 "gloss": "the agreement bounds are ordered probabilities, the upper one is worst at the least concentration, and the uniform prior gives 1/(k+1)"}]},
-  {"name": "metric",
-   "prompt": "This repository is a knowledge kernel; you are checking a statement from its documentation. docs/symbols.md section 6 says that the distance d(A, B) = probability that A and B disagree satisfies the triangle inequality. Establish the required claim: state it as a closed Lean proposition with `ground` (finite set of worlds, non-negative rational weights) and prove it. There is no code to model. Lean here has Mathlib.",
-   "requires": ["For every probability distribution on a finite set of worlds and all events A, B, C, the probability that A and C disagree is at most the probability that A and B disagree plus the probability that B and C disagree"]}
+ {
+  "name": "copulas",
+  "prompt": "This repository is a knowledge kernel; you are auditing part of its own mathematics. `COPULAS` in pw/credal.py gives, for each class of copulas, the range of the probability that several pieces of evidence are all observed. Do not change pw/credal.py. Establish the required claim. The function to model takes a non-empty list p of probabilities and returns the triple (lower end under 'frechet', value under 'independent', upper end under 'pqd'), i.e. COPULAS['frechet'](p, p)[0], COPULAS['independent'](p, p)[0], COPULAS['pqd'](p, p)[1] with p = numpy.array(<list of fractions.Fraction>, dtype=object) so that the arithmetic is exact. State the binding so: the call takes one argument with domain \"units\" (a list of Fractions). Lean here has Mathlib.",
+  "requires": [
+   {
+    "subject": "pw/credal.py::COPULAS",
+    "type": "List ℚ → ℚ × ℚ × ℚ",
+    "predicate": "Spec.NestedCopulaBounds",
+    "gloss": "for probabilities, Frechet lower bound <= product <= minimum: the copula classes nest"
+   }
+  ]
+ },
+ {
+  "name": "exchange",
+  "prompt": "This repository is a knowledge kernel; you are auditing part of its own mathematics. `exchangeable_agreement(k, mean, min_concentration)` in pw/credal.py returns (lo, hi), bounds on the probability that k random checks all agree although the hypothesis is false. Do not change pw/credal.py. Establish the required claim. State the binding with domains [\"nat\", \"unit\", \"pos\"]; the rational arguments arrive as fractions.Fraction, so the arithmetic is exact. Lean here has Mathlib.",
+  "requires": [
+   {
+    "subject": "pw/credal.py::exchangeable_agreement",
+    "type": "ℕ → ℚ → ℚ → ℚ × ℚ",
+    "predicate": "Spec.AgreementBounds",
+    "gloss": "the agreement bounds are ordered probabilities, the upper one is worst at the least concentration, and the uniform prior gives 1/(k+1)"
+   }
+  ]
+ },
+ {
+  "name": "metric",
+  "prompt": "This repository is a knowledge kernel; you are checking a statement from its documentation. docs/symbols.md section 6 says that the distance d(A, B) = probability that A and B disagree satisfies the triangle inequality. Establish the required claim: state it as a closed Lean proposition with `ground` (finite set of worlds, non-negative rational weights) and prove it. There is no code to model. Lean here has Mathlib.",
+  "requires": [
+   "For every probability distribution on a finite set of worlds and all events A, B, C, the probability that A and C disagree is at most the probability that A and B disagree plus the probability that B and C disagree"
+  ]
+ }
 ]

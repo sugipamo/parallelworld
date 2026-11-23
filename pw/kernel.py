@@ -34,22 +34,90 @@ def _unit(rng, bound):
     return Fraction(rng.randint(0, d), d)
 
 
-# How an argument of a model is drawn. Each entry: (random source, bound) -> value.
+# A model hypothesis says more than "this term models that code". Written out, it is
+#
+#     M(s, a, D, call):   for every x in D,   show(call(x)) = a(x)
+#
+#   s     the code, by path::name and the hash of its file
+#   a     the Lean term
+#   D     the domain of each argument, by name (below), and the bound random draws stay within
+#   call  how the code is invoked: Python statements to run first, and an expression in {0}, {1}, ...
+#
+# A value of a domain has two spellings, one for each side (`_lean`, `_python`); the code's result
+# is written out by the kernel, not by the code (`_SHOW`); the two outputs are compared as values
+# (`_values`). All of this is recorded with M and is part of what M claims.
 DOMAINS = {
-    "nat": lambda rng, b: rng.randint(0, b),                      # natural number 0..bound
-    "int": lambda rng, b: rng.randint(-b, b),                     # integer -bound..bound
-    "unit": _unit,                                                # rational in [0, 1]
-    "pos": lambda rng, b: Fraction(rng.randint(1, 4 * b), 4),     # positive rational up to bound
-    "units": lambda rng, b: tuple(_unit(rng, b) for _ in range(rng.randint(1, 4))),  # non-empty list of rationals in [0, 1]
+    "nat":   (lambda rng, b: rng.randint(0, b),
+              lambda v: isinstance(v, int) and v >= 0, "natural number"),
+    "int":   (lambda rng, b: rng.randint(-b, b),
+              lambda v: isinstance(v, int), "integer"),
+    "unit":  (_unit,
+              lambda v: isinstance(v, (int, Fraction)) and 0 <= v <= 1, "rational in [0, 1]"),
+    "pos":   (lambda rng, b: Fraction(rng.randint(1, 4 * b), 4),
+              lambda v: isinstance(v, (int, Fraction)) and v > 0, "positive rational"),
+    "units": (lambda rng, b: tuple(_unit(rng, b) for _ in range(rng.randint(1, 4))),
+              lambda v: isinstance(v, tuple) and len(v) > 0 and all(isinstance(x, (int, Fraction)) and 0 <= x <= 1 for x in v),
+              "non-empty list of rationals in [0, 1]"),
 }
+_RATIONAL = ("unit", "pos", "units")
+
+_SHOW = """
+import fractions as _f, numbers as _n
+from fractions import Fraction
+def _show(v):
+    if isinstance(v, bool): return "true" if v else "false"
+    if isinstance(v, _n.Integral): return str(int(v))
+    if isinstance(v, _f.Fraction): return str(v)
+    if isinstance(v, float):
+        if v != v or v in (float("inf"), float("-inf")): raise TypeError("no exact value for " + repr(v))
+        return str(_f.Fraction(v))
+    if hasattr(v, "tolist"): v = v.tolist()
+    if isinstance(v, tuple): return "(" + ", ".join(_show(x) for x in v) + ")"
+    if isinstance(v, list): return "[" + ", ".join(_show(x) for x in v) + "]"
+    raise TypeError("no exact rendering for " + type(v).__name__)
+"""
+
+
+def _value(raw, domain):
+    """Read an argument given from outside (an int, "3/4", or a list of these) as a value of `domain`."""
+    def one(x):
+        if isinstance(x, bool) or not isinstance(x, (int, str, Fraction)):
+            raise KernelError(f"{x!r} is not a number")
+        try:
+            return x if isinstance(x, (int, Fraction)) else (int(x) if x.lstrip("-").isdigit() else Fraction(x))
+        except (ValueError, ZeroDivisionError):
+            raise KernelError(f"{x!r} is not a number")
+    v = tuple(one(x) for x in raw) if isinstance(raw, (list, tuple)) else one(raw)
+    if not DOMAINS[domain][1](v):
+        raise KernelError(f"{raw!r} is not a {DOMAINS[domain][2]}")
+    return v
+
+
+def _lean(v, domain):
+    if isinstance(v, tuple):
+        return "([" + ", ".join(_lean(x, "unit") for x in v) + "] : List ℚ)"
+    if domain in _RATIONAL:
+        v = Fraction(v)
+        return f"({v.numerator}/{v.denominator} : ℚ)"
+    return str(v) if v >= 0 else f"({v})"
+
+
+def _python(v, domain):
+    if isinstance(v, tuple):
+        return "[" + ", ".join(_python(x, "unit") for x in v) + "]"
+    if domain in _RATIONAL:
+        v = Fraction(v)
+        return f"Fraction({v.numerator}, {v.denominator})"
+    return str(v)
 
 
 def _values(text):
     """What an output says, apart from how it is written: numbers as exact rationals
-    (3/4, 0.75 and Fraction(3, 4) are the same value; 0.0 is 0), everything else as words."""
+    (3/4, 0.75 and Fraction(3, 4) are the same value; 0.0 is 0), list brackets, and words.
+    Round brackets are dropped, because the two sides nest tuples differently."""
     text = re.sub(r"fraction\((-?\d+),\s*(\d+)\)", r"\1/\2", text.lower())
     out = []
-    for tok in re.findall(r"-?\d+(?:\.\d+(?:e-?\d+)?|/\d+)?|[a-z_]+", text):
+    for tok in re.findall(r"-?\d+(?:\.\d+(?:e-?\d+)?|/\d+)?|[a-z_!]+|[\[\]]", text):
         try:
             out.append(Fraction(tok))
         except (ValueError, ZeroDivisionError):
@@ -57,20 +125,16 @@ def _values(text):
     return out
 
 
-def _lean(v):
-    if isinstance(v, tuple):
-        return "([" + ", ".join(_lean(x) for x in v) + "] : List ℚ)"
-    if isinstance(v, Fraction):
-        return f"({v.numerator}/{v.denominator} : ℚ)"
-    return str(v) if v >= 0 else f"({v})"
-
-
-def _python(v):
-    if isinstance(v, tuple):
-        return "[" + ", ".join(_python(x) for x in v) + "]"
-    if isinstance(v, Fraction):
-        return f"Fraction({v.numerator}, {v.denominator})"
-    return str(v)
+def binding(call, setup="", domains=(), bound=15):
+    """The recorded way a piece of code is invoked and its arguments drawn (see above)."""
+    domains = list(domains)
+    if not call.strip() or not domains:
+        raise KernelError("a binding needs a call expression and a domain for each argument")
+    if any(d not in DOMAINS for d in domains):
+        raise KernelError(f"domains must be among {sorted(DOMAINS)}")
+    if any("{%d}" % i not in call for i in range(len(domains))):
+        raise KernelError("the call must use every argument: {0}, {1}, ...")
+    return {"language": "python", "setup": setup.strip(), "call": call.strip(), "domains": domains, "bound": int(bound)}
 
 
 class KernelError(Exception):
@@ -158,7 +222,7 @@ class State:
                 if p["m"] not in self.atoms:
                     self.atoms[p["m"]] = {"kind": "M", "text": f'{obj["id"]} models {p["subject"]}'}
                     self.prior[p["m"]] = p["model_prior"]
-                    self.models[p["m"]] = {"subject": p["subject"], "obj": obj["id"]}
+                    self.models[p["m"]] = {"subject": p["subject"], "obj": obj["id"], "binding": p.get("binding")}
                 guards += (p["m"],)
             self.links.append((guards, p["h"], p["f"]))
         elif typ == "observe":
@@ -268,9 +332,13 @@ class Kernel:
                 })
         return {"h": h, "p": pred["id"]}
 
-    def attach_model(self, h, obj, subject_version=None, model_prior=None):
+    def attach_model(self, h, obj, subject_version=None, model_prior=None, binding=None, cwd=None):
         """For a formal claim: state that Lean object `obj` models the claim's code.
-        Introduces only the model hypothesis M; if M holds, the claim is true iff predicate(obj) is."""
+        Introduces only the model hypothesis M; if M holds, the claim is true iff predicate(obj) is.
+
+        `binding` (see `binding()`) says how the code is called and where its arguments come
+        from. It is part of what M claims; without it M cannot be checked against the code.
+        """
         st = self.state()
         if h not in st.formal:
             raise KernelError(f"{h} is not a formal claim; use ground_at")
@@ -281,11 +349,12 @@ class Kernel:
         subject = subject_version or st.formal[h]["subject"]
         ob = {"id": "O:" + _sha(pred["type"], obj), "type": pred["type"], "text": obj}
         lean = f"((({pred['text']}) : ({pred['type']}) → Prop) (({obj}) : ({pred['type']})))"
-        f, m = "F:" + _sha(lean), "M:" + _sha(subject, ob["id"])
+        f, m = "F:" + _sha(lean), self._model_id(subject, ob, binding, cwd)
         with self._tx() as (con, st):
             if not any(l == ((m,), h, f) for l in st.links):
                 self._append(con, st, "ground", {
                     "h": h, "f": f, "lean": lean, "pred": pred, "obj": ob, "subject": subject, "m": m,
+                    "binding": binding,
                     "model_prior": self.catalog["priors"]["model"] if model_prior is None else model_prior,
                 })
         return {"m": m, "f": f, "p": pred["id"], "o": ob["id"]}
@@ -316,7 +385,8 @@ class Kernel:
         return self._ground(h, lean, {"prior": self.catalog["priors"]["grounding"] if prior is None else prior,
                                       "left_out": left_out, "added": added})
 
-    def ground_at(self, h, subject, typ, predicate, obj, prior=None, model_prior=None, left_out="", added=""):
+    def ground_at(self, h, subject, typ, predicate, obj, prior=None, model_prior=None, left_out="", added="",
+                  binding=None, cwd=None):
         """Claim `h` says: the thing `subject` satisfies a property. Two separate hypotheses:
 
           G  `predicate : typ -> Prop` expresses the property the claim talks about
@@ -334,7 +404,8 @@ class Kernel:
         priors = self.catalog["priors"]
         return self._ground(h, f"((({predicate}) : ({typ}) → Prop) (({obj}) : ({typ})))", {
             "prior": priors["specification"] if prior is None else prior,
-            "pred": pred, "obj": ob, "subject": subject, "m": "M:" + _sha(subject, ob["id"]),
+            "pred": pred, "obj": ob, "subject": subject, "m": self._model_id(subject, ob, binding, cwd),
+            "binding": binding,
             "model_prior": priors["model"] if model_prior is None else model_prior,
             "left_out": left_out, "added": added,
         })
@@ -420,92 +491,100 @@ class Kernel:
                            {"likelihood": spec["outcomes"][outcome], "command": command, "tree": tree})
         return {**out, "outcome": outcome, "tail": (r.stdout + r.stderr)[-800:]}
 
+    def _model_id(self, subject, ob, binding, cwd):
+        """M is identified by everything it claims: the code version, the term, and the binding."""
+        if binding is None:
+            return "M:" + _sha(subject, ob["id"])
+        if cwd is not None:                      # the way of calling the code must at least load
+            r = self._run_code(binding, [], cwd)
+            if isinstance(r, str):
+                raise KernelError("the binding's setup does not run: " + r)
+        return "M:" + _sha(subject, ob["id"], json.dumps(binding, sort_keys=True, ensure_ascii=False))
+
     def _model(self, m):
         st = self.state()
         if m not in st.models:
             raise KernelError(f"unknown model hypothesis {m}")
         if self.gate is None:
             raise KernelError("no Lean gate configured; cannot evaluate the object")
-        return st.algebra.objs[st.models[m]["obj"]]
+        if not st.models[m]["binding"]:
+            raise KernelError(f"{m} was stated without saying how the code is called, so it cannot be checked")
+        return st.algebra.objs[st.models[m]["obj"]], st.models[m]["binding"]
 
-    def _compare(self, obj, lean_args, commands, cwd, timeout):
-        """[(agree?, lean value, code output)] for each input, or an error string."""
-        lean = self.gate.evaluate(obj["type"], obj["text"], lean_args)
-        if not lean["ok"]:
-            return "Lean could not evaluate the object: " + lean["reason"]
-        out = []
-        for value, command in zip(lean["values"], commands):
-            r = subprocess.run(["bash", "-c", command], cwd=cwd, capture_output=True, text=True, timeout=timeout)
-            if r.returncode != 0:
-                return "command failed: " + (r.stdout + r.stderr)[-500:]
-            code = " ".join(r.stdout.split())
-            out.append((_values(code) == _values(value), value, code))
+    @staticmethod
+    def _run_code(binding, inputs, cwd, timeout=300):
+        """What the code returns on each input, written out by the kernel; or an error string.
+        An input on which the code raises yields "!raised <Type>": that is a result, not a fault."""
+        lines = [_SHOW, binding["setup"]]
+        for values in inputs:
+            call = binding["call"]
+            for i, (v, d) in enumerate(zip(values, binding["domains"])):
+                call = call.replace("{%d}" % i, _python(v, d))
+            lines.append(f"try:\n    print(_show({call}))\nexcept Exception as _e:\n    print('!raised ' + type(_e).__name__)")
+        try:
+            r = subprocess.run(["python3", "-c", "\n".join(lines)], cwd=cwd, capture_output=True, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            return "the code did not finish in time"
+        out = r.stdout.strip().splitlines()
+        if r.returncode != 0 or len(out) != len(inputs):
+            return (r.stdout + r.stderr)[-500:]
         return out
 
-    def observe_model(self, m, lean_args, command, cwd, timeout=300):
-        """A chosen check of model hypothesis M: evaluate the Lean object on `lean_args`, run
-        `command` (which must print what the real code returns for the same input), compare.
+    def _compare(self, m, inputs, cwd):
+        """[(lean arguments, agree?, model's value, code's value)] for each input, or an error string."""
+        obj, binding = self._model(m)
+        args = [" ".join(_lean(v, d) for v, d in zip(values, binding["domains"])) for values in inputs]
+        lean = self.gate.evaluate(obj["type"], obj["text"], args)
+        if not lean["ok"]:
+            return "Lean could not evaluate the object on these arguments: " + lean["reason"]
+        code = self._run_code(binding, inputs, cwd)
+        if isinstance(code, str):
+            return "the code could not be run: " + code
+        return [(a, _values(c) == _values(v), v, c) for a, v, c in zip(args, lean["values"], code)]
+
+    def observe_model(self, m, values, cwd):
+        """A chosen check of model hypothesis M on one input, given as a list of argument values
+        (an integer, "3/4", or a list of these; each must lie in its argument's domain).
 
         M is universal, so if M holds agreement is certain: one disagreement refutes M. An
         input picked by hand is not a random draw, so agreeing checks of this kind support M
         only as much as one of them does.
         """
-        obj = self._model(m)
-        res = self._compare(obj, [lean_args], [command], cwd, timeout)
+        _, binding = self._model(m)
+        if len(values) != len(binding["domains"]):
+            raise KernelError(f"expected {len(binding['domains'])} arguments")
+        res = self._compare(m, [tuple(_value(v, d) for v, d in zip(values, binding["domains"]))], cwd)
         if isinstance(res, str):
             return {"error": res}
-        same, lean, code = res[0]
+        args, same, lean, code = res[0]
         outcome = "agree" if same else "disagree"
-        out = self._record(m, "instance_check", outcome,
-                           f"args:{_sha(_norm(lean_args))}@cmd:{_sha(command)}@{_tree(cwd)}",
-                           {"likelihood": self.catalog["evidence"]["instance_check"]["outcomes"][outcome],
-                            "lean_args": lean_args, "command": command})
-        return {**out, "outcome": "agree" if same else "disagree", "lean": lean, "code": code}
+        out = self._record(m, "instance_check", outcome, f"chosen:{args}",
+                           {"likelihood": self.catalog["evidence"]["instance_check"]["outcomes"][outcome], "args": args})
+        return {**out, "outcome": outcome, "lean": lean, "code": code}
 
-    def sample_model(self, m, command, cwd, n=10, bound=15, seed=None, timeout=300, domains=None):
-        """Random checks of model hypothesis M. The kernel draws the inputs itself.
+    def sample_model(self, m, cwd, n=10, seed=None):
+        """Random checks of model hypothesis M. The kernel draws the inputs from M's recorded
+        domains, calls the code the recorded way, and compares with the Lean object.
 
-        `command` is a shell template with {0}, {1}, ... for the arguments, written as Python
-        literals; it must print what the real code returns, in the form Lean's `toString` gives.
-        `domains` names the distribution of each argument (see DOMAINS); by default Nat and Int
-        arguments are read off the object's type. Because the draws are random they are
-        exchangeable, and each further agreement raises the lower probability of M (see
-        credal.exchangeable_agreement). What gets supported is agreement on almost all inputs
-        *under this distribution*.
+        Because the draws are random they are exchangeable, and each further agreement raises the
+        lower probability of M (see credal.exchangeable_agreement). What gets supported is
+        agreement on almost all inputs *under this distribution*. The same input is the same
+        evidence, whoever drew it.
         """
-        obj = self._model(m)
-        if domains is None:
-            types = [t.strip() for t in obj["type"].split("→")][:-1]
-            if not types or any(t not in ("Nat", "Int", "ℕ", "ℤ") for t in types):
-                raise KernelError(f"name a domain for each argument of {obj['type']}: {sorted(DOMAINS)}")
-            domains = ["nat" if t in ("Nat", "ℕ") else "int" for t in types]
-        if any(d not in DOMAINS for d in domains):
-            raise KernelError(f"domains must be among {sorted(DOMAINS)}")
-        spec = self.catalog["sampling"]
+        _, binding = self._model(m)
         rng = random.Random(seed)
-        draws = sorted({tuple(DOMAINS[d](rng, bound) for d in domains) for _ in range(n)}, key=repr)
-        lean_args = [" ".join(_lean(v) for v in d) for d in draws]
-        commands = []
-        for d in draws:
-            c = command
-            for i, v in enumerate(d):
-                c = c.replace("{%d}" % i, _python(v))
-            commands.append(c)
-        res = self._compare(obj, lean_args, commands, cwd, timeout)
+        draws = sorted({tuple(DOMAINS[d][0](rng, binding["bound"]) for d in binding["domains"]) for _ in range(n)}, key=repr)
+        res = self._compare(m, draws, cwd)
         if isinstance(res, str):
             return {"error": res}
-        tree, dist = _tree(cwd), f"{' × '.join(domains)} within {bound}"
-        new, disagreements = 0, []
-        for d, args, (same, lean, code) in zip(draws, lean_args, res):
-            r = self._record(m, "sampled_check", "agree" if same else "disagree",
-                             f"draw:{args}@cmd:{_sha(command)}@{tree}",
-                             {"args": args, "distribution": dist, "command": command, "domains": list(domains),
-                              "bound": bound, **spec})
+        spec, new, disagreements = self.catalog["sampling"], 0, []
+        for args, same, lean, code in res:
+            r = self._record(m, "sampled_check", "agree" if same else "disagree", f"draw:{args}", {"args": args, **spec})
             new += not r["duplicate"]
             if not same:
                 disagreements.append({"args": args, "lean": lean, "code": code})
-        return {"drawn": len(draws), "new": new, "agree": len(draws) - len(disagreements),
-                "disagreements": disagreements, "distribution": dist}
+        return {"drawn": len(draws), "new": new, "agree": len(draws) - len(disagreements), "disagreements": disagreements,
+                "distribution": f"{' × '.join(binding['domains'])} within {binding['bound']}"}
 
     def declare_independent(self, eid, justification):
         """Assert evidence `eid` is conditionally independent of all other evidence on its target."""
@@ -731,14 +810,16 @@ class Kernel:
             if any(st.models[m]["subject"] == now for m in models):
                 entry["state"] = "current"
             else:
-                plan = next((e for m in reversed(models) for e in reversed(list(st.evidence.values()))
-                             if e["target"] == m and e["kind"] == "sampled_check" and "command" in e), None)
-                if plan is None:
+                old = next((m for m in reversed(models) if st.models[m]["binding"]), None)
+                if old is None:
                     entry["state"] = "unsupported"
                 else:
-                    obj = st.algebra.objs[st.models[plan["target"]]["obj"]]
-                    new = self.attach_model(h, obj["text"], subject_version=now)
-                    r = self.sample_model(new["m"], plan["command"], cwd, n=n, bound=plan["bound"], domains=plan["domains"])
+                    obj = st.algebra.objs[st.models[old]["obj"]]
+                    try:
+                        new = self.attach_model(h, obj["text"], subject_version=now, binding=st.models[old]["binding"], cwd=cwd)
+                        r = self.sample_model(new["m"], cwd, n=n)
+                    except KernelError as e:
+                        r = {"error": str(e)}
                     if "error" in r:
                         entry.update(state="unsupported", error=r["error"])
                     elif r["disagreements"]:

@@ -11,7 +11,7 @@ try:  # mcp 2.x
 except ImportError:  # mcp 1.x
     from mcp.server.fastmcp import FastMCP
 
-from .kernel import Kernel, KernelError, subject_id
+from .kernel import Kernel, KernelError, binding, subject_id
 from .lean_gate import LEAN_DIR, GateError, LeanGate
 
 mcp = FastMCP("pw")
@@ -36,16 +36,29 @@ def _workdir():
     return os.environ.get("PW_WORKDIR", os.getcwd())
 
 
+def _binding(setup, call, domains):
+    return binding(call, setup, domains or []) if call else None
+
+
 @mcp.tool()
-def model(h: str, object: str) -> dict:
+def model(h: str, object: str, setup: str = "", call: str = "", domains: list[str] | None = None) -> dict:
     """For a FORMAL claim (one given to you as a predicate; `status` marks it formal): state
     that the Lean term `object` models the claim's code. The claim's predicate and type are
-    already fixed. Returns ids of the model hypothesis M and the proposition F = predicate(object);
+    already fixed. Also say how the code is called:
+      setup      Python statements run before the call, e.g. "from clamp import clamp"
+      call       a Python expression calling the code on arguments {0}, {1}, ..., e.g. "clamp({0}, {1}, {2})"
+      domains    how each argument is drawn: "nat", "int", "unit" (rational in [0, 1], passed as a
+                 Fraction), "pos" (positive rational), "units" (non-empty list of rationals in [0, 1])
+    `setup`, `call` and `domains` are part of what the model hypothesis claims: "on every input from
+    these domains, calling the code this way gives what the Lean term gives". The kernel builds and
+    runs the checks from them; you do not write check commands.
+    Returns ids of the model hypothesis M and the proposition F = predicate(object);
     then prove `holds [F]` and support M with sample_model."""
     st = _kernel.state()
     if h not in st.formal:
         return {"error": f"{h} is not a formal claim; use ground_at"}
-    return _safe(_kernel.attach_model, h, object, subject_id(st.formal[h]["subject"], _workdir()))
+    return _safe(lambda: _kernel.attach_model(h, object, subject_id(st.formal[h]["subject"], _workdir()),
+                                               binding=_binding(setup, call, domains), cwd=_workdir()))
 
 
 @mcp.tool()
@@ -58,45 +71,49 @@ def reject_object(p: str, object: str, proof: str) -> dict:
 
 @mcp.tool()
 def ground_at(h: str, subject: str, type: str, predicate: str, object: str,
+              setup: str = "", call: str = "", domains: list[str] | None = None,
               left_out: str = "", added: str = "") -> dict:
     """For a claim in natural language: state that claim `h` says the code `subject` has a property. Give
       subject    what the claim is about, as "path::name", e.g. "clamp.py::clamp"
       object     a Lean term of type `type` modelling that code's behaviour
       predicate  a Lean term of type `type -> Prop` stating the property
+      setup      Python statements run before the call, e.g. "from clamp import clamp"
+      call       a Python expression calling the code on arguments {0}, {1}, ..., e.g. "clamp({0}, {1}, {2})"
+      domains    how each argument is drawn: "nat", "int", "unit" (rational in [0, 1], passed as a
+                 Fraction), "pos" (positive rational), "units" (non-empty list of rationals in [0, 1])
+    `setup`, `call` and `domains` are part of what the model hypothesis claims: "on every input from
+    these domains, calling the code this way gives what the Lean term gives". The kernel builds and
+    runs the checks from them; you do not write check commands.
       left_out   what the sentence says or implies that your formalization does not capture
       added      what your formalization fixes that the sentence leaves open
     using only Lean core and Gamma, e.g. type "Nat → Nat", predicate "fun f => ∀ n, n ≤ f n",
     object "fun n => n + 1". This introduces two separate uncertain hypotheses: G (the predicate
     expresses the claim's property) and M (the object models the code). M is shared by every
-    claim about the same code and object, and is tied to the file's current content.
+    claim that states the same code, object and way of calling, and is tied to the file's content.
     Be exact in `left_out` and `added`: a person reads them to judge the connection.
     Returns ids of G, M, proposition F, specification P and object O."""
-    return _safe(_kernel.ground_at, h, subject_id(subject, _workdir()), type, predicate, object,
-                 left_out=left_out, added=added)
+    return _safe(lambda: _kernel.ground_at(h, subject_id(subject, _workdir()), type, predicate, object,
+                                           left_out=left_out, added=added,
+                                           binding=_binding(setup, call, domains), cwd=_workdir()))
 
 
 @mcp.tool()
-def sample_model(m: str, command: str, n: int = 10, domains: list[str] | None = None) -> dict:
-    """Support a model hypothesis M with random checks. The kernel draws `n` inputs itself,
-    evaluates the Lean object on each, and runs `command` with {0}, {1}, ... replaced by the
-    arguments as Python literals. The command must print what the real code returns, in the
-    form Lean's `toString` gives (rationals as 3/4, pairs as (a, b), lists as [a, b]), e.g.
-    python3 -c "from clamp import clamp; print(clamp({0}, {1}, {2}))".
-    `domains` names how each argument is drawn: "nat", "int", "unit" (rational in [0, 1],
-    substituted as Fraction(a, b)), "pos" (positive rational), "units" (non-empty list of
-    rationals in [0, 1]). It may be omitted when all arguments are Nat or Int.
-    Every agreement raises confidence in M; a single disagreement refutes it."""
-    return _safe(_kernel.sample_model, m, command, _workdir(), n, domains=domains)
+def sample_model(m: str, n: int = 10) -> dict:
+    """Support a model hypothesis M with random checks. The kernel draws `n` inputs from M's
+    recorded domains, calls the code the recorded way, and compares the result with the Lean
+    object, as exact values. Every agreement raises confidence in M; a single disagreement
+    (including the code raising an exception on an input from the domain) refutes it."""
+    return _safe(_kernel.sample_model, m, _workdir(), n)
 
 
 @mcp.tool()
-def check_model(m: str, lean_args: str, command: str) -> dict:
-    """Try to refute a model hypothesis M on an input you choose (e.g. "7 2 5"): the kernel
-    evaluates the Lean object on it and runs `command`, which must print what the real code
-    returns for the same input. A disagreement refutes M. Agreements on hand-picked inputs add
-    little support however many there are; use sample_model for support and this for edge
-    cases, especially ones outside what the claim covers."""
-    return _safe(_kernel.observe_model, m, lean_args, command, _workdir())
+def check_model(m: str, values: list) -> dict:
+    """Try to refute a model hypothesis M on an input you choose: one value per argument, each
+    an integer, a string like "3/4", or a list of these, lying in that argument's domain
+    (e.g. [7, 2, 5] or [["1/2", "1"]]). A disagreement refutes M. Agreements on hand-picked
+    inputs add little support however many there are; use sample_model for support and this
+    for edge cases, especially ones outside what the claim covers."""
+    return _safe(_kernel.observe_model, m, values, _workdir())
 
 
 @mcp.tool()

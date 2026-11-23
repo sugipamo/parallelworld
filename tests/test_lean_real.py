@@ -5,7 +5,7 @@ import subprocess
 
 import pytest
 
-from pw.kernel import Kernel, KernelError
+from pw.kernel import Kernel, KernelError, binding
 from pw.lean_gate import LeanGate
 
 LAKE = os.environ.get("PW_LAKE") or shutil.which("lake")
@@ -105,56 +105,110 @@ def test_specification_and_object_identity_with_real_lean(tmp_path):
     assert alg.find(a["f"]) == alg.find(c["f"])          # congruence closure identifies the propositions
 
 
-def test_model_check_compares_lean_with_running_code(tmp_path):
-    k = Kernel(str(tmp_path / "e.db"), gate=LeanGate())
+def _clamp_repo(tmp_path, body="min(max(x, lo), hi)"):
     repo = tmp_path / "repo"                                  # the event log lives outside the code
     repo.mkdir()
-    (repo / "clamp.py").write_text("def clamp(x, lo, hi):\n    return min(max(x, lo), hi)\n")
-    (repo / ".gitignore").write_text("__pycache__/\n")       # caches must not look like a changed tree
+    (repo / "clamp.py").write_text(f"def clamp(x, lo, hi):\n    return {body}\n")
+    (repo / ".gitignore").write_text("__pycache__/\n")
     for cmd in ("git init -q", "git add -A", "git -c user.name=t -c user.email=t@t commit -qm init"):
         subprocess.run(cmd.split(), cwd=repo, check=True)
-    tmp_path = repo
-    run = lambda *a: f'python3 -c "from clamp import clamp; print(clamp{a})"'
-    good = k.ground_at(k.claim("clamp is bounded")["h"], "clamp.py::clamp", FN, SPEC1, CLAMP)
-    r = k.observe_model(good["m"], "7 2 5", run(7, 2, 5), str(tmp_path))
+    return str(repo)
+
+
+CALL = binding("clamp({0}, {1}, {2})", "from clamp import clamp", ["nat", "nat", "nat"])
+
+
+def test_chosen_check_compares_lean_with_running_code(tmp_path):
+    k = Kernel(str(tmp_path / "e.db"), gate=LeanGate())
+    cwd = _clamp_repo(tmp_path)
+    good = k.ground_at(k.claim("clamp is bounded")["h"], "clamp.py::clamp", FN, SPEC1, CLAMP, binding=CALL, cwd=cwd)
+    r = k.observe_model(good["m"], [7, 2, 5], cwd)
     assert r["outcome"] == "agree" and r["lean"] == "5" and not r["duplicate"], r
-    assert k.observe_model(good["m"], "7 2 5", run(7, 2, 5), str(tmp_path))["duplicate"]
+    assert k.observe_model(good["m"], [7, 2, 5], cwd)["duplicate"]
     assert k.infer(good["m"])["lo"] > 0.75
 
     # the if/else term is a wrong model of this code: they differ when lo > hi
-    bad = k.ground_at(k.claim("clamp is bounded (alt)")["h"], "clamp.py::clamp", FN, SPEC1, BOUND)
-    r = k.observe_model(bad["m"], "0 5 3", run(0, 5, 3), str(tmp_path))
+    bad = k.ground_at(k.claim("clamp is bounded (alt)")["h"], "clamp.py::clamp", FN, SPEC1, BOUND, binding=CALL, cwd=cwd)
+    assert bad["m"] != good["m"]
+    r = k.observe_model(bad["m"], [0, 5, 3], cwd)
     assert r["outcome"] == "disagree" and (r["lean"], r["code"]) == ("5", "3"), r
-    assert k.infer(bad["m"])["hi"] < 0.75
-    assert "error" in k.observe_model(good["m"], "true", run(1, 2, 3), str(tmp_path))   # ill-typed input
+    assert k.infer(bad["m"])["hi"] == 0.0
+    for wrong in ([1, 2], [-1, 2, 3], ["1/2", 2, 3], [True, 2, 3]):       # not values of the stated domains
+        with pytest.raises(KernelError):
+            k.observe_model(good["m"], wrong, cwd)
+
+
+def test_what_a_model_hypothesis_claims_is_recorded_and_checked_when_stated(tmp_path):
+    k = Kernel(str(tmp_path / "e.db"), gate=LeanGate())
+    cwd = _clamp_repo(tmp_path)
+    h = k.claim("clamp is bounded")["h"]
+    a = k.ground_at(h, "clamp.py::clamp", FN, SPEC1, CLAMP, binding=CALL, cwd=cwd)
+    assert k.status()["models"][a["m"]]["binding"] == CALL
+    # another way of calling, or other domains, is another hypothesis about the same code and term
+    wider = binding("clamp({0}, {1}, {2})", "from clamp import clamp", ["int", "nat", "nat"])
+    assert k.ground_at(k.claim("c2")["h"], "clamp.py::clamp", FN, SPEC1, CLAMP, binding=wider, cwd=cwd)["m"] != a["m"]
+    # a model stated without a binding cannot be checked at all
+    bare = k.ground_at(k.claim("c3")["h"], "clamp.py::clamp", FN, SPEC1, CLAMP)
+    with pytest.raises(KernelError):
+        k.sample_model(bare["m"], cwd)
+    # a binding whose setup does not even load is refused when stated
+    with pytest.raises(KernelError):
+        k.ground_at(k.claim("c4")["h"], "clamp.py::clamp", FN, SPEC1, CLAMP, cwd=cwd,
+                    binding=binding("clamp({0}, {1}, {2})", "from nowhere import clamp", ["nat"] * 3))
+    for bad in (dict(call="clamp(1, 2, 3)", domains=["nat"]), dict(call="clamp({0})", domains=["real"]), dict(call="", domains=["nat"])):
+        with pytest.raises(KernelError):
+            binding(**bad)
 
 
 def test_kernel_drawn_checks_with_real_lean(tmp_path):
     k = Kernel(str(tmp_path / "e.db"), gate=LeanGate())
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    (repo / "clamp.py").write_text("def clamp(x, lo, hi):\n    return min(max(x, lo), hi)\n")
-    (repo / ".gitignore").write_text("__pycache__/\n")
-    for cmd in ("git init -q", "git add -A", "git -c user.name=t -c user.email=t@t commit -qm init"):
-        subprocess.run(cmd.split(), cwd=repo, check=True)
-    template = 'python3 -c "from clamp import clamp; print(clamp({0}, {1}, {2}))"'
-
-    good = k.ground_at(k.claim("clamp is bounded")["h"], "clamp.py::clamp", FN, SPEC1, CLAMP)
-    r = k.sample_model(good["m"], template, str(repo), n=12, seed=1)
+    cwd = _clamp_repo(tmp_path)
+    good = k.ground_at(k.claim("clamp is bounded")["h"], "clamp.py::clamp", FN, SPEC1, CLAMP, binding=CALL, cwd=cwd)
+    r = k.sample_model(good["m"], cwd, n=12, seed=1)
     assert r["agree"] == r["drawn"] == r["new"] and not r["disagreements"], r
     assert k.infer(good["m"])["lo"] == pytest.approx(0.75 * (r["drawn"] + 1) / (0.75 * (r["drawn"] + 1) + 0.25))
-    assert k.sample_model(good["m"], template, str(repo), n=12, seed=1)["new"] == 0   # same draws: same evidence
+    assert k.sample_model(good["m"], cwd, n=12, seed=1)["new"] == 0       # same draws: same evidence
+    # ...also when a second author states the same hypothesis and draws the same inputs
+    other = Kernel(str(tmp_path / "e.db"), gate=LeanGate(), actor="someone else")
+    again = other.ground_at(other.claim("clamp never leaves the range")["h"], "clamp.py::clamp", FN, SPEC1, CLAMP, binding=CALL, cwd=cwd)
+    assert again["m"] == good["m"] and other.sample_model(again["m"], cwd, n=12, seed=1)["new"] == 0
 
     # the if/else term agrees with this code only when lo <= hi; random draws find that out
-    bad = k.ground_at(k.claim("clamp is bounded (alt)")["h"], "clamp.py::clamp", FN, SPEC1, BOUND)
-    r = k.sample_model(bad["m"], template, str(repo), n=12, seed=1)
+    bad = k.ground_at(k.claim("clamp is bounded (alt)")["h"], "clamp.py::clamp", FN, SPEC1, BOUND, binding=CALL, cwd=cwd)
+    r = k.sample_model(bad["m"], cwd, n=12, seed=1)
     assert r["disagreements"], r
     assert k.infer(bad["m"])["hi"] == 0.0
 
-    with pytest.raises(KernelError):
-        other = k.ground_at(k.claim("p")["h"], "x", "Bool → Bool", "fun f => True", "fun b => b")
-        k.sample_model(other["m"], "echo {0}", str(repo))
-    assert "disagree" not in str(k.sample_model(good["m"], template, str(repo), n=5, seed=3, domains=["nat"] * 3)["disagreements"])
+
+def test_code_that_raises_on_an_input_from_the_domain_disagrees_with_a_total_model(tmp_path):
+    k = Kernel(str(tmp_path / "e.db"), gate=LeanGate())
+    cwd = _clamp_repo(tmp_path, body="min(max(x, lo), hi) if lo <= hi else 1 // 0")
+    m = k.ground_at(k.claim("clamp is bounded")["h"], "clamp.py::clamp", FN, SPEC1, CLAMP, binding=CALL, cwd=cwd)["m"]
+    assert k.observe_model(m, [3, 1, 5], cwd)["outcome"] == "agree"
+    r = k.observe_model(m, [3, 5, 1], cwd)
+    assert r["outcome"] == "disagree" and r["code"] == "!raised ZeroDivisionError", r
+
+
+MATHLIB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "experiments", "selfcheck", "lean")
+
+
+@pytest.mark.skipif(not os.path.isdir(os.path.join(MATHLIB, ".lake", "packages", "mathlib")),
+                    reason="needs the mathlib-backed Gamma (experiments/selfcheck/lean)")
+def test_rational_and_list_arguments_are_compared_exactly(tmp_path):
+    k = Kernel(str(tmp_path / "e.db"), gate=LeanGate(MATHLIB))
+    cwd = _clamp_repo(tmp_path)
+    (tmp_path / "repo" / "avg.py").write_text("def spread(p):\n    return (min(p), sum(p) / len(p), [x * x for x in p])\n")
+    b = binding("spread({0})", "from avg import spread", ["units"])
+    m = k.ground_at(k.claim("spread")["h"], "avg.py::spread", "List ℚ → ℚ × ℚ × List ℚ", "fun f => True",
+                    "fun p => (p.foldr min 1, p.sum / p.length, p.map fun x => x * x)", binding=b, cwd=cwd)["m"]
+    r = k.sample_model(m, cwd, n=8, seed=2)
+    assert "error" not in r and not r["disagreements"] and r["distribution"] == "units within 15", r
+    assert k.observe_model(m, [["1/2", 1, "1/3"]], cwd)["outcome"] == "agree"
+    # a float that is not the exact value disagrees
+    (tmp_path / "repo" / "avg.py").write_text("def spread(p):\n    return (min(p), float(sum(p)) / len(p), [x * x for x in p])\n")
+    m2 = k.ground_at(k.claim("spread, float")["h"], "avg.py::spread@v2", "List ℚ → ℚ × ℚ × List ℚ", "fun f => True",
+                     "fun p => (p.foldr min 1, p.sum / p.length, p.map fun x => x * x)", binding=b, cwd=cwd)["m"]
+    assert k.observe_model(m2, [["1/3", "1/3", "1/2"]], cwd)["outcome"] == "disagree"
 
 
 def test_formal_claim_using_a_definition_from_gamma(tmp_path):
@@ -203,10 +257,10 @@ def test_past_decisions_are_held_against_the_code_as_it_is_now(tmp_path):
     # the decision, established once
     d = k.claim_formal("indexing.py::clamp_index", "Nat → Nat → Nat", VALID, gloss="always a valid index")
     from pw.kernel import subject_id
-    a = k.attach_model(d["h"], "fun i n => min i (n - 1)", subject_version=subject_id("indexing.py::clamp_index", cwd))
+    a = k.attach_model(d["h"], "fun i n => min i (n - 1)", subject_version=subject_id("indexing.py::clamp_index", cwd), cwd=cwd,
+                       binding=binding("clamp_index({0}, {1})", "from indexing import clamp_index", ["nat", "nat"]))
     assert k.prove("holds", [a["f"]], "intro i n h\nomega")["accepted"]
-    template = 'python3 -c "from indexing import clamp_index; print(clamp_index({0}, {1}))"'
-    assert not k.sample_model(a["m"], template, cwd, n=25, seed=1)["disagreements"]
+    assert not k.sample_model(a["m"], cwd, n=25, seed=1)["disagreements"]
     k.observe_command(d["h"], "test", "python3 -m pytest -q test_indexing.py", cwd)
     r = k.recheck(cwd)["decisions"][0]
     assert r["state"] == "current" and r["lo"] > 0.99, r
