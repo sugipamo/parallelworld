@@ -18,6 +18,7 @@
 - `pw-facts.json` — このプロジェクトの事実と、それを述べている箇所の一覧
 - `pw-log.jsonl` — 記録（読み、証明、人の確認）。追記式のテキストで、リポジトリに含める
 - `pw-rules.json` — 読みが成り立つ条件の表と、読み手に求める測定の基準
+- `pw/reader.txt` — 目隠しの読み手に渡す指示文。変えると読み手の測り直しになる
 - `pw-calibration.json` — 読み手の測定結果
 
 実験の記録: [依存のある並列タスク](experiments/dependency/RESULTS.md)、[自己適用](experiments/selfcheck/RESULTS.md)、[過去の決定との矛盾](experiments/decisions/RESULTS.md)、[自然言語の決定の形式化](experiments/nl/RESULTS.md)、[コードでないファイル](experiments/artifacts/RESULTS.md)、[散文](experiments/prose/RESULTS.md)、[事実と箇所](experiments/facts/RESULTS.md)、[読み手の測定](experiments/calibration/RESULTS.md)、[箇所の探索](experiments/discovery/RESULTS.md)
