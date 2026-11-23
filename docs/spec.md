@@ -384,4 +384,4 @@ CI が取ってくるものは、付け替えられる名前ではなく中身�
 
 CI が使う Lean の版はワークフローに書いてあり、`lean-toolchain` と同じでなければならない。この重複は「Lean の版」という事実の箇所として宣言してあるので、片方だけ変えると CI 自身がそれを報告する。
 
-このリポジトリ自身の `pw-facts.json` には 14 の事実を、文書 14 箇所・コードと設定 24 箇所で宣言してある。最初の 6 つ（16 箇所）は手で書いた。残りは `pw.discover` が提案したものから採った。実走の記録は `experiments/facts/RESULTS.md` と `experiments/discovery/RESULTS.md`。
+このリポジトリ自身の `pw-facts.json` には 15 の事実を、文書 14 箇所・コードと設定 26 箇所で宣言してある。最初の 6 つ（16 箇所）は手で書いた。残りは `pw.discover` が提案したものから採り、1 つは手で足した。実走の記録は `experiments/facts/RESULTS.md` と `experiments/discovery/RESULTS.md`。
