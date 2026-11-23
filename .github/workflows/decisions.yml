@@ -4,10 +4,17 @@ name: decisions
 # Nothing here needs an agent: places with a declared way of reading are read again, the
 # recorded proofs are run through Lean again, and readings stated by an agent count only
 # for the exact content they were made for.
+#
+# Everything this job fetches is pinned to content, not to a name that can be moved:
+# the actions by commit, the Python packages by hash (requirements-ci.txt), Lean by checksum.
+# The job can read the repository and nothing else.
 
 on:
   push:
   pull_request:
+
+permissions:
+  contents: read
 
 env:
   LEAN_VERSION: 4.14.0   # must equal lean/lean-toolchain; pw-facts.json holds the two together
@@ -15,33 +22,28 @@ env:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1        # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0    # v7.1.0
         with:
           python-version: "3.13"
 
-      - run: pip install numpy scipy pytest
+      - name: Python packages, by hash
+        run: pip install --require-hashes -r requirements-ci.txt
 
-      - uses: actions/cache@v4
-        with:
-          path: ~/lean
-          key: lean-${{ env.LEAN_VERSION }}-${{ env.LEAN_SHA256 }}
-
-      - name: Lean
+      - name: Lean, by checksum
         run: |
-          dir="$HOME/lean/lean-$LEAN_VERSION-linux"
-          if [ ! -x "$dir/bin/lake" ]; then
-            mkdir -p "$HOME/lean"
-            curl -fsSL -o "$HOME/lean/lean.tar.zst" \
-              "https://github.com/leanprover/lean4/releases/download/v$LEAN_VERSION/lean-$LEAN_VERSION-linux.tar.zst"
-            echo "$LEAN_SHA256  $HOME/lean/lean.tar.zst" | sha256sum -c --quiet
-            tar --zstd -xf "$HOME/lean/lean.tar.zst" -C "$HOME/lean"
-            rm "$HOME/lean/lean.tar.zst"
-          fi
-          echo "$dir/bin" >> "$GITHUB_PATH"
+          mkdir -p "$HOME/lean"
+          curl -fsSL -o "$HOME/lean/lean.tar.zst" \
+            "https://github.com/leanprover/lean4/releases/download/v$LEAN_VERSION/lean-$LEAN_VERSION-linux.tar.zst"
+          echo "$LEAN_SHA256  $HOME/lean/lean.tar.zst" | sha256sum -c --quiet
+          tar --zstd -xf "$HOME/lean/lean.tar.zst" -C "$HOME/lean"
+          rm "$HOME/lean/lean.tar.zst"
+          echo "$HOME/lean/lean-$LEAN_VERSION-linux/bin" >> "$GITHUB_PATH"
 
       - name: Facts and decisions, with the recorded proofs verified again
         run: python -m pw.check --verify

@@ -22,7 +22,7 @@
 ## 動かす
 
 ```
-pip install scipy numpy mcp pytest
+pip install scipy numpy mcp pytest          # CI は requirements-ci.txt の版とハッシュで固定している
 python -m pytest tests
 python -m pw.orchestrator tasks.json --dry-run     # 起動コマンドの確認のみ
 python -m pw.orchestrator tasks.json               # claude-opus-5-5 のワーカーを起動（課金あり）
