@@ -42,6 +42,12 @@ You are one of several parallel workers. Shared knowledge lives in the `pw` MCP 
   rely on them and again before you finish. If the lower bound is low, do not build on the
   claim silently: prefer code that stays correct if the claim fails, and say in your final
   message whether you relied on it.
+- Claims listed under "Past decisions" were settled earlier about the same code and still
+  stand. Before you change anything, decide for each whether your required claim can hold
+  together with it. If it cannot, prove that with `pred_disjoint [P_past, P_yours]` and STOP:
+  do not change the code, and say in your final message that the decisions contradict each
+  other; a person has to choose. If your claim follows from a past decision, or implies it,
+  you may record that with `pred_implies`.
 - If `status` shows another worker's specification or object that you believe is the same as
   yours, try `pred_iff` / `obj_eq`. Only prove what is true: different code is usually a
   different object even when it meets the same specification.
@@ -57,7 +63,8 @@ def required(kernel, task):
             out.append((kernel.claim(c)["h"], c))
         else:
             h = kernel.claim_formal(c["subject"], c["type"], c["predicate"], c.get("gloss", ""))["h"]
-            out.append((h, f'{h} (formal): {c["subject"]} satisfies `{c["predicate"]}` : ({c["type"]}) → Prop'
+            p = kernel.state().formal[h]["pred"]
+            out.append((h, f'{h} (formal, specification {p}): {c["subject"]} satisfies `{c["predicate"]}` : ({c["type"]}) → Prop'
                            + (f' — {c["gloss"]}' if c.get("gloss") else "")))
     return out
 
@@ -72,6 +79,8 @@ def run_task(task, args, repo):
                 "PW_LEAN_DIR": args.lean_dir},
     }}}
     prompt = task["prompt"] + "\n\nRequired claims:\n" + "\n".join(f"- {d}" for _, d in task["_required"])
+    if task["_past"]:
+        prompt += "\n\nPast decisions (settled earlier, about the same code):\n" + "\n".join(f"- {d}" for d in task["_past"])
     if task["_depends"]:
         prompt += "\n\nDepends on (claims owned by other workers):\n" + "\n".join(f"- {d}" for _, d in task["_depends"])
     cmd = [
@@ -123,6 +132,13 @@ def main():
     kernel = Kernel(args.db, gate=LeanGate(args.lean_dir), actor="orchestrator")
     for task in tasks:
         task["_required"] = required(kernel, task)
+    st = kernel.state()
+    for task in tasks:
+        mine = {h for h, _ in task["_required"]}
+        subjects = {st.formal[h]["subject"] for h in mine if h in st.formal}
+        task["_past"] = [f'{h}: {st.formal[h]["subject"]} satisfies `{st.algebra.preds[st.formal[h]["pred"]]["text"]}` '
+                         f'(specification {st.formal[h]["pred"]}) — {st.atoms[h]["text"]}'
+                         for h in st.formal if h not in mine and h not in st.withdrawn and st.formal[h]["subject"] in subjects]
     by_name = {t["name"]: t for t in tasks}
     for task in tasks:
         task["_depends"] = [c for d in task.get("depends_on", []) for c in by_name[d]["_required"]]

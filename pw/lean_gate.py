@@ -41,6 +41,7 @@ _GOALS = {
     "pred_implies": "∀ x, S0 x → S1 x",
     "obj_eq": "_root_.Eq S0 S1",
     "pred_rejects": "_root_.Not (S0 S1)",
+    "pred_disjoint": "∀ x, _root_.Not (_root_.And (S0 x) (S1 x))",
 }
 
 

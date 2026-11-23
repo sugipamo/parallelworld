@@ -25,11 +25,13 @@ Relation          meaning in the algebra
   pred_implies      [P1] <= [P2]  in the fibre over A   ("refines")
   obj_eq a1 a2      a1 = a2                             ("same object")
   pred_rejects P a  [P(a)] = bottom, hence [P] is not top in its fibre ("not vacuous")
+  pred_disjoint     [P1] meet [P2] = bottom in the fibre ("nothing can meet both")
 """
 
 RELATIONS = {
     "holds": "F", "not": "F", "iff": "FF", "implies": "FF", "contradiction": "FF",
     "pred_iff": "PP", "pred_implies": "PP", "obj_eq": "OO", "pred_rejects": "PO",
+    "pred_disjoint": "PP",
 }
 _EQUATIONS = ("iff", "pred_iff", "obj_eq")
 
@@ -106,6 +108,13 @@ class Lindenbaum:
                 for f, p in self.props.items():
                     if p["pred"] and (self.find(p["pred"]), self.find(p["obj"])) == tuple(map(self.find, ids)):
                         out.add(("not", (self.find(f),)))
+            elif rel == "pred_disjoint":
+                a, b = (self.find(p) for p in ids)
+                for f1, p1 in self.props.items():
+                    for f2, p2 in self.props.items():
+                        if (p1["pred"] and p2["pred"] and self.find(p1["pred"]) == a and self.find(p2["pred"]) == b
+                                and self.find(p1["obj"]) == self.find(p2["obj"])):
+                            out.add(("contradiction", (self.find(f1), self.find(f2))))
             elif rel == "pred_implies":
                 lo, hi = (self.find(p) for p in ids)
                 for f1, p1 in self.props.items():
@@ -123,3 +132,8 @@ class Lindenbaum:
     def nonvacuous(self):
         """Predicate classes with a verified counterexample: specifications that exclude something."""
         return {self.find(ids[0]) for rel, ids in self.relations if rel == "pred_rejects"}
+
+    def disjoint(self, p1, p2):
+        """Has Lean verified that no object satisfies both specifications?"""
+        pair = {self.find(p1), self.find(p2)}
+        return any(rel == "pred_disjoint" and {self.find(x) for x in ids} == pair for rel, ids in self.relations)

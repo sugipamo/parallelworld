@@ -115,6 +115,7 @@ class State:
         self.retracted = {}  # eid -> justification
         self.formal = {}     # H id -> {"subject", "pred"} for claims stated as a predicate
         self.authors = {}    # G id -> actors who stated that connection
+        self.withdrawn = {}  # H id -> why the decision no longer stands
         self.evidence = {}   # eid -> dict
         self.proofs = []     # proof events as recorded
         self.algebra = Lindenbaum()
@@ -131,6 +132,8 @@ class State:
                 self.algebra.add_pred(p["pred"]["id"], p["pred"]["type"], p["pred"]["text"])
         elif typ == "object":
             self.algebra.add_obj(p["id"], p["lean_type"], p["text"])
+        elif typ == "withdraw":
+            self.withdrawn[p["h"]] = p["justification"]
         elif typ == "concur":
             self.authors.setdefault(p["g"], set()).add(p["by"])
         elif typ == "ground":
@@ -388,7 +391,12 @@ class Kernel:
         """Run a check ourselves and record its result, so evidence is not self-reported."""
         r = subprocess.run(["bash", "-c", command], cwd=cwd, capture_output=True, text=True, timeout=timeout)
         outcome = "pass" if r.returncode == 0 else "fail"
-        out = self.observe(target, kind, outcome, source=f"cmd:{_sha(command)}@{_tree(cwd)}")
+        spec = self.catalog["evidence"].get(kind)
+        if spec is None or outcome not in spec["outcomes"] or target[0] not in spec["targets"]:
+            raise KernelError(f"evidence kind {kind} cannot be recorded for {target} by a command")
+        tree = _tree(cwd)
+        out = self._record(target, kind, outcome, f"cmd:{_sha(command)}@{tree}",
+                           {"likelihood": spec["outcomes"][outcome], "command": command, "tree": tree})
         return {**out, "outcome": outcome, "tail": (r.stdout + r.stderr)[-800:]}
 
     def _model(self, m):
@@ -426,8 +434,11 @@ class Kernel:
         if isinstance(res, str):
             return {"error": res}
         same, lean, code = res[0]
-        out = self.observe(m, "instance_check", "agree" if same else "disagree",
-                           source=f"args:{_sha(_norm(lean_args))}@cmd:{_sha(command)}@{_tree(cwd)}")
+        outcome = "agree" if same else "disagree"
+        out = self._record(m, "instance_check", outcome,
+                           f"args:{_sha(_norm(lean_args))}@cmd:{_sha(command)}@{_tree(cwd)}",
+                           {"likelihood": self.catalog["evidence"]["instance_check"]["outcomes"][outcome],
+                            "lean_args": lean_args, "command": command})
         return {**out, "outcome": "agree" if same else "disagree", "lean": lean, "code": code}
 
     def sample_model(self, m, command, cwd, n=10, bound=15, seed=None, timeout=300, domains=None):
@@ -467,7 +478,8 @@ class Kernel:
         for d, args, (same, lean, code) in zip(draws, lean_args, res):
             r = self._record(m, "sampled_check", "agree" if same else "disagree",
                              f"draw:{args}@cmd:{_sha(command)}@{tree}",
-                             {"args": args, "distribution": dist, **spec})
+                             {"args": args, "distribution": dist, "command": command, "domains": list(domains),
+                              "bound": bound, **spec})
             new += not r["duplicate"]
             if not same:
                 disagreements.append({"args": args, "lean": lean, "code": code})
@@ -516,9 +528,19 @@ class Kernel:
         return {"accepted": True, "axioms": verdict["axioms"], "gamma": verdict["gamma"]}
 
     # ---- inference -------------------------------------------------------
-    def infer(self, query):
-        """Lower and upper probability [lo, hi] of a formula, given all evidence and proofs."""
+    def infer(self, query, current=None, tree=None):
+        """Lower and upper probability [lo, hi] of a formula, given all evidence and proofs.
+
+        `current` maps a piece of code ("path::name") to its present version, and `tree` names
+        the present working tree. Given them, only what was learnt about the code as it is now
+        counts: models of other versions and check runs on other trees are set aside.
+        """
         st = self.state()
+        if current is not None:
+            fresh = lambda m: current.get(st.models[m]["subject"].split("@")[0], st.models[m]["subject"]) == st.models[m]["subject"]
+            st.links = [l for l in st.links if all(fresh(x) for x in l[0] if x[0] == "M")]
+        if tree is not None:
+            st.evidence = {k: e for k, e in st.evidence.items() if e.get("tree", tree) == tree}
         alg = st.algebra
         q = fm.rename(fm.parse(query), st.rep)
         for a in fm.atoms(q):
@@ -537,6 +559,7 @@ class Kernel:
         }
         theory = [("imp", all_of([A(g) for g in gs]), ("iff", A(h), A(f))) for gs, h, f in links]
         theory += [shape[rel](*ids) for rel, ids in order]
+        theory += [("not", ("and", A(a), A(b))) for a, b in self._conflicts(st)]   # decisions nothing can meet together
 
         # The component of the query. A class Lean has decided is a constant: sharing
         # it creates no dependence, so it does not pull unrelated claims together.
@@ -634,6 +657,79 @@ class Kernel:
         if b is None:
             raise Conflict(f"the recorded evidence has probability zero over {names}")
         return {"lo": b[0], "hi": b[1], "atoms": names, "worlds": m}
+
+    # ---- decisions over time ------------------------------------------------
+    @staticmethod
+    def _conflicts(st):
+        """Pairs of standing formal claims about the same code whose specifications Lean has shown disjoint."""
+        hs = [h for h in st.formal if h not in st.withdrawn]
+        return [(a, b) for i, a in enumerate(hs) for b in hs[i + 1:]
+                if st.formal[a]["subject"] == st.formal[b]["subject"]
+                and st.algebra.disjoint(st.formal[a]["pred"], st.formal[b]["pred"])]
+
+    def withdraw(self, h, justification):
+        """A person declares that a decision no longer stands (it was superseded or was wrong)."""
+        if not justification.strip():
+            raise KernelError("withdrawing a decision needs a justification")
+        with self._tx() as (con, st):
+            if h not in st.formal:
+                raise KernelError(f"{h} is not a formal claim")
+            self._append(con, st, "withdraw", {"h": h, "justification": justification})
+        return {"h": h}
+
+    def recheck(self, cwd, n=20):
+        """Hold every standing decision against the code as it is in `cwd`, without anyone's judgement.
+
+        For each formal claim: if its code changed since it was established, attach the same Lean
+        object to the new version and run the stored random check again; run the stored test
+        commands again on this tree. Then report where the claim stands.
+
+          current         the code is the version the claim was established for
+          re-established  the code changed, but the old model still agrees with it, so the old proof applies
+          broken          the code changed and no longer agrees with the model the proof was about
+          unsupported     nothing was ever attached, or there is no stored check to run again
+        """
+        st = self.state()
+        standing = [h for h in st.formal if h not in st.withdrawn]
+        current = {st.formal[h]["subject"]: subject_id(st.formal[h]["subject"], cwd) for h in standing}
+        tree, report = _tree(cwd), []
+        for h in standing:
+            st = self.state()
+            now = current[st.formal[h]["subject"]]
+            entry = {"h": h, "text": st.atoms[h]["text"], "subject": now,
+                     "spec": st.algebra.preds[st.formal[h]["pred"]]["text"]}
+            models = [x for gs, hh, _ in st.links if hh == h for x in gs if x[0] == "M"]
+            if any(st.models[m]["subject"] == now for m in models):
+                entry["state"] = "current"
+            else:
+                plan = next((e for m in reversed(models) for e in reversed(list(st.evidence.values()))
+                             if e["target"] == m and e["kind"] == "sampled_check" and "command" in e), None)
+                if plan is None:
+                    entry["state"] = "unsupported"
+                else:
+                    obj = st.algebra.objs[st.models[plan["target"]]["obj"]]
+                    new = self.attach_model(h, obj["text"], subject_version=now)
+                    r = self.sample_model(new["m"], plan["command"], cwd, n=n, bound=plan["bound"], domains=plan["domains"])
+                    if "error" in r:
+                        entry.update(state="unsupported", error=r["error"])
+                    elif r["disagreements"]:
+                        entry.update(state="broken", counterexample=r["disagreements"][0], model=obj["text"])
+                    else:
+                        entry["state"] = "re-established"
+            for kind, command in sorted({(e["kind"], e["command"]) for e in st.evidence.values()
+                                         if e["target"] == h and "tree" in e}):
+                self.observe_command(h, kind, command, cwd)
+            try:
+                b = self.infer(h, current=current, tree=tree)
+                entry.update(lo=b["lo"], hi=b["hi"])
+            except KernelError as e:
+                entry.update(lo=0.0, hi=1.0, error=str(e))
+            report.append(entry)
+        st = self.state()
+        return {"decisions": report, "tree": tree,
+                "conflicts": [{"a": a, "b": b, "subject": st.formal[a]["subject"],
+                               "specs": [st.algebra.preds[st.formal[x]["pred"]]["text"] for x in (a, b)]}
+                              for a, b in self._conflicts(st)]}
 
     def distance(self, a, b):
         """Frechet-Nikodym distance d(a, b) = P(a and b disagree), as an interval.

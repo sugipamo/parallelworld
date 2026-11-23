@@ -132,6 +132,7 @@ def prove(relation: str, args: list[str], proof: str) -> dict:
       pred_iff [P1,P2]      ∀ x, P1 x ↔ P2 x   the two specifications are the same
       pred_implies [P1,P2]  ∀ x, P1 x → P2 x   P1 refines P2
       obj_eq [O1,O2]        O1 = O2            the two objects are the same
+      pred_disjoint [P1,P2] ∀ x, ¬(P1 x ∧ P2 x)  nothing can meet both specifications
     Accepted only if the Lean kernel checks it with approved axioms and no sorry. Note that
     `iff` between two propositions that are each already proved says nothing; to say two claims
     are about the same thing, use pred_iff and obj_eq."""

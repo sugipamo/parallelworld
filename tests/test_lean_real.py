@@ -5,7 +5,7 @@ import subprocess
 
 import pytest
 
-from pw.kernel import Kernel, KernelError
+from pw.kernel import Conflict, Kernel, KernelError
 from pw.lean_gate import LeanGate
 
 LAKE = os.environ.get("PW_LAKE") or shutil.which("lake")
@@ -180,3 +180,60 @@ def test_formal_claim_using_a_definition_from_gamma(tmp_path):
     assert r["accepted"], r
     assert not k.reject_object(c["p"], CLAMP, "intro h\nexact absurd (h 0 0 0 (Nat.le_refl 0)).2 (by decide)")["accepted"]   # clamp does satisfy it
     assert not LeanGate().check("holds", [("Prop", "Spec.Bounded (fun x lo hi => lo)")], "trivial")["ok"]  # unknown in the default Gamma
+
+
+VALID = "fun f => ∀ i n, 0 < n → f i n < n"
+SENTINEL = "fun f => ∀ i n, n ≤ i → f i n = n"
+
+
+def test_past_decisions_are_held_against_the_code_as_it_is_now(tmp_path):
+    """Sessions later, with no model in the loop: does a change contradict what was decided?"""
+    k = Kernel(str(tmp_path / "e.db"), gate=LeanGate())
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    code = repo / "indexing.py"
+    write = lambda body: code.write_text(f"def clamp_index(i, n):\n    return {body}\n")
+    git = lambda *a: subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=repo, check=True, capture_output=True)
+    write("min(i, max(n - 1, 0))")
+    (repo / ".gitignore").write_text("__pycache__/\n")
+    (repo / "test_indexing.py").write_text("from indexing import clamp_index\n\ndef test_last():\n    assert clamp_index(9, 4) == 3\n")
+    git("init", "-q"); git("add", "-A"); git("commit", "-qm", "v1")
+    cwd = str(repo)
+
+    # the decision, established once
+    d = k.claim_formal("indexing.py::clamp_index", "Nat → Nat → Nat", VALID, gloss="always a valid index")
+    from pw.kernel import subject_id
+    a = k.attach_model(d["h"], "fun i n => min i (n - 1)", subject_version=subject_id("indexing.py::clamp_index", cwd))
+    assert k.prove("holds", [a["f"]], "intro i n h\nomega")["accepted"]
+    template = 'python3 -c "from indexing import clamp_index; print(clamp_index({0}, {1}))"'
+    assert not k.sample_model(a["m"], template, cwd, n=25, seed=1)["disagreements"]
+    k.observe_command(d["h"], "test", "python3 -m pytest -q test_indexing.py", cwd)
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "current" and r["lo"] > 0.99, r
+
+    # a refactoring that keeps the behaviour: the old proof still applies, found mechanically
+    write("i if i < n else max(n - 1, 0)")
+    git("commit", "-qam", "refactor")
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "re-established" and r["lo"] > 0.99, r
+
+    # a change that breaks the decision, although the test suite still passes
+    write("min(i, n)")
+    (repo / "test_indexing.py").write_text("from indexing import clamp_index\n\ndef test_in_range():\n    assert clamp_index(2, 4) == 2\n")
+    git("commit", "-qam", "return n when out of range")
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "broken" and r["lo"] <= 0.75 and r["counterexample"]["lean"] != r["counterexample"]["code"], r
+
+    # a new decision that cannot hold together with the old one
+    e = k.claim_formal("indexing.py::clamp_index", "Nat → Nat → Nat", SENTINEL, gloss="returns n when out of range")
+    assert k.recheck(cwd)["conflicts"] == []
+    proof = "intro f h\nhave a := h.1 1 1 (by decide)\nhave b := h.2 1 1 (Nat.le_refl 1)\nomega"
+    assert k.prove("pred_disjoint", [d["p"], e["p"]], proof)["accepted"]
+    c = k.recheck(cwd)["conflicts"]
+    assert [(x["a"], x["b"]) for x in c] == [(d["h"], e["h"])]
+    with pytest.raises(Conflict):                 # one is established, so the other cannot even sit at its base rate
+        k.infer(f"{d['h']} & {e['h']}")
+    assert all("error" in x for x in k.recheck(cwd)["decisions"])
+    k.withdraw(d["h"], "superseded: callers now detect overflow by the sentinel")
+    rep = k.recheck(cwd)
+    assert rep["conflicts"] == [] and [x["h"] for x in rep["decisions"]] == [e["h"]]
