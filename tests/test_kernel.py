@@ -287,6 +287,7 @@ def test_specification_that_excludes_something_is_better_supported(k):
     approx(k.infer(g["g"]), 0.8, 0.8)
     r = k.reject_object(g["p"], "fun n => 0", "intro h; exact absurd (h 1) (by decide)")
     assert r["accepted"] and k.state().algebra.nonvacuous() == {g["p"]}
+    assert [e["type"] for e in k.events()][-2:] == ["object", "proof"]
     approx(k.infer(g["g"]), 0.8 / (0.8 + 0.2 * 0.7), 0.8 / (0.8 + 0.2 * 0.7))
     k.reject_object(g["p"], "fun n => n - 1", "x")                            # a second counterexample adds nothing
     approx(k.infer(g["g"]), 0.8 / (0.8 + 0.2 * 0.7), 0.8 / (0.8 + 0.2 * 0.7))

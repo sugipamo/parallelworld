@@ -84,7 +84,7 @@ class State:
                 self.formal[p["h"]] = {"subject": p["subject"], "pred": p["pred"]["id"]}
                 self.algebra.add_pred(p["pred"]["id"], p["pred"]["type"], p["pred"]["text"])
         elif typ == "object":
-            self.algebra.add_obj(p["id"], p["type"], p["text"])
+            self.algebra.add_obj(p["id"], p["lean_type"], p["text"])
         elif typ == "concur":
             self.authors.setdefault(p["g"], set()).add(p["by"])
         elif typ == "ground":
@@ -246,7 +246,7 @@ class Kernel:
         o = "O:" + _sha(typ, obj)
         with self._tx() as (con, st):
             if st.algebra.kind(o) is None:
-                self._append(con, st, "object", {"id": o, "type": typ, "text": obj})
+                self._append(con, st, "object", {"id": o, "lean_type": typ, "text": obj})
         return {**self.prove("pred_rejects", [p, o], proof), "o": o}
 
     def ground(self, h, lean, prior=None):
