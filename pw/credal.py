@@ -42,7 +42,7 @@ COPULAS = {
     "independent": lambda lo, hi: (lo.prod(), hi.prod()),
     "comonotone": lambda lo, hi: (lo.min(), hi.min()),
     "pqd": lambda lo, hi: (lo.prod(), hi.min()),
-    "frechet": lambda lo, hi: (max(0.0, lo.sum() - (len(lo) - 1)), hi.min()),
+    "frechet": lambda lo, hi: (max(0, lo.sum() - (len(lo) - 1)), hi.min()),
 }
 
 
