@@ -661,8 +661,9 @@ class Kernel:
                 pass
         with self._tx() as (con, st):
             known = st.models.get(m, {})
-            if ((place, m) not in st.facts[h]["readings"] or self.actor not in known.get("by", ())
-                    or (blind and how is None and self.actor not in known.get("blind", ()))):
+            # who read it matters only for a reading someone stated; a computed one is the same whoever runs it
+            if ((place, m) not in st.facts[h]["readings"]
+                    or (how is None and (self.actor not in known.get("by", ()) or (blind and self.actor not in known.get("blind", ()))))):
                 self._append(con, st, "reading", {
                     "h": h, "place": place, "subject": version, "m": m, "obj": ob, "binding": how, "quote": quote,
                     "blind": bool(blind) and how is None, "literal": literal,

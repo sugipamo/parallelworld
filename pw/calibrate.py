@@ -23,6 +23,7 @@ import json
 import os
 import random
 import re
+import shutil
 import sys
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
@@ -161,7 +162,10 @@ def main():
     ap.add_argument("--parallel", type=int, default=4)
     args = ap.parse_args()
     repo = os.path.abspath(args.repo)
-    kernel = Kernel(os.path.join(repo, LOG), gate=LeanGate(args.lean_dir), actor="calibrate")
+    scratch = os.path.join(tempfile.mkdtemp(prefix="pw-calibrate-"), LOG)       # the project's record is only read
+    if os.path.exists(os.path.join(repo, LOG)):
+        shutil.copy(os.path.join(repo, LOG), scratch)
+    kernel = Kernel(scratch, gate=LeanGate(args.lean_dir), actor="calibrate")
     if os.path.exists(os.path.join(repo, FACTS)):
         kernel.sync_facts(os.path.join(repo, FACTS))
     todo = trials(kernel, repo, args.per_place, random.Random(args.seed))

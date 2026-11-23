@@ -513,6 +513,7 @@ def test_the_record_is_text_in_the_repository_and_is_not_believed_where_it_can_b
     # someone else, somewhere else, with only the files and the record: the same answer
     other = Kernel(str(log), gate=LeanGate(), actor="ci")
     assert other.recheck(cwd)["decisions"][0]["state"] == "current"
+    assert log.read_text().splitlines() == lines                                # ...and checking adds nothing to the record
 
     # two branches appended; merged by keeping both, some lines twice
     log.write_text("\n".join(lines + lines[-2:]) + "\n")
