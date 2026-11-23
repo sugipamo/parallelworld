@@ -167,21 +167,22 @@ def prove(relation: str, args: list[str], proof: str) -> dict:
 @mcp.tool()
 def distance(a: str, b: str) -> dict:
     """Bounds on the probability that two claims or propositions disagree (0 = identical)."""
-    return _safe(_kernel.distance, a, b)
+    return _safe(lambda: _kernel.distance(a, b, current=_kernel.versions(_workdir())))
 
 
 @mcp.tool()
 def infer(query: str) -> dict:
-    """Bounds [lo, hi] on the probability of a formula over atom ids, e.g. "H:ab12" or
+    """Bounds [lo, hi] on the probability of a formula over atom ids, for the code as it is in
+    your worktree (what was learnt about other versions of a file is set aside), e.g. "H:ab12" or
     "H:ab12 <-> H:cd34". Operators: ! & | -> <->. Rely on a claim only if `lo` is high enough."""
-    return _safe(_kernel.infer, query)
+    return _safe(lambda: _kernel.infer(query, current=_kernel.versions(_workdir())))
 
 
 @mcp.tool()
 def status() -> dict:
     """All claims with current bounds and what they are connected to; model hypotheses; the classes of
     propositions, specifications and objects Lean has identified; accepted proofs."""
-    return _safe(_kernel.status)
+    return _safe(lambda: _kernel.status(current=_kernel.versions(_workdir())))
 
 
 if __name__ == "__main__":

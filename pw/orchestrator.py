@@ -153,9 +153,11 @@ def main():
 
     for task in tasks:
         verdicts = []
+        current = kernel.versions(os.path.join(os.path.abspath(args.repo), ".pw", "worktrees", task["name"]))
+
         def judge(query, text):
             try:
-                b = kernel.infer(query)
+                b = kernel.infer(query, current=current)     # the code as it is on this task's branch
                 verdicts.append((b["lo"] >= args.threshold, b["lo"], b["hi"], text))
             except KernelError as e:      # e.g. it contradicts a decision that is established
                 verdicts.append((False, 0.0, 1.0, f"{text}\n       cannot be evaluated: {e}"))

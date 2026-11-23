@@ -276,6 +276,11 @@ def test_past_decisions_are_held_against_the_code_as_it_is_now(tmp_path):
     (repo / "test_indexing.py").write_text("from indexing import clamp_index\n\ndef test_in_range():\n    assert clamp_index(2, 4) == 2\n")
     git("commit", "-qam", "return n when out of range")
     r = k.recheck(cwd)["decisions"][0]
+    # what was learnt about earlier versions must not be mixed in: taken together, the refuted
+    # model of this version and the supported models of the old ones say almost nothing
+    mixed = k.infer(d["h"])
+    assert mixed["hi"] - mixed["lo"] > 0.2 and mixed["hi"] > 0.99
+    assert k.infer(d["h"], current=k.versions(cwd))["hi"] <= 0.75
     assert r["state"] == "uncovered" and r["lo"] <= 0.75 and r["counterexample"]["lean"] != r["counterexample"]["code"], r
 
     # a new decision that cannot hold together with the old one

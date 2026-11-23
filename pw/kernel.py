@@ -799,7 +799,7 @@ class Kernel:
         """
         st = self.state()
         standing = [h for h in st.formal if h not in st.withdrawn]
-        current = {st.formal[h]["subject"]: subject_id(st.formal[h]["subject"], cwd) for h in standing}
+        current = {**self.versions(cwd), **{st.formal[h]["subject"]: subject_id(st.formal[h]["subject"], cwd) for h in standing}}
         tree, report = _tree(cwd), []
         for h in standing:
             st = self.state()
@@ -857,16 +857,28 @@ class Kernel:
                                "specs": [st.algebra.preds[st.formal[x]["pred"]]["text"] for x in (a, b)]}
                               for a, b in self._conflicts(st)]}
 
-    def distance(self, a, b):
+    def versions(self, cwd):
+        """The present version of every piece of code some model is about, as found in `cwd`.
+
+        A claim about code means the code as it is now. A model of another version, supported
+        or refuted, is about something else; counted together with the present one it only
+        blurs the picture. Pass the result as `current` to `infer`.
+        """
+        st = self.state()
+        bases = {info["subject"].split("@")[0] for info in st.models.values()} | {f["subject"] for f in st.formal.values()}
+        found = {b: subject_id(b, cwd) for b in bases}
+        return {b: v for b, v in found.items() if "@" in v}     # code that is not here is left alone
+
+    def distance(self, a, b, current=None):
         """Frechet-Nikodym distance d(a, b) = P(a and b disagree), as an interval.
 
         Lean makes it exactly 0 between equal propositions; a connection bounds it by
         1 - P(G); the triangle inequality does the rest.
         """
-        r = self.infer(f"({a}) <-> ({b})")
+        r = self.infer(f"({a}) <-> ({b})", current=current)
         return {"lo": round(1 - r["hi"], 9), "hi": round(1 - r["lo"], 9)}
 
-    def status(self):
+    def status(self, current=None):
         st = self.state()
         alg = st.algebra
         out = {"claims": [], "evidence": len(st.evidence), "proofs": st.proofs,
@@ -874,13 +886,15 @@ class Kernel:
                "specifications": {c: [alg.preds[p] for p in ps] for c, ps in alg.classes("P").items()},
                "objects": {c: [alg.objs[o] for o in os_] for c, os_ in alg.classes("O").items()}}
         for mid, info in st.models.items():
-            b = self.infer(mid)
+            if current is not None and current.get(info["subject"].split("@")[0], info["subject"]) != info["subject"]:
+                continue                                    # a model of another version of the code
+            b = self.infer(mid, current=current)
             out["models"][mid] = {**info, "lo": b["lo"], "hi": b["hi"]}
         for a, info in st.atoms.items():
             if info["kind"] != "H":
                 continue
             try:
-                b = self.infer(a)
+                b = self.infer(a, current=current)
                 entry = {"h": a, "text": info["text"], "lo": b["lo"], "hi": b["hi"]}
             except KernelError as e:
                 entry = {"h": a, "text": info["text"], "error": str(e)}

@@ -1,0 +1,56 @@
+{
+ "session1": {
+  "output": "MERGEABLE pw/s1-index\n   ok  [0.998, 1.000] H:8bf20776cf (formal, specification P:9e0b961518): indexing.py::clamp_index satisfies `Spec.ValidIndex` : (Nat → Nat → Nat) → Prop — for n > 0, clamp_index(i, n) is a valid index, i.e. < n\nPreparing worktree (new branch 'pw/s1-index')\n",
+  "workers": {
+   "s1-index": {
+    "turns": 17,
+    "cost_usd": 0.26,
+    "seconds": 27,
+    "report": "I've added `clamp_index` and its tests, and the required claim H:8bf20776cf is established: for any n > 0, the result is less than n. Everything is committed on `pw/s1-index`.\n\n**Code**\n- **`indexing.py`:** `clamp_index(i, n)` returns 0 when n is 0, and otherwise the smaller of i and n − 1.\n- **`test_indexing.py`:** covers an empty sequence, an index already in range, an index past the end, and a check of every i from 0 to 59 for every n from 1 to 29 that the result is at least 0 and less than n. `python3 -m pytest -q test_indexing.py` gives 4 passed, recorded as evidence by the kernel.\n\n**Claim H:8bf20776cf**\n- **Model:** the Lean term `fun i n => if n = 0 then 0 else min i (n - 1)`, called as `clamp_index({0}, {1})` on two natural numbers.\n- **Proof:** the kernel accepted the Lean proof of `Spec.ValidIndex` for that term, using only the standard axioms (`propext`, `Quot.sound`).\n- **Matching code to model:**\n  - 28 random inputs all gave the same result in Python and in Lean.\n  - Hand-picked edge cases also matched: (0, 0), (1000000, 0), (1000000, 1), (7, 8) and (8, 8).\n- **Confidence:** the claim's lower bound is now 0.998.\n\nNo other workers' claims or past decisions applied, so I didn't rely on anything outside this task."
+   }
+  }
+ },
+ "check after merge": {
+  "exit": 0,
+  "output": "ok   current         [0.998, 1.000] H:8bf20776cf indexing.py::clamp_index satisfies Spec.ValidIndex"
+ },
+ "check after refactor": {
+  "exit": 0,
+  "output": "ok   re-established  [0.997, 1.000] H:8bf20776cf indexing.py::clamp_index satisfies Spec.ValidIndex"
+ },
+ "check after breaking change": {
+  "exit": 1,
+  "output": "FAIL uncovered       [0.704, 0.704] H:8bf20776cf indexing.py::clamp_index satisfies Spec.ValidIndex\n       the code no longer matches the model the proof was about: on 10 4 the model gives 3, the code gives 4"
+ },
+ "check after restore": {
+  "exit": 0,
+  "output": "ok   current         [0.998, 1.000] H:8bf20776cf indexing.py::clamp_index satisfies Spec.ValidIndex"
+ },
+ "session2": {
+  "output": "HOLD      pw/s2-sentinel\n   low [0.000, 0.520] H:d3d2dad382 (formal, specification P:c235eede09): indexing.py::clamp_index satisfies `Spec.OverflowSentinel` : (Nat → Nat → Nat) → Prop — when i >= n, clamp_index(i, n) returns n so that callers can detect an out-of-range index\nHOLD      pw/s2-identity\n   low [0.000, 1.000] H:c000d1173b (formal, specification P:c34edfad97): indexing.py::clamp_index satisfies `Spec.IdentityInRange` : (Nat → Nat → Nat) → Prop — when i < n, clamp_index(i, n) returns i unchanged\nPreparing worktree (new branch 'pw/s2-sentinel')\nPreparing worktree (new branch 'pw/s2-identity')\n",
+  "workers": {
+   "s2-sentinel": {
+    "turns": 5,
+    "cost_usd": 0.17,
+    "seconds": 16,
+    "report": "I didn't change `clamp_index`, because the change you asked for contradicts a decision that was already settled for this function. A person needs to choose between the two.\n\n**The conflict:**\n- **Settled earlier (H:8bf20776cf, `Spec.ValidIndex`):** when `n > 0`, `clamp_index(i, n)` must return a valid index, so the result is `< n`.\n- **Required now (H:d3d2dad382, `Spec.OverflowSentinel`):** when `i >= n`, `clamp_index(i, n)` must return `n`.\n\nTake `i = 1, n = 1`. The new rule says the function returns `1`, and the settled rule says it must return something below `1`. No function can do both. I proved this as `pred_disjoint [P:9e0b961518, P:c235eede09]`, and the Lean kernel accepted the proof.\n\n**What I left alone:** `indexing.py` and `test_indexing.py` are unchanged, and there was nothing to commit. I didn't attempt H:d3d2dad382, because it can't hold while the settled decision stands.\n\n**Ways forward (your call):**\n1. **Drop the valid-index guarantee** and have `clamp_index` return `n` for out-of-range input. Callers that rely on always getting a valid index would then need to check the result.\n2. **Keep `clamp_index` as it is** and add a separate function for callers who need to detect out-of-range input. It could return `n`, `None`, or a flag when `i >= n`. Both guarantees then hold, one per function.\n\nI'd go with option 2. It gives the caller what they need without breaking existing callers of `clamp_index`."
+   },
+   "s2-identity": {
+    "turns": 14,
+    "cost_usd": 0.23,
+    "seconds": 23,
+    "report": "The claim already holds for `clamp_index` in `indexing.py` as it is, so I didn't change the code. That also means there was nothing to commit.\n\n**Why it holds:** if `i < n`, then `n` is at least 1, so the `n == 0` branch is skipped and the function returns `min(i, n - 1)`, which is `i`.\n\n**What I recorded:**\n- **Model:** the Lean term `fun i n => if n = 0 then 0 else min i (n - 1)`, matched to the call `clamp_index({0}, {1})` on natural-number inputs. The kernel attached it to the existing model M:dda3316402.\n- **Proof:** the Lean proof of `Spec.IdentityInRange` for that term (F:37f942b2ee) was accepted.\n- **Checks against the code:**\n  - 30 random inputs all matched the model.\n  - Hand-picked edge cases matched too: `(0, 0)`, a very large in-range index `(1000000, 1000001)`, and an out-of-range `(7, 3)`.\n  - A property test confirmed `clamp_index(i, n) == i` for every `i < n` with `n < 60`, and it passed.\n\n**Past decision:** this doesn't conflict with H:8bf20776cf (\"for n > 0 the result is < n\"). Returning `min(i, n - 1)` satisfies both.\n\n**Open issue:** the system's lower bound for H:c000d1173b is still near 0 even though the proof and every check passed. That is because model M:dda3316402 still has a lower bound of 0. One older model of the same function, recorded against a different version of the file, has been refuted (M:d94da88624). The same lower bound of 0 holds for M:d067a529f4, the other earlier model.\n\nThere's a separate, unassigned claim H:d3d2dad382 (\"when i >= n, return n so callers can detect an out-of-range index\"). It contradicts the past decision, so if someone later pushes for it, a person will need to choose between them."
+   }
+  }
+ },
+ "check after session 2": {
+  "exit": 1,
+  "output": "ok   current         [0.999, 1.000] H:8bf20776cf indexing.py::clamp_index satisfies Spec.ValidIndex\nFAIL unsupported     [0.000, 0.001] H:d3d2dad382 indexing.py::clamp_index satisfies Spec.OverflowSentinel\nok   current         [1.000, 1.000] H:c000d1173b indexing.py::clamp_index satisfies Spec.IdentityInRange\nFAIL contradictory decisions about indexing.py::clamp_index: H:8bf20776cf (Spec.ValidIndex) and H:d3d2dad382 (Spec.OverflowSentinel) cannot both hold (verified by Lean)"
+ },
+ "diff pw/s2-sentinel": {
+  "output": ""
+ },
+ "diff pw/s2-identity": {
+  "output": ""
+ }
+}
