@@ -22,7 +22,7 @@ def unconfirmed(kernel, repo):
     for m, info in st.models.items():
         base = info["subject"].split("@")[0]
         if not info["binding"] and now.get(base) == info["subject"] and m not in signed:
-            yield m, base, st.algebra.objs[info["obj"]]["text"], info.get("quote")
+            yield m, base, st.algebra.objs[info["obj"]]["text"], info.get("quote"), info.get("anchor")
 
 
 def main():
@@ -43,9 +43,11 @@ def main():
             print(("rejected " if args.reject else "confirmed ") + m)
         return
     todo = list(unconfirmed(kernel, repo))
-    for m, place, term, quote in todo:
-        if quote:      # the kernel has checked that these words are in the place
+    for m, place, term, quote, anchor in todo:
+        if quote and anchor:      # the kernel has checked that these words are in the place
             shown = "because it says: " + " ".join(quote.split())
+        elif quote:
+            shown = "for example it says: " + " ".join(quote.split()) + "\n   (a list is read off the whole place: compare it with " + place + ")"
         else:
             passage = (locate(place, repo) or b"").decode("utf-8", "replace").strip()
             shown = "passage:  " + passage[:600].replace("\n", "\n             ") + ("\n             …" if len(passage) > 600 else "")

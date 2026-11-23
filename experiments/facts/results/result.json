@@ -1,0 +1,86 @@
+{
+ "as it is: check": {
+  "exit": 1,
+  "output": "FAIL stale           [0.500, 0.500] H:1b384f7867 fact: default dependence class\n       pw/kernel.py::Kernel.__init__ reads as \"pqd\"\n       docs/spec.md::3. モデル: nobody has read it yet\n       docs/spec.md::2. v0.1 からの変更: nobody has read it yet\n       docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則: nobody has read it yet\n       read the place(s) again: python -m pw.maintain\nFAIL stale           [0.500, 0.500] H:ff0660c7fb fact: axioms a proof may depend on\n       pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]\n       docs/spec.md::5. Lean Gate: nobody has read it yet\n       read the place(s) again: python -m pw.maintain\nFAIL stale           [0.500, 0.500] H:3a14674a21 fact: largest component inference solves\n       pw/kernel.py::Kernel.__init__ reads as 14\n       docs/spec.md::7. 未解決: nobody has read it yet\n       read the place(s) again: python -m pw.maintain\nFAIL stale           [0.500, 0.500] H:da95269971 fact: names of the MCP tools\n       pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",\n       docs/spec.md::4. 操作（MCPツール）: nobody has read it yet\n       read the place(s) again: python -m pw.maintain\nok   current         [0.970, 0.990] H:5b3ef45a86 fact: default threshold, in thousandths\nok   current         [0.980, 0.990] H:8dd0087695 fact: Lean version"
+ },
+ "as it is: maintain": {
+  "exit": 1,
+  "output": "0 decision(s) and 6 place(s) need reading; asking an agent (maintain-4afa02)\nFAIL current         [0.615, 0.875] H:1b384f7867 fact: default dependence class\n       docs/spec.md::3. モデル reads as \"pqd\"   (stated, M:71b76f8540, not confirmed)\n       docs/spec.md::2. v0.1 からの変更 reads as \"pqd\"   (stated, M:c9d3d7e7ad, not confirmed)\n       docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則 reads as \"pqd\"   (stated, M:068aa887f0, not confirmed)\n       pw/kernel.py::Kernel.__init__ reads as \"pqd\"\n       the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm\nFAIL current         [0.865, 0.875] H:ff0660c7fb fact: axioms a proof may depend on\n       docs/spec.md::5. Lean Gate reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]   (stated, M:2d2f501f9e, not confirmed)\n       pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]\n       the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm\nFAIL current         [0.865, 0.875] H:3a14674a21 fact: largest component inference solves\n       docs/spec.md::7. 未解決 reads as 14   (stated, M:ef99b187a9, not confirmed)\n       pw/kernel.py::Kernel.__init__ reads as 14\n       the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm\nFAIL current         [0.865, 0.875] H:da95269971 fact: names of the MCP tools\n       docs/spec.md::4. 操作（MCPツール） reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",   (stated, M:dd90dd5f50, not confirmed)\n       pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",\n       the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm\nok   current         [0.970, 0.990] H:5b3ef45a86 fact: default threshold, in thousandths\nok   current         [0.980, 0.990] H:8dd0087695 fact: Lean version"
+ },
+ "as it is: readings a person has to confirm": {
+  "exit": 0,
+  "output": "M:71b76f8540  docs/spec.md::3. モデル\n   reads as: \"pqd\"\n   because it says: 既定の `pqd` は正の依存で、独立と完全な重複の間。\n\nM:c9d3d7e7ad  docs/spec.md::2. v0.1 からの変更\n   reads as: \"pqd\"\n   because it says: | 9 | （v0.2）証拠の依存は「重複〜独立」の独自の混合 | コピュラのクラスを名前で選ぶ：`independent` / `comonotone` / `pqd`（既定）/ `frechet` | 独自の混合に根拠がなかった。`frechet` が v0.1 の文字どおりの読み |\n\nM:068aa887f0  docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則\n   reads as: \"pqd\"\n   because it says: | `pqd`（既定） | Π ≤ C ≤ M | [∏ aᵢ, min aᵢ] | 正の依存（positive quadrant dependence） |\n\nM:2d2f501f9e  docs/spec.md::5. Lean Gate\n   reads as: [\"Classical.choice\", \"Quot.sound\", \"propext\"]\n   because it says: - 受理条件：1回目が成功し、2回目の出力が公理レポート1行だけで、許可リスト（`propext`、`Classical.choice`、`Quot.sound`）に収まる。\n\nM:ef99b187a9  docs/spec.md::7. 未解決\n   reads as: 14\n   because it says: - **連結成分が14原子を超えると解けない。** 分割か近似が要る。\n\nM:dd90dd5f50  docs/spec.md::4. 操作（MCPツール）\n   reads as: [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\", \"observe\", \"observe_command\", \"prove\", \"read_place\", \"reject_object\", \"sample_model\", \"status\"]\n   because it says: | `claim(text)` | Hを登録 |\n\n6 reading(s) nobody has confirmed; confirm with: python -m pw.confirm --who NAME M:71b76f8540 M:c9d3d7e7ad M:068aa887f0 M:2d2f501f9e M:ef99b187a9 M:dd90dd5f50"
+ },
+ "as it is: confirmed": {
+  "exit": 0,
+  "output": "confirmed M:71b76f8540\nconfirmed M:c9d3d7e7ad\nconfirmed M:068aa887f0\nconfirmed M:2d2f501f9e\nconfirmed M:ef99b187a9\nconfirmed M:dd90dd5f50"
+ },
+ "as it is: check after confirming": {
+  "exit": 0,
+  "output": "ok   current         [0.852, 1.000] H:1b384f7867 fact: default dependence class\nok   current         [0.971, 0.984] H:ff0660c7fb fact: axioms a proof may depend on\nok   current         [0.971, 0.984] H:3a14674a21 fact: largest component inference solves\nok   current         [0.971, 0.984] H:da95269971 fact: names of the MCP tools\nok   current         [0.970, 0.990] H:5b3ef45a86 fact: default threshold, in thousandths\nok   current         [0.980, 0.990] H:8dd0087695 fact: Lean version"
+ },
+ "one section changes its mind about the default: check": {
+  "exit": 1,
+  "output": "FAIL stale           [0.500, 0.500] H:1b384f7867 fact: default dependence class\n       docs/spec.md::2. v0.1 からの変更 reads as \"pqd\"   (stated, M:c9d3d7e7ad)\n       docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則 reads as \"pqd\"   (stated, M:068aa887f0)\n       pw/kernel.py::Kernel.__init__ reads as \"pqd\"\n       docs/spec.md::3. モデル: it changed since it was read\n       read the place(s) again: python -m pw.maintain\nok   current         [0.971, 0.984] H:ff0660c7fb fact: axioms a proof may depend on\nok   current         [0.971, 0.984] H:3a14674a21 fact: largest component inference solves\nok   current         [0.971, 0.984] H:da95269971 fact: names of the MCP tools\nok   current         [0.970, 0.990] H:5b3ef45a86 fact: default threshold, in thousandths\nok   current         [0.980, 0.990] H:8dd0087695 fact: Lean version"
+ },
+ "one section changes its mind about the default: maintain": {
+  "exit": 1,
+  "output": "0 decision(s) and 1 place(s) need reading; asking an agent (maintain-13d804)\nFAIL violated        [0.002, 0.291] H:1b384f7867 fact: default dependence class\n       docs/spec.md::3. モデル reads as \"frechet\"   (stated, M:6948c8f54f, not confirmed)\n       docs/spec.md::2. v0.1 からの変更 reads as \"pqd\"   (stated, M:c9d3d7e7ad)\n       docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則 reads as \"pqd\"   (stated, M:068aa887f0)\n       pw/kernel.py::Kernel.__init__ reads as \"pqd\"\n       the places do not say the same thing (verified by Lean); which one is right is for a person to say\nok   current         [0.971, 0.984] H:ff0660c7fb fact: axioms a proof may depend on\nok   current         [0.971, 0.984] H:3a14674a21 fact: largest component inference solves\nok   current         [0.971, 0.984] H:da95269971 fact: names of the MCP tools\nok   current         [0.970, 0.990] H:5b3ef45a86 fact: default threshold, in thousandths\nok   current         [0.980, 0.990] H:8dd0087695 fact: Lean version"
+ },
+ "one section changes its mind about the default: readings a person has to confirm": {
+  "exit": 0,
+  "output": "M:6948c8f54f  docs/spec.md::3. モデル\n   reads as: \"frechet\"\n   because it says: 既定の `frechet` は依存について何も仮定しない。\n\n1 reading(s) nobody has confirmed; confirm with: python -m pw.confirm --who NAME M:6948c8f54f"
+ },
+ "one section changes its mind about the default: confirmed": {
+  "exit": 0,
+  "output": "confirmed M:6948c8f54f"
+ },
+ "one section changes its mind about the default: check after confirming": {
+  "exit": 1,
+  "output": "FAIL violated        [0.000, 0.148] H:1b384f7867 fact: default dependence class\n       docs/spec.md::3. モデル reads as \"frechet\"   (stated, M:6948c8f54f)\n       docs/spec.md::2. v0.1 からの変更 reads as \"pqd\"   (stated, M:c9d3d7e7ad)\n       docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則 reads as \"pqd\"   (stated, M:068aa887f0)\n       pw/kernel.py::Kernel.__init__ reads as \"pqd\"\n       the places do not say the same thing (verified by Lean); which one is right is for a person to say\nok   current         [0.971, 0.984] H:ff0660c7fb fact: axioms a proof may depend on\nok   current         [0.971, 0.984] H:3a14674a21 fact: largest component inference solves\nok   current         [0.971, 0.984] H:da95269971 fact: names of the MCP tools\nok   current         [0.970, 0.990] H:5b3ef45a86 fact: default threshold, in thousandths\nok   current         [0.980, 0.990] H:8dd0087695 fact: Lean version"
+ },
+ "the other places follow: check": {
+  "exit": 1,
+  "output": "FAIL stale           [0.500, 0.500] H:1b384f7867 fact: default dependence class\n       docs/spec.md::3. モデル reads as \"frechet\"   (stated, M:6948c8f54f)\n       pw/kernel.py::Kernel.__init__ reads as \"frechet\"\n       docs/spec.md::2. v0.1 からの変更: it changed since it was read\n       docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則: it changed since it was read\n       read the place(s) again: python -m pw.maintain\nok   current         [0.971, 0.984] H:ff0660c7fb fact: axioms a proof may depend on\nok   re-established  [0.971, 0.984] H:3a14674a21 fact: largest component inference solves\nok   current         [0.971, 0.984] H:da95269971 fact: names of the MCP tools\nok   current         [0.970, 0.990] H:5b3ef45a86 fact: default threshold, in thousandths\nok   current         [0.980, 0.990] H:8dd0087695 fact: Lean version"
+ },
+ "the other places follow: maintain": {
+  "exit": 1,
+  "output": "0 decision(s) and 2 place(s) need reading; asking an agent (maintain-1866b9)\nFAIL current         [0.648, 0.984] H:1b384f7867 fact: default dependence class\n       docs/spec.md::3. モデル reads as \"frechet\"   (stated, M:6948c8f54f)\n       docs/spec.md::2. v0.1 からの変更 reads as \"frechet\"   (stated, M:f1678404cf, not confirmed)\n       docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則 reads as \"frechet\"   (stated, M:5182fce3b1, not confirmed)\n       pw/kernel.py::Kernel.__init__ reads as \"frechet\"\n       the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm\nok   current         [0.971, 0.984] H:ff0660c7fb fact: axioms a proof may depend on\nok   current         [0.971, 0.984] H:3a14674a21 fact: largest component inference solves\nok   current         [0.971, 0.984] H:da95269971 fact: names of the MCP tools\nok   current         [0.970, 0.990] H:5b3ef45a86 fact: default threshold, in thousandths\nok   current         [0.980, 0.990] H:8dd0087695 fact: Lean version"
+ },
+ "the other places follow: readings a person has to confirm": {
+  "exit": 0,
+  "output": "M:f1678404cf  docs/spec.md::2. v0.1 からの変更\n   reads as: \"frechet\"\n   because it says: | 9 | （v0.2）証拠の依存は「重複〜独立」の独自の混合 | コピュラのクラスを名前で選ぶ：`independent` / `comonotone` / `pqd` / `frechet`（既定） | 独自の混合に根拠がなかった。`frechet` が v0.1 の文字どおりの読み |\n\nM:5182fce3b1  docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則\n   reads as: \"frechet\"\n   because it says: | `frechet`（既定） | W ≤ C ≤ M | [max(0, Σaᵢ − (k−1)), min aᵢ] | 何も知らない（フレシェ＝ヘフディング限界） |\n\n2 reading(s) nobody has confirmed; confirm with: python -m pw.confirm --who NAME M:f1678404cf M:5182fce3b1"
+ },
+ "the other places follow: confirmed": {
+  "exit": 0,
+  "output": "confirmed M:f1678404cf\nconfirmed M:5182fce3b1"
+ },
+ "the other places follow: check after confirming": {
+  "exit": 0,
+  "output": "ok   current         [0.852, 1.000] H:1b384f7867 fact: default dependence class\nok   current         [0.971, 0.984] H:ff0660c7fb fact: axioms a proof may depend on\nok   current         [0.971, 0.984] H:3a14674a21 fact: largest component inference solves\nok   current         [0.971, 0.984] H:da95269971 fact: names of the MCP tools\nok   current         [0.970, 0.990] H:5b3ef45a86 fact: default threshold, in thousandths\nok   current         [0.980, 0.990] H:8dd0087695 fact: Lean version"
+ },
+ "one command gets a different default threshold: check": {
+  "exit": 1,
+  "output": "ok   current         [0.852, 1.000] H:1b384f7867 fact: default dependence class\nok   current         [0.971, 0.984] H:ff0660c7fb fact: axioms a proof may depend on\nok   current         [0.971, 0.984] H:3a14674a21 fact: largest component inference solves\nok   current         [0.971, 0.984] H:da95269971 fact: names of the MCP tools\nFAIL violated        [0.010, 0.030] H:5b3ef45a86 fact: default threshold, in thousandths\n       pw/orchestrator.py::main reads as 900\n       pw/check.py::main reads as 900\n       pw/maintain.py::main reads as 800\n       the places do not say the same thing (verified by Lean); which one is right is for a person to say\nok   current         [0.980, 0.990] H:8dd0087695 fact: Lean version"
+ },
+ "workers": {
+  "maintain-13d804": {
+   "turns": 5,
+   "cost_usd": 0.15,
+   "seconds": 11,
+   "report": "I recorded what `docs/spec.md` section \"3. モデル\" says for fact H:1b384f7867, read as the Lean term `\"frechet\"`. The kernel saved the reading as M:6948c8f54f.\n\nThe quote I gave is: 「既定の `frechet` は依存について何も仮定しない。」 It says the default copula class, `frechet`, assumes nothing about dependence. The sentence before it in that section says that evidence on the same target forms one block, unless declared independent, and that the block's joint likelihood ranges over what the chosen copula class allows.\n\nI read only that section and changed no files, so there was nothing to commit."
+  },
+  "maintain-1866b9": {
+   "turns": 6,
+   "cost_usd": 0.16,
+   "seconds": 13,
+   "report": "Both places name `\"frechet\"` as the default copula class for evidence on one target, so they agree. I recorded both readings, and the kernel filed them under the same object, `O:4fbd6387d9`.\n\n- **`docs/spec.md::2. v0.1 からの変更`** → `\"frechet\"`. Row 9 lists the classes `independent` / `comonotone` / `pqd` / `frechet`, and marks `frechet` with （既定）, meaning \"default\".\n- **`docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則`** → `\"frechet\"`. The class table row reads \"`frechet`（既定） | W ≤ C ≤ M | …\", so this place also marks it as the default.\n\nI didn't change any files, so there was nothing to commit."
+  },
+  "maintain-4afa02": {
+   "turns": 12,
+   "cost_usd": 0.28,
+   "seconds": 25,
+   "report": "I recorded a reading for all six places, each with its quote copied word for word from that section alone. The kernel took every reading. I changed no files, so there was nothing to commit.\n\n| Fact | Place | Reading |\n|---|---|---|\n| H:1b384f7867 | `docs/spec.md::3. モデル` | `\"pqd\"` (from \"既定の `pqd` は正の依存で…\") |\n| H:1b384f7867 | `docs/spec.md::2. v0.1 からの変更` | `\"pqd\"` (row 9: \"`pqd`（既定）\") |\n| H:1b384f7867 | `docs/symbols.md::7. 証拠 ― …` | `\"pqd\"` (copula table row \"`pqd`（既定）\") |\n| H:ff0660c7fb | `docs/spec.md::5. Lean Gate` | `[\"Classical.choice\", \"Quot.sound\", \"propext\"]` |\n| H:3a14674a21 | `docs/spec.md::7. 未解決` | `14` |\n| H:da95269971 | `docs/spec.md::4. 操作（MCPツール）` | the 15 tools listed below |\n\nThe 15 tools, sorted: `check_model`, `claim`, `declare_independent`, `distance`, `ground`, `ground_at`, `infer`, `model`, `observe`, `observe_command`, `prove`, `read_place`, `reject_object`, `sample_model`, `status`.\n\nTwo readings involved a judgement call:\n- **Atom limit:** the section says \"連結成分が14原子を超えると解けない\" (it cannot solve a component of more than 14 atoms). It doesn't state the largest solvable size directly, so I read \"more than 14 fails\" as 14 being the largest that still works.\n- **Tool list:** the tools are spread across a table, so as instructed I quoted one entry's row (`claim(text)`), not the whole table.\n\nAll three places for the default copula class say `pqd`, so they agree with each other. Nothing I read was missing or said anything unexpected."
+  }
+ }
+}

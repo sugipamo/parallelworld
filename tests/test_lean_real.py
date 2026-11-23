@@ -477,3 +477,16 @@ def test_a_fact_stated_in_several_places(tmp_path):
     k.sync_facts(str(repo / "pw-facts.json"))
     rep = k.recheck(cwd)["decisions"]
     assert [(d["fact"], d["state"]) for d in rep] == [("largest", "current")] and rep[0]["places"][0]["reads as"] == "3"
+
+
+def test_a_list_is_read_off_the_whole_place(tmp_path):
+    """One quoted row cannot stand for a list: if the table changes, it has to be read again."""
+    k = Kernel(str(tmp_path / "e.db"), gate=LeanGate())
+    (tmp_path / "doc.md").write_text("## Tools\n\n| `a` | first |\n| `b` | second |\n")
+    cwd = str(tmp_path)
+    h = k.claim_fact("tool names", "List String", ["doc.md::Tools"])["h"]
+    k.read_place(h, "doc.md::Tools", '["a", "b"]', cwd=cwd, quote="| `a` | first |")
+    assert k.recheck(cwd)["decisions"][0]["state"] == "current"
+    (tmp_path / "doc.md").write_text("## Tools\n\n| `a` | first |\n| `b` | second |\n| `c` | third |\n")
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "stale" and r["unread"][0]["why"] == "it changed since it was read", r
