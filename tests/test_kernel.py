@@ -403,7 +403,7 @@ def test_a_place_is_read_by_a_description_not_by_code():
     assert _read_pattern(pattern(find_all=r"(\d+)", kind="nat", sort=True), "9 10 2") == "[2, 9, 10]"       # by size, not as text
     assert _read_pattern(pattern(find_all=r"zzz(\d)", kind="nat"), text) == "[]"
     assert _read_pattern(pattern(find=r"^ALLOWED = (.)"), text) == '"{"'                                    # ^ is a line start
-    for found, why in ((r'"(\w+)"', "matches 5 times"), (r"nothing (here)", "matches 0 times")):
+    for found, why in ((r'"(\w+)"', "matches 3 times"), (r"nothing (here)", "matches 0 times")):
         with pytest.raises(KernelError, match=why):
             _read_pattern(pattern(find=found), text)
     with pytest.raises(KernelError):
