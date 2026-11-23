@@ -890,6 +890,16 @@ class Kernel:
                                          if e["target"] == h and "tree" in e}):
                 self.observe_command(h, kind, command, cwd)
             st = self.state()
+            if entry["state"] == "current":
+                # the file is read, but what it reads as may not be proved yet: try what was proved before
+                decided = st.algebra.decided()
+                now_f = [f for gs, hh, f in st.links if hh == h and all(st.models[x]["subject"] == now for x in gs if x[0] == "M")]
+                before = [f for _, f in mine if st.rep(f) in decided]
+                if now_f and before and not any(st.rep(f) in decided for f in now_f):
+                    carried = self._carry_proofs(before[-1], now_f[-1])
+                    if carried["state"] != "re-established":
+                        entry.update(carried)
+                st = self.state()
             refuted = {x for rel, ids in st.algebra.order() if rel == "not" for x in ids}
             if any(st.rep(f) in refuted for gs, hh, f in st.links
                    if hh == h and all(st.models[x]["subject"] == now for x in gs if x[0] == "M")):
@@ -927,11 +937,17 @@ class Kernel:
         st = self.state()
         if st.rep(old_f) == st.rep(new_f):
             return {"state": "re-established"}              # the reading did not change
-        for p in st.proofs:
-            if p["relation"] in ("holds", "not") and p["args"] == [old_f] and p.get("proof"):
-                if self.prove(p["relation"], [new_f], p["proof"])["accepted"]:
-                    return {"state": "re-established" if p["relation"] == "holds" else "violated"}
-        if self.prove("not", [new_f], "decide")["accepted"]:  # a decidable specification can simply be evaluated
+        stored = [p for p in st.proofs if p["relation"] in ("holds", "not") and p["args"] == [old_f] and p.get("proof")]
+        for p in stored:
+            if self.prove(p["relation"], [new_f], p["proof"])["accepted"]:
+                return {"state": "re-established" if p["relation"] == "holds" else "violated"}
+        # A specification that can be decided is often decided by the same tactics either way:
+        # try what proved the old proposition on the opposite of the new one.
+        for p in stored:
+            other = "not" if p["relation"] == "holds" else "holds"
+            if self.prove(other, [new_f], p["proof"])["accepted"]:
+                return {"state": "violated" if other == "not" else "re-established"}
+        if self.prove("not", [new_f], "decide")["accepted"]:
             return {"state": "violated"}
         return {"state": "uncovered", "note": "the stored proof does not go through for the file as it is now"}
 

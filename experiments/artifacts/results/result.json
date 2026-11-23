@@ -1,0 +1,88 @@
+{
+ "A": {
+  "agent reads the file": {
+   "output": "MERGEABLE pw/read-catalog\n   ok  [0.943, 0.943] H:72403d99d6 (formal, specification P:2827e17646): pw/catalog.json::evidence satisfies `Spec.Likelihoods` : (List (String × List (String × Nat × Nat))) → Prop — for every kind of evidence, the likelihoods given true sum to 1 and so do those given false"
+  },
+  "check": {
+   "exit": 0,
+   "output": "ok   current         [0.943, 0.943] H:72403d99d6 pw/catalog.json::evidence satisfies Spec.Likelihoods"
+  },
+  "the agent's reading against the reader's": {
+   "output": "{\"same rows\": true, \"rows\": 14, \"same text\": false}"
+  },
+  "check after a person confirms the reading": {
+   "exit": 0,
+   "output": "ok   current         [0.993, 0.993] H:72403d99d6 pw/catalog.json::evidence satisfies Spec.Likelihoods"
+  },
+  "check after edit 1: retune test: columns still sum to 1": {
+   "exit": 1,
+   "output": "FAIL stale           [0.704, 0.704] H:72403d99d6 pw/catalog.json::evidence satisfies Spec.Likelihoods\n       the file changed since an agent read it; it has to be read again (python -m pw.maintain)"
+  },
+  "maintain after edit 1": {
+   "exit": 0,
+   "output": "1 decision(s) need a file read again; asking an agent (maintain-87f7e2)\nok   current         [0.943, 0.943] H:72403d99d6 pw/catalog.json::evidence satisfies Spec.Likelihoods"
+  },
+  "check after edit 2: retune property_test: the false column now sums to 1.1": {
+   "exit": 1,
+   "output": "FAIL stale           [0.077, 0.077] H:72403d99d6 pw/catalog.json::evidence satisfies Spec.Likelihoods\n       the file changed since an agent read it; it has to be read again (python -m pw.maintain)"
+  },
+  "maintain after edit 2": {
+   "exit": 1,
+   "output": "1 decision(s) need a file read again; asking an agent (maintain-0c1f3f)\nFAIL violated        [0.012, 0.012] H:72403d99d6 pw/catalog.json::evidence satisfies Spec.Likelihoods\n       Lean has verified that the file, as read, does not satisfy the specification"
+  },
+  "workers": {
+   "maintain-0c1f3f": {
+    "turns": 7,
+    "cost_usd": 0.19,
+    "seconds": 16,
+    "report": "**H:72403d99d6 no longer holds.** I read the `evidence` section of `pw/catalog.json` as it is now and wrote it as a Lean term, with each likelihood in thousandths. The Lean kernel accepted a proof of `not [F]` (proposition F:042b4783b9, model M:7f92270490).\n\n**Why it fails:** In `property_test`, the chance of `pass` when the target is false has changed from 0.15 to 0.25 (`pw/catalog.json:33`). The chance of `fail` when the target is false is still 0.85, so the two now add up to 1.10 instead of 1. The values given true still add up to 1 (0.9 + 0.1).\n\nThe other six kinds of evidence (`test`, `typecheck`, `review`, `instance_check`, `back_translation` and `sign_off`) are unchanged, and their pairs still add up to 1 both given true and given false.\n\nI didn't change any file, so there was nothing to commit."
+   },
+   "maintain-87f7e2": {
+    "turns": 7,
+    "cost_usd": 0.19,
+    "seconds": 19,
+    "report": "**H:72403d99d6 still holds.** I didn't change any files, so there was nothing to commit.\n\nI read `pw/catalog.json` as it is now. One thing has changed since the earlier reading: the `test` evidence now gives `pass` as [0.9, 0.4] and `fail` as [0.1, 0.6]. Before, it was 0.95/0.05 when the target is true; the false column (0.4/0.6) is the same. The other six kinds of evidence match the earlier reading.\n\nI stated the model as the file reads now, scaling each probability by 1000:\n`[(\"test\", [(\"pass\", 900, 400), (\"fail\", 100, 600)]), (\"property_test\", [(\"pass\", 900, 150), (\"fail\", 100, 850)]), (\"typecheck\", [(\"pass\", 990, 700), (\"fail\", 10, 300)]), (\"review\", [(\"agree\", 800, 350), (\"disagree\", 200, 650)]), (\"instance_check\", [(\"agree\", 1000, 350), (\"disagree\", 0, 650)]), (\"back_translation\", [(\"match\", 850, 450), (\"mismatch\", 150, 550)]), (\"sign_off\", [(\"confirmed\", 980, 100), (\"rejected\", 20, 900)])]`\n\nLean accepted the proof of `holds [F:014a56b8d1]` (`unfold Spec.Likelihoods; decide`, no axioms). For every kind of evidence, the likelihoods add up to 1 both when the target is true and when it is false."
+   },
+   "read-catalog": {
+    "turns": 11,
+    "cost_usd": 0.28,
+    "seconds": 32,
+    "report": "The claim holds: in `pw/catalog.json`, every kind of evidence has likelihoods that sum to 1 given true and to 1 given false. The kernel now puts claim H:72403d99d6 at 0.943. I didn't change the file. Nothing in the repository changed, so there was nothing to commit.\n\n- **Model (M:0f2259409f):** I wrote the `evidence` table as a Lean list of `(kind, [(outcome, given true, given false)])`, with each number in thousandths. For example, `test` became `[(\"pass\", 950, 400), (\"fail\", 50, 600)]`. All seven kinds are included (`test`, `property_test`, `typecheck`, `review`, `instance_check`, `back_translation`, `sign_off`), and each has pairs that sum to 1000/1000.\n- **Proof:** the Lean kernel accepted `holds [F:294456fce7]`. Plain `decide` failed because the specification has no decision procedure; `unfold Spec.Likelihoods; simp (config := {decide := true})` worked.\n- **Evidence:** the kernel ran a Python check of the real file that sums each column with exact fractions, and it passed (E:2d48449379).\n\n`sample_model` and `check_model` can't be used here: a file model has no call to run, and the kernel also refused a command that compares the file with the Lean model. So the Lean term rests on my reading of the file plus that sum check.\n\nNo other workers' claims or past decisions were involved, so I relied on none."
+   }
+  }
+ },
+ "B (first run, before the fix)": {
+  "proof": {
+   "output": "{\"accepted\": true, \"axioms\": [], \"gamma\": \"67c05fcbaf14\"}"
+  },
+  "check": {
+   "exit": 0,
+   "output": "ok   current         [0.990, 0.990] H:72403d99d6 pw/catalog.json::evidence satisfies Spec.Likelihoods"
+  },
+  "check after edit 1: retune test: columns still sum to 1": {
+   "exit": 0,
+   "output": "ok   re-established  [0.990, 0.990] H:72403d99d6 pw/catalog.json::evidence satisfies Spec.Likelihoods"
+  },
+  "check after edit 2: retune property_test: the false column now sums to 1.1": {
+   "exit": 1,
+   "output": "FAIL uncovered       [0.500, 0.500] H:72403d99d6 pw/catalog.json::evidence satisfies Spec.Likelihoods\n       the stored proof does not go through for the file as it is now"
+  }
+ },
+ "B": {
+  "proof": {
+   "output": "{\"accepted\": true, \"axioms\": [], \"gamma\": \"67c05fcbaf14\"}"
+  },
+  "check": {
+   "exit": 0,
+   "output": "ok   current         [0.990, 0.990] H:72403d99d6 pw/catalog.json::evidence satisfies Spec.Likelihoods"
+  },
+  "check after edit 1: retune test: columns still sum to 1": {
+   "exit": 0,
+   "output": "ok   re-established  [0.990, 0.990] H:72403d99d6 pw/catalog.json::evidence satisfies Spec.Likelihoods"
+  },
+  "check after edit 2: retune property_test: the false column now sums to 1.1": {
+   "exit": 1,
+   "output": "FAIL violated        [0.010, 0.010] H:72403d99d6 pw/catalog.json::evidence satisfies Spec.Likelihoods\n       Lean has verified that the file, as read, does not satisfy the specification"
+  }
+ }
+}

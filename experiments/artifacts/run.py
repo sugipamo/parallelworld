@@ -94,12 +94,13 @@ def workers(repo):
 def main():
     out = os.path.abspath(sys.argv[1])
     shutil.rmtree(out, ignore_errors=True)
-    os.makedirs(out)
+    os.makedirs(out)   # usage: run OUT_DIR [B]   (B alone runs only the reader path, which needs no agent)
     lean = os.path.join(out, "lean")
     shutil.copytree(os.path.join(ROOT, "lean"), lean, ignore=shutil.ignore_patterns(".lake", "PWCheck"))
     with open(os.path.join(lean, "Gamma.lean"), "a") as fh:
         fh.write(GAMMA)
     result = {"A": {}, "B": {}}
+    only = sys.argv[2:] or ["A", "B"]
 
     def step(path, name, value):
         result[path][name] = value
@@ -118,6 +119,8 @@ def main():
         edit(repo, message, kind, outcomes)
         step("B", f"check after edit {i}: {message}", run("pw.check", repo, lean))
     derived = k.state().algebra.objs[a["o"]]["text"]
+    if "A" not in only:
+        return
 
     # ---- path A: an agent reads
     repo = setup(out, "agent")
