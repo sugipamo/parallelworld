@@ -47,7 +47,7 @@ def show(report, threshold, unconfirmed="fail"):
             print(f"{mark(ok, soft)} {d['state']:<15} [{d['lo']:.3f}, {d['hi']:.3f}] {d['h']} fact: {d['fact']}")
             if not ok or len({p["reads as"] for p in d["places"]}) > 1:
                 for p in d["places"]:
-                    how = "" if p["by"] == "reader" else f"   (stated, {p['m']}" + (", not confirmed)" if p in weak else ")")
+                    how = "" if p["by"] == "reader" else f"   (stated, {p['m']}" + (", on one agent's word)" if p in weak else ")")
                     print(f"       {p['at']} reads as {p['reads as'][:100]}{how}")
             for u in d.get("unread", []):
                 print(f"       {u['at']}: {u['why'][:160]}")
@@ -55,8 +55,11 @@ def show(report, threshold, unconfirmed="fail"):
                 print("       the places do not say the same thing (verified by Lean); which one is right is for a person to say")
             elif d["state"] == "stale":
                 print("       read the place(s) again: python -m pw.maintain")
+            elif d["state"] == "disputed":
+                print("       a person has to say which reading is right: python -m pw.confirm --who NAME M:... and --reject M:...")
             elif not ok:
-                print("       the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm")
+                print("       the places agree, but a reading has nothing behind it except the agent that made it:")
+                print("       python -m pw.maintain (a second, blind reading) or python -m pw.confirm (a person)")
             if "error" in d:
                 print(f"       {d['error'][:300]}")
             continue

@@ -556,3 +556,46 @@ def test_a_fact_keeps_its_readings_when_its_declaration_changes(tmp_path):
     r = k.recheck(cwd)["decisions"]
     assert len(r) == 1 and r[0]["state"] in ("current", "re-established") and len(r[0]["places"]) == 3, r
     assert [p for p in r[0]["places"] if p["at"] == "doc.md::Limits"][0]["m"] == m and all(p["lo"] > 0.9 for p in r[0]["places"])
+
+
+def test_what_stands_behind_a_reading_no_person_confirmed(tmp_path):
+    from pw.kernel import pattern
+    log = str(tmp_path / "pw-log.jsonl")
+    (tmp_path / "doc.md").write_text("## Limits\n\nAt most 14 atoms.\n")
+    (tmp_path / "notes.md").write_text("## Size\n\nComponents have up to 14 atoms.\n")
+    (tmp_path / "k.py").write_text("LIMIT = 14\n")
+    cwd = str(tmp_path)
+    a, b = Kernel(log, gate=LeanGate(), actor="reader-a"), Kernel(log, gate=LeanGate(), actor="reader-b")
+    lo = lambda h, at: next(p["lo"] for d in a.recheck(cwd)["decisions"] if d["h"] == h for p in d["places"] if p["at"] == at)
+
+    # a place the kernel computes says the same
+    h = a.claim_fact("limit", "Nat", ["doc.md::Limits", {"at": "k.py::LIMIT", "reader": pattern(find=r"= (\d+)", kind="nat")}])["h"]
+    a.read_place(h, "doc.md::Limits", "14", cwd=cwd, quote="At most 14 atoms.")
+    assert lo(h, "doc.md::Limits") == pytest.approx(0.675 / 0.7625)            # the words are there; nothing else
+    a.read_place(h, "doc.md::Limits", "14", cwd=cwd, quote="At most 14 atoms.", blind=True)
+    assert lo(h, "doc.md::Limits") > 0.97                                       # read blind, and the code says 14 too
+
+    # no computed place: two prose places
+    g = a.claim_fact("size", "Nat", ["notes.md::Size", "doc.md::Limits"])["h"]
+    a.read_place(g, "notes.md::Size", "14", cwd=cwd, quote="Components have up to 14 atoms.", blind=True)
+    assert lo(g, "notes.md::Size") < 0.9                                        # one reader agreeing with itself
+    b.read_place(g, "notes.md::Size", "14", cwd=cwd, quote="Components have up to 14 atoms.", blind=True)
+    assert lo(g, "notes.md::Size") > 0.9                                        # a second reader, also blind
+
+    a.read_place(g, "doc.md::Limits", "14", cwd=cwd, quote="At most 14 atoms.", blind=True)
+    assert next(x for x in a.recheck(cwd)["decisions"] if x["h"] == g)["state"] == "current"
+
+    # the second reader sees something else: nobody is believed
+    (tmp_path / "notes.md").write_text("## Size\n\nComponents have up to 14 atoms, sixteen in tests.\n")
+    a.read_place(g, "notes.md::Size", "14", cwd=cwd, blind=True)
+    b.read_place(g, "notes.md::Size", "16", cwd=cwd, blind=True)
+    d = next(x for x in a.recheck(cwd)["decisions"] if x["h"] == g)
+    assert d["state"] == "disputed" and "reader-a" in d["unread"][0]["why"] and "reader-b" in d["unread"][0]["why"], d
+    wrong = next(m for p, m in a.state().facts[g]["readings"] if a.state().algebra.objs[a.state().models[m]["obj"]]["text"] == "16")
+    a.sign_off(wrong, "reviewer", confirmed=False)                              # a person settles it
+    assert next(x for x in a.recheck(cwd)["decisions"] if x["h"] == g)["state"] in ("current", "re-established")
+
+    # a value that is not in the words (a translation, say) gets no credit for being literal
+    t = a.claim_fact("unit", "String", ["doc.md::Limits"])["h"]
+    a.read_place(t, "doc.md::Limits", '"原子"', cwd=cwd, quote="At most 14 atoms.", blind=True)
+    assert lo(t, "doc.md::Limits") == pytest.approx(0.75)

@@ -376,8 +376,15 @@ class State:
                 self.atoms[p["m"]] = {"kind": "M", "text": f'{p["subject"]} reads as {p["obj"]["id"]}'}
                 self.prior[p["m"]] = p["model_prior"]
                 self.models[p["m"]] = {"subject": p["subject"], "obj": p["obj"]["id"], "binding": p.get("binding"),
-                                       "quote": p.get("quote"), "anchor": p.get("anchor", False)}
-            self.facts[p["h"]]["readings"].append((p["place"], p["m"]))
+                                       "quote": p.get("quote"), "anchor": p.get("anchor", False),
+                                       "by": set(), "blind": set(), "literal": False}
+            info = self.models[p["m"]]
+            info["by"].add(p.get("actor", "anon"))                 # who read it this way
+            if p.get("blind"):
+                info["blind"].add(p.get("actor", "anon"))          # ...shown nothing but the place
+            info["literal"] = info["literal"] or bool(p.get("literal"))
+            if (p["place"], p["m"]) not in self.facts[p["h"]]["readings"]:
+                self.facts[p["h"]]["readings"].append((p["place"], p["m"]))
         elif typ == "agree":
             if p["f"] not in self.atoms:
                 self.atoms[p["f"]] = {"kind": "F", "text": p["lean"]}
@@ -466,7 +473,7 @@ class Kernel:
     def _append(self, fh, state, typ, payload):
         event = {"ts": round(time.time(), 3), "actor": self.actor, "type": typ, **payload}
         fh.write(json.dumps(event, ensure_ascii=False) + "\n")
-        state.apply(typ, payload)
+        state.apply(typ, event)
 
     def state(self):
         with self._tx() as (_, state):
@@ -606,7 +613,7 @@ class Kernel:
                     "prior": self.catalog["priors"]["claim"], "fact": fact})
         return {"h": h}
 
-    def read_place(self, h, place, obj=None, cwd=None, quote=None):
+    def read_place(self, h, place, obj=None, cwd=None, quote=None, blind=False):
         """Record how one place of a fact reads, for its content as it is now. Without `obj`
         the place's reader computes it.
 
@@ -616,6 +623,10 @@ class Kernel:
         again. (The price: something added elsewhere in the place that says otherwise goes
         unnoticed.) A list is read off the whole place, so a quote shows one entry of it and
         any change to the place calls for reading it again.
+
+        `blind` says the reader was shown this place and nothing else. Only then does it mean
+        anything that the reading agrees with what another place says: a reader who could
+        look at the other place might simply have copied it.
         """
         st = self.state()
         if h not in st.facts:
@@ -638,11 +649,23 @@ class Kernel:
         self._well_typed((fact["type"], obj))
         version = subject_id(place, cwd)
         ob = {"id": "O:" + _sha(fact["type"], obj), "type": fact["type"], "text": obj}
-        m = self._model_id(version, ob, how, None)
+        # a reading answers a question: the same place read for another fact is another hypothesis
+        m = "M:" + _sha(h, version, ob["id"], json.dumps(how, sort_keys=True, ensure_ascii=False) if how else "")
+        literal = False
+        if how is None:                              # do the words read actually occur there?
+            try:
+                said = json.loads(obj)
+                where = quote if quote is not None and not isinstance(said, list) else locate(place, cwd).decode("utf-8", "replace")
+                literal = all(str(x) in where for x in (said if isinstance(said, list) else [said]))
+            except ValueError:
+                pass
         with self._tx() as (con, st):
-            if (place, m) not in st.facts[h]["readings"]:
+            known = st.models.get(m, {})
+            if ((place, m) not in st.facts[h]["readings"] or self.actor not in known.get("by", ())
+                    or (blind and how is None and self.actor not in known.get("blind", ()))):
                 self._append(con, st, "reading", {
                     "h": h, "place": place, "subject": version, "m": m, "obj": ob, "binding": how, "quote": quote,
+                    "blind": bool(blind) and how is None, "literal": literal,
                     "anchor": quote is not None and "List" not in fact["type"],
                     "model_prior": self.catalog["priors"]["derived" if how else "model"]})
         return {"m": m, "o": ob["id"], "read as": obj}
@@ -676,9 +699,15 @@ class Kernel:
         guards, unread, reread = [], [], False
         for decl in fact["places"]:
             at, now = decl["at"], subject_id(decl["at"], cwd)
-            seen = [m for p, m in fact["readings"] if p == at]
+            rejected = {e["target"] for e in st.evidence.values() if e["kind"] == "sign_off" and e["outcome"] == "rejected"}
+            seen = [m for p, m in fact["readings"] if p == at and m not in rejected]
             have = [m for m in seen if st.models[m]["subject"] == now
                     or (st.models[m].get("anchor") and _anchored(st.models[m]["quote"], at, cwd))]
+            said = {st.models[m]["obj"]: m for m in have if not st.models[m]["binding"]}
+            if not decl["reader"] and len(said) > 1:      # two readers, two values: not for the kernel to choose
+                unread.append({"at": at, "why": "its readers disagree: " + "; ".join(
+                    f'{m} ({", ".join(sorted(st.models[m]["by"]))}) reads {st.algebra.objs[o]["text"][:60]}' for o, m in said.items())})
+                continue
             if decl["reader"]:                       # computed afresh every time, never taken from the record
                 try:
                     was = have
@@ -696,12 +725,17 @@ class Kernel:
             entry["places"].append({"at": at, "reads as": st.algebra.objs[st.models[have[-1]]["obj"]]["text"], "m": have[-1],
                                     "by": "reader" if st.models[have[-1]]["binding"] else "stated"})
         if unread:
-            entry.update(state="stale", unread=unread)
+            entry.update(state="disputed" if any("disagree" in u["why"] for u in unread) else "stale", unread=unread)
         else:
             verdict, new = self._agreement(h, guards, [p["reads as"] for p in entry["places"]])
             entry["state"] = {"holds": "re-established" if new and reread else "current", "not": "violated"}.get(verdict, "uncovered")
+        st = self.state()
         for p in entry["places"]:                    # how well each reading stands on its own
             p["lo"] = self.infer(p["m"], current=current)["lo"]
+            info = st.models[p["m"]]
+            if not info["binding"]:
+                p["blind by"] = sorted(info["blind"])
+                p["confirmed"] = any(e["target"] == p["m"] and e["kind"] == "sign_off" for e in st.evidence.values())
         try:
             b = self.infer(h, current=current)
             entry.update(lo=b["lo"], hi=b["hi"])
@@ -1136,6 +1170,32 @@ class Kernel:
             if len(agreeing) > 1:
                 blocks.setdefault((g, "shared"), []).append(
                     {"kind": "concurrence", "likelihood": derived["independent_formalization"]})
+        # What stands behind a reading that an agent stated, without anyone confirming it:
+        #   the words it reports occur in the place;
+        #   a blind reader arrived at the value that another place's declared pattern computes;
+        #   or two readers, each blind, arrived at the same value.
+        for fh, fact in st.facts.items():
+            if fh in st.withdrawn:
+                continue
+            present = {}
+            for at, rm in fact["readings"]:
+                base = st.models[rm]["subject"].split("@")[0]
+                if current is None or current.get(base, st.models[rm]["subject"]) == st.models[rm]["subject"]:
+                    present.setdefault(at, []).append(rm)
+            for at, rms in present.items():
+                for rm in rms:
+                    info = st.models[rm]
+                    if info["binding"] or rm not in comp:
+                        continue
+                    if info["literal"]:
+                        blocks.setdefault((rm, "shared"), []).append({"kind": "literal", "likelihood": derived["literal_in_place"]})
+                    if not info["blind"]:
+                        continue
+                    others = [st.models[x] for a2, xs in present.items() if a2 != at for x in xs if st.models[x]["obj"] == info["obj"]]
+                    if any(o["binding"] for o in others):
+                        blocks.setdefault((rm, "shared"), []).append({"kind": "computed", "likelihood": derived["agrees_with_computed"]})
+                    elif len(info["blind"]) > 1 or any(o["blind"] - info["blind"] for o in others if not o["binding"]):
+                        blocks.setdefault((rm, "shared"), []).append({"kind": "independent", "likelihood": derived["agrees_with_independent"]})
         choices = []
         for (t, _), evs in sorted(blocks.items()):
             items = [((e["likelihood"][0],) * 2, (e["likelihood"][1],) * 2) for e in evs if "likelihood" in e]
