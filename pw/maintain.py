@@ -38,8 +38,9 @@ setup, call and domains unless the file is code you can call. Then prove `holds 
 """
 
 PLACES = """
-Facts (one thing stated in several places). State what the place says with `read_place(h, place, object)`.
-Nothing has to be proved: the kernel compares the places itself.
+Facts (one thing stated in several places). State what the place says with
+`read_place(h, place, object, quote)`, where `quote` is the sentence or table row of the place that
+says it, copied word for word. Nothing has to be proved: the kernel compares the places itself.
 """
 
 def main():

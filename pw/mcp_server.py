@@ -66,12 +66,14 @@ def model(h: str, object: str, setup: str = "", call: str = "", domains: list[st
 
 
 @mcp.tool()
-def read_place(h: str, place: str, object: str) -> dict:
+def read_place(h: str, place: str, object: str, quote: str) -> dict:
     """For a FACT (one thing stated in several places): state what one of its places says, as a
     Lean term of the fact's type, e.g. object "\"pqd\"" or "[\"a\", \"b\"]" or "14". `place` is exactly
-    as listed for the fact, e.g. "docs/spec.md::3. Model". Write what that place itself says, for
-    its content as it is now. The kernel compares the places; you prove nothing."""
-    return _safe(lambda: _kernel.read_place(h, place, object, cwd=_workdir()))
+    as listed for the fact, e.g. "docs/spec.md::3. Model". `quote` is the sentence or table row of
+    that place which says it, copied word for word (for a list spread over a table, the row of
+    one entry); the kernel checks the quote is there and shows it to the person who confirms your
+    reading. Write what the place itself says. The kernel compares the places; you prove nothing."""
+    return _safe(lambda: _kernel.read_place(h, place, object, cwd=_workdir(), quote=quote))
 
 
 @mcp.tool()

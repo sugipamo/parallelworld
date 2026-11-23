@@ -22,7 +22,7 @@ def unconfirmed(kernel, repo):
     for m, info in st.models.items():
         base = info["subject"].split("@")[0]
         if not info["binding"] and now.get(base) == info["subject"] and m not in signed:
-            yield m, base, st.algebra.objs[info["obj"]]["text"]
+            yield m, base, st.algebra.objs[info["obj"]]["text"], info.get("quote")
 
 
 def main():
@@ -43,10 +43,14 @@ def main():
             print(("rejected " if args.reject else "confirmed ") + m)
         return
     todo = list(unconfirmed(kernel, repo))
-    for m, place, term in todo:
-        passage = (locate(place, repo) or b"").decode("utf-8", "replace").strip()
-        print(f"{m}  {place}\n   reads as: {term}\n   passage:  " + passage[:600].replace("\n", "\n             ") + ("\n             …" if len(passage) > 600 else "") + "\n")
-    print(f"{len(todo)} reading(s) nobody has confirmed" + ("" if not todo else "; confirm with: python -m pw.confirm --who NAME " + " ".join(m for m, _, _ in todo)))
+    for m, place, term, quote in todo:
+        if quote:      # the kernel has checked that these words are in the place
+            shown = "because it says: " + " ".join(quote.split())
+        else:
+            passage = (locate(place, repo) or b"").decode("utf-8", "replace").strip()
+            shown = "passage:  " + passage[:600].replace("\n", "\n             ") + ("\n             …" if len(passage) > 600 else "")
+        print(f"{m}  {place}\n   reads as: {term}\n   {shown}\n")
+    print(f"{len(todo)} reading(s) nobody has confirmed" + ("" if not todo else "; confirm with: python -m pw.confirm --who NAME " + " ".join(t[0] for t in todo)))
 
 
 if __name__ == "__main__":

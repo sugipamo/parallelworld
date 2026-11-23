@@ -426,17 +426,33 @@ def test_a_fact_stated_in_several_places(tmp_path):
 
     r = k.recheck(cwd)["decisions"][0]
     assert r["state"] == "stale" and [u["at"] for u in r["unread"]] == ["doc.md::Model", "doc.md::Changes"], r
-    assert r["places"] == [{"at": "k.py::K.__init__", "reads as": '"pqd"', "m": r["places"][0]["m"], "by": "reader"}]
+    assert r["places"] == [{"at": "k.py::K.__init__", "reads as": '"pqd"', "m": r["places"][0]["m"], "by": "reader", "lo": 0.98}]
     with pytest.raises(KernelError):
         k.read_place(h, "doc.md::Model", "14", cwd=cwd)                     # not a value of the fact's type
     with pytest.raises(KernelError):
         k.read_place(h, "doc.md::Elsewhere", '"pqd"', cwd=cwd)              # not one of its places
-    a = k.read_place(h, "doc.md::Model", '"pqd"', cwd=cwd)
+    with pytest.raises(KernelError):
+        k.read_place(h, "doc.md::Model", '"pqd"', cwd=cwd, quote="The default is pqd.")     # not what is written there
+    a = k.read_place(h, "doc.md::Model", '"pqd"', cwd=cwd, quote="The default class is `pqd`.")
     b = k.read_place(h, "doc.md::Changes", '"pqd"', cwd=cwd)
     r = k.recheck(cwd)["decisions"][0]
     assert r["state"] == "current" and 0.7 < r["lo"] < 0.9, r               # they agree, on two agents' word
     k.sign_off(a["m"], "reviewer"); k.sign_off(b["m"], "reviewer")
     assert k.recheck(cwd)["decisions"][0]["lo"] > 0.9                      # now on a person's word; three readings must all be right
+
+    assert all(p["lo"] > 0.9 for p in k.recheck(cwd)["decisions"][0]["places"])            # each reading stands on its own
+
+    # an edit elsewhere in the quoted place leaves its reading alone; the unquoted one must be read again
+    (repo / "doc.md").write_text(doc.format(a="pqd", b="pqd").replace("## Changes\n", "## Changes\n\nA note.\n")
+                                 .replace("The default class", "Some remarks first.\n\nThe default class"))
+    git("commit", "-qam", "remarks")
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "stale" and [u["at"] for u in r["unread"]] == ["doc.md::Changes"], r
+    b = k.read_place(h, "doc.md::Changes", '"pqd"', cwd=cwd, quote="| 9 | classes | `pqd` (default) |")
+    k.sign_off(b["m"], "reviewer")
+    assert k.recheck(cwd)["decisions"][0]["state"] == "current"
+    write("pqd", "pqd", "pqd"); git("commit", "-qam", "remarks removed")
+    assert k.recheck(cwd)["decisions"][0]["state"] == "current"                              # both quotes are still there
 
     # one place changes its mind
     write("frechet", "pqd", "pqd"); git("commit", "-qam", "the model section now says frechet")

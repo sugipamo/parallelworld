@@ -252,6 +252,12 @@ def locate(subject, cwd):
     return raw if found is None else found.encode("utf-8")
 
 
+def _anchored(quote, subject, cwd):
+    """Is the quote in the content the subject names, word for word (spacing aside)?"""
+    content = locate(subject, cwd)
+    return content is not None and " ".join(quote.split()) in " ".join(content.decode("utf-8", "replace").split())
+
+
 def subject_id(subject, cwd):
     """The subject plus a hash of what it names. A reading holds for exactly this content:
     it dies when the content changes, and is untouched by changes elsewhere in the file."""
@@ -298,7 +304,8 @@ class State:
             if p["m"] not in self.atoms:
                 self.atoms[p["m"]] = {"kind": "M", "text": f'{p["subject"]} reads as {p["obj"]["id"]}'}
                 self.prior[p["m"]] = p["model_prior"]
-                self.models[p["m"]] = {"subject": p["subject"], "obj": p["obj"]["id"], "binding": p.get("binding")}
+                self.models[p["m"]] = {"subject": p["subject"], "obj": p["obj"]["id"], "binding": p.get("binding"),
+                                       "quote": p.get("quote")}
             self.facts[p["h"]]["readings"].append((p["place"], p["m"]))
         elif typ == "agree":
             if p["f"] not in self.atoms:
@@ -517,9 +524,15 @@ class Kernel:
                     "prior": self.catalog["priors"]["claim"], "fact": fact})
         return {"h": h}
 
-    def read_place(self, h, place, obj=None, cwd=None):
+    def read_place(self, h, place, obj=None, cwd=None, quote=None):
         """Record how one place of a fact reads, for its content as it is now. Without `obj`
-        the place's reader computes it."""
+        the place's reader computes it.
+
+        `quote` is the sentence (or table row) of the place that says it, word for word. The
+        kernel checks that it is there. A reading with a quote stays valid for as long as the
+        quote stays in the place: other edits to the same place do not call for reading it again.
+        (The price: something added elsewhere in the place that says otherwise goes unnoticed.)
+        """
         st = self.state()
         if h not in st.facts:
             raise KernelError(f"{h} is not a fact")
@@ -534,6 +547,8 @@ class Kernel:
             if how is None:
                 raise KernelError(f"{place} has no reader; state what it says")
             obj = self.read(place, how, cwd)
+        if quote is not None and not _anchored(quote, place, cwd):
+            raise KernelError("the quote is not in the place word for word")
         obj = _norm(obj)
         self._screen(obj)
         self._well_typed((fact["type"], obj))
@@ -543,7 +558,7 @@ class Kernel:
         with self._tx() as (con, st):
             if (place, m) not in st.facts[h]["readings"]:
                 self._append(con, st, "reading", {
-                    "h": h, "place": place, "subject": version, "m": m, "obj": ob, "binding": how,
+                    "h": h, "place": place, "subject": version, "m": m, "obj": ob, "binding": how, "quote": quote,
                     "model_prior": self.catalog["priors"]["derived" if how else "model"]})
         return {"m": m, "o": ob["id"], "read as": obj}
 
@@ -577,7 +592,8 @@ class Kernel:
         for decl in fact["places"]:
             at, now = decl["at"], subject_id(decl["at"], cwd)
             seen = [m for p, m in fact["readings"] if p == at]
-            have = [m for m in seen if st.models[m]["subject"] == now]
+            have = [m for m in seen if st.models[m]["subject"] == now
+                    or (st.models[m].get("quote") and _anchored(st.models[m]["quote"], at, cwd))]
             if not have and decl["reader"]:
                 try:
                     have = [self.read_place(h, at, cwd=cwd)["m"]]
@@ -590,6 +606,7 @@ class Kernel:
                 continue
             guards.append(have[-1])
             st = self.state()
+            current = {**current, at: st.models[have[-1]]["subject"]}      # a quoted reading outlives other edits to its place
             entry["places"].append({"at": at, "reads as": st.algebra.objs[st.models[have[-1]]["obj"]]["text"], "m": have[-1],
                                     "by": "reader" if st.models[have[-1]]["binding"] else "stated"})
         if unread:
@@ -597,6 +614,8 @@ class Kernel:
         else:
             verdict, new = self._agreement(h, guards, [p["reads as"] for p in entry["places"]])
             entry["state"] = {"holds": "re-established" if new and reread else "current", "not": "violated"}.get(verdict, "uncovered")
+        for p in entry["places"]:                    # how well each reading stands on its own
+            p["lo"] = self.infer(p["m"], current=current)["lo"]
         try:
             b = self.infer(h, current=current)
             entry.update(lo=b["lo"], hi=b["hi"])
@@ -1179,6 +1198,10 @@ class Kernel:
         bases = ({info["subject"].split("@")[0] for info in st.models.values()} | {f["subject"] for f in st.formal.values()}
                  | {p["at"] for f in st.facts.values() for p in f["places"]})
         found = {b: subject_id(b, cwd) for b in bases}
+        for info in st.models.values():              # a quoted reading is of the present version while its quote is there
+            base = info["subject"].split("@")[0]
+            if info.get("quote") and _anchored(info["quote"], base, cwd):
+                found[base] = info["subject"]
         return {b: v for b, v in found.items() if "@" in v}     # code that is not here is left alone
 
     def distance(self, a, b, current=None):

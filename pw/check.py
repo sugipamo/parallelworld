@@ -31,23 +31,29 @@ def show(report, threshold):
                 print(f"       failing check: {d['failed'][:200]}")
             continue
         ok = d["state"] in ("current", "re-established") and d["lo"] >= threshold
-        bad |= not ok
         if "fact" in d:
+            # The places agree if every reading is right. The bound on that falls as places are added
+            # (any one reading may be the wrong one), so each reading is held to the threshold by itself.
+            weak = [p for p in d["places"] if p["lo"] < threshold]
+            ok = d["state"] in ("current", "re-established") and not weak
+            bad |= not ok
             print(f"{'ok  ' if ok else 'FAIL'} {d['state']:<15} [{d['lo']:.3f}, {d['hi']:.3f}] {d['h']} fact: {d['fact']}")
             if not ok or len({p["reads as"] for p in d["places"]}) > 1:
                 for p in d["places"]:
-                    print(f"       {p['at']} reads as {p['reads as'][:100]}" + ("" if p["by"] == "reader" else f"   (stated, {p['m']})"))
+                    how = "" if p["by"] == "reader" else f"   (stated, {p['m']}" + (", not confirmed)" if p in weak else ")")
+                    print(f"       {p['at']} reads as {p['reads as'][:100]}{how}")
             for u in d.get("unread", []):
                 print(f"       {u['at']}: {u['why'][:160]}")
             if d["state"] == "violated":
                 print("       the places do not say the same thing (verified by Lean); which one is right is for a person to say")
             elif d["state"] == "stale":
                 print("       read the place(s) again: python -m pw.maintain")
-            elif not ok and d["state"] in ("current", "re-established"):
-                print(f"       the places agree, but stated readings are not supported well enough (threshold {threshold}): python -m pw.confirm")
+            elif not ok:
+                print("       the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm")
             if "error" in d:
                 print(f"       {d['error'][:300]}")
             continue
+        bad |= not ok
         print(f"{'ok  ' if ok else 'FAIL'} {d['state']:<15} [{d['lo']:.3f}, {d['hi']:.3f}] {d['h']} {d['subject'].split('@')[0]} satisfies {d['spec']}")
         if d["state"] == "stale":
             print("       the file changed since an agent read it; it has to be read again (python -m pw.maintain)")
