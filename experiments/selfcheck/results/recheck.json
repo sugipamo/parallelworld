@@ -1,0 +1,32 @@
+[
+ {
+  "label": "as established",
+  "exit": 0,
+  "seconds": 2,
+  "output": "ok   current         [0.999, 1.000] H:c9283a12c7 pw/credal.py::COPULAS satisfies Spec.NestedCopulaBounds\nok   current         [0.999, 1.000] H:d98120863d pw/credal.py::exchangeable_agreement satisfies Spec.AgreementBounds\nok   checks pass     [0.960, 0.960] H:b75c95ce2b \"For every probability distribution on a finite set of worlds and all events A, B, C, the p\" (1 check(s), not formal)"
+ },
+ {
+  "label": "refactored: same behaviour, different code",
+  "exit": 0,
+  "seconds": 51,
+  "output": "ok   re-established  [0.999, 1.000] H:c9283a12c7 pw/credal.py::COPULAS satisfies Spec.NestedCopulaBounds\nok   re-established  [0.999, 1.000] H:d98120863d pw/credal.py::exchangeable_agreement satisfies Spec.AgreementBounds\nok   checks pass     [0.960, 0.960] H:b75c95ce2b \"For every probability distribution on a finite set of worlds and all events A, B, C, the p\" (1 check(s), not formal)"
+ },
+ {
+  "label": "off by one in the Frechet bound",
+  "exit": 1,
+  "seconds": 51,
+  "output": "FAIL broken          [0.857, 0.857] H:c9283a12c7 pw/credal.py::COPULAS satisfies Spec.NestedCopulaBounds\n       the code no longer matches the model the proof was about: on ([(1/1 : ℚ), (1/1 : ℚ)] : List ℚ) the model gives (1, (1, 1)), the code gives (0, 1, 1)\nok   re-established  [0.999, 1.000] H:d98120863d pw/credal.py::exchangeable_agreement satisfies Spec.AgreementBounds\nok   checks pass     [0.960, 0.960] H:b75c95ce2b \"For every probability distribution on a finite set of worlds and all events A, B, C, the p\" (1 check(s), not formal)"
+ },
+ {
+  "label": "off by one in the product over checks",
+  "exit": 1,
+  "seconds": 47,
+  "output": "ok   re-established  [0.998, 1.000] H:c9283a12c7 pw/credal.py::COPULAS satisfies Spec.NestedCopulaBounds\nFAIL broken          [0.105, 0.105] H:d98120863d pw/credal.py::exchangeable_agreement satisfies Spec.AgreementBounds\n       the code no longer matches the model the proof was about: on 1 (0/1 : ℚ) (21/4 : ℚ) the model gives (0, 0), the code gives (0, 4/25)\nok   checks pass     [0.960, 0.960] H:b75c95ce2b \"For every probability distribution on a finite set of worlds and all events A, B, C, the p\" (1 check(s), not formal)"
+ },
+ {
+  "label": "restored",
+  "exit": 0,
+  "seconds": 2,
+  "output": "ok   current         [0.999, 1.000] H:c9283a12c7 pw/credal.py::COPULAS satisfies Spec.NestedCopulaBounds\nok   current         [0.999, 1.000] H:d98120863d pw/credal.py::exchangeable_agreement satisfies Spec.AgreementBounds\nok   checks pass     [0.960, 0.960] H:b75c95ce2b \"For every probability distribution on a finite set of worlds and all events A, B, C, the p\" (1 check(s), not formal)"
+ }
+]

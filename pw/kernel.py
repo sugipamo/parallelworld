@@ -116,6 +116,7 @@ class State:
         self.formal = {}     # H id -> {"subject", "pred"} for claims stated as a predicate
         self.authors = {}    # G id -> actors who stated that connection
         self.withdrawn = {}  # H id -> why the decision no longer stands
+        self.notes = {}      # G id -> what its author says the formalization leaves out and adds
         self.evidence = {}   # eid -> dict
         self.proofs = []     # proof events as recorded
         self.algebra = Lindenbaum()
@@ -150,6 +151,8 @@ class State:
                 self.atoms[p["g"]] = {"kind": "G", "text": f'{p["h"]} means {p["f"]}'}
                 self.prior[p["g"]] = p["prior"]
                 self.authors.setdefault(p["g"], set()).add(p.get("by", "anon"))
+                if p.get("left_out") or p.get("added"):
+                    self.notes[p["g"]] = {"left_out": p.get("left_out", ""), "added": p.get("added", "")}
                 guards = (p["g"],)
             if p.get("m"):
                 if p["m"] not in self.atoms:
@@ -300,14 +303,20 @@ class Kernel:
                 self._append(con, st, "object", {"id": o, "lean_type": typ, "text": obj})
         return {**self.prove("pred_rejects", [p, o], proof), "o": o}
 
-    def ground(self, h, lean, prior=None):
-        """One connection hypothesis G: claim `h` means the closed Lean proposition `lean`."""
+    def ground(self, h, lean, prior=None, left_out="", added=""):
+        """One connection hypothesis G: claim `h` means the closed Lean proposition `lean`.
+
+        `left_out` and `added` record, in the author's words, what the sentence says that the
+        formalization does not, and what the formalization fixes that the sentence leaves open.
+        They change no number; they are what a person reviewing the connection needs to read.
+        """
         lean = _norm(lean)
         self._screen(lean)
         self._well_typed(("Prop", lean))
-        return self._ground(h, lean, {"prior": self.catalog["priors"]["grounding"] if prior is None else prior})
+        return self._ground(h, lean, {"prior": self.catalog["priors"]["grounding"] if prior is None else prior,
+                                      "left_out": left_out, "added": added})
 
-    def ground_at(self, h, subject, typ, predicate, obj, prior=None, model_prior=None):
+    def ground_at(self, h, subject, typ, predicate, obj, prior=None, model_prior=None, left_out="", added=""):
         """Claim `h` says: the thing `subject` satisfies a property. Two separate hypotheses:
 
           G  `predicate : typ -> Prop` expresses the property the claim talks about
@@ -327,6 +336,7 @@ class Kernel:
             "prior": priors["specification"] if prior is None else prior,
             "pred": pred, "obj": ob, "subject": subject, "m": "M:" + _sha(subject, ob["id"]),
             "model_prior": priors["model"] if model_prior is None else model_prior,
+            "left_out": left_out, "added": added,
         })
 
     def _screen(self, text):
@@ -800,6 +810,7 @@ class Kernel:
                     p = alg.props[f]
                     entry["means"].append({
                         "g": next((x for x in gs if x[0] == "G"), None),
+                        **st.notes.get(next((x for x in gs if x[0] == "G"), ""), {}),
                         "m": next((x for x in gs if x[0] == "M"), None), "f": f,
                         "proposition_class": alg.find(f),
                         "specification_class": p["pred"] and alg.find(p["pred"]),

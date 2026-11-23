@@ -3,6 +3,7 @@
 並列コーディングエージェントが共有する知識を、ベイズ推定とLeanの証明だけで扱うバックエンドの叩き台。
 
 - 設計: [docs/spec.md](docs/spec.md)、記号と既存概念への対応: [docs/symbols.md](docs/symbols.md)
+- 自然言語の決定がどこまで乗るかの知見: [docs/natural-language.md](docs/natural-language.md)
 - `pw/lindenbaum.py` — 形式層（検証済みの関係で表示されたブール代数、仕様と対象、合同閉包）
 - `pw/credal.py` — 確率層（クレーダル集合、一般化ベイズ則、コピュラ）
 - `pw/kernel.py` — イベントログと、主張を命題に結ぶ信頼性モデル
@@ -12,7 +13,7 @@
 
 - `pw/check.py` — 立っている決定を、いまのコードに当て直す（言語モデルなし）
 
-実験の記録: [依存のある並列タスク](experiments/dependency/RESULTS.md)、[自己適用](experiments/selfcheck/RESULTS.md)、[過去の決定との矛盾](experiments/decisions/RESULTS.md)
+実験の記録: [依存のある並列タスク](experiments/dependency/RESULTS.md)、[自己適用](experiments/selfcheck/RESULTS.md)、[過去の決定との矛盾](experiments/decisions/RESULTS.md)、[自然言語の決定の形式化](experiments/nl/RESULTS.md)
 
 ## 動かす
 

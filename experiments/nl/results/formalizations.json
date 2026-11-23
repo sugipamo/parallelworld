@@ -1,0 +1,446 @@
+{
+ "f1": {
+  "formalizations": {
+   "decisions": [
+    {
+     "id": "N1",
+     "kind": "lean",
+     "lean": {
+      "form": "closed",
+      "prop": "∀ p q : ℝ, 0 ≤ p → p ≤ 1 → 0 ≤ q → q ≤ 1 → max 0 (p + q - 1) ≤ p * q ∧ p * q ≤ min p q"
+     },
+     "command": null,
+     "left_out": "Only two probabilities; the sentence says 'the probabilities' with no count (the n-ary form is max 0 (Σp - (n-1)) ≤ Πp ≤ min p). Not tied to the COPULAS table in pw/credal.py, where the 'frechet' lower end, the 'independent'/'pqd' lower end and the 'comonotone' upper end are these three quantities. Claim H:1784a99682; proved in the kernel (holds F:95754b4d4e).",
+     "added": "Probabilities are real numbers in [0,1]; the lower Fréchet bound is read as max 0 (p+q-1) (the W copula); 'never exceeds' is read as ≤.",
+     "holds": true
+    },
+    {
+     "id": "N2",
+     "kind": "lean",
+     "lean": {
+      "form": "closed",
+      "prop": "∀ (π s m : ℝ) (k : ℕ), 0 ≤ π → π ≤ 1 → 0 < s → 0 ≤ m → m ≤ 1 → π / (π + (1 - π) * ∏ i ∈ Finset.range k, (s * m + i) / (s + i)) ≤ π / (π + (1 - π) * ∏ i ∈ Finset.range (k + 1), (s * m + i) / (s + i))"
+     },
+     "command": null,
+     "left_out": "Models only random checks on their own: prior π, P(agree | true) = 1, and the worst case for P(k agree | false), which is the Beta-mixture moment E[q^k] from credal.exchangeable_agreement. Does not cover combining them with other evidence on the same M under the copula classes. Does not cover the lower end of an interval when other atoms widen it. Reads 'credible' only as the lower posterior probability. 'However many' follows by induction from the one-step statement. Claim H:8410dba1f9; proved (holds F:cc30351b46).",
+     "added": "Fixes 'credible' as the posterior P(M | k agreements) under the upper likelihood of agreement when M is false, with Beta concentration s > 0 and mean m in [0,1], and P(agree | M true) = 1 (the catalog's instance_check/sampling choice).",
+     "holds": true
+    },
+    {
+     "id": "N3",
+     "kind": "lean",
+     "lean": {
+      "form": "closed",
+      "prop": "∀ (f g : ℕ → ℕ) (x : ℕ), f x ≠ g x → ¬ (∀ y, f y = g y)"
+     },
+     "command": null,
+     "left_out": "That the kernel acts on it. In Kernel.infer, a 'disagree' sampled_check adds likelihood (0, 1), and the catalog's instance_check 'disagree' is [0.0, 0.65], so P(M) becomes 0. That is in the code but not in the Lean proposition. Also covers only unary Nat functions; real model hypotheses have other types. Claim H:ff1ce1536c; proved (holds F:8aaa3189bf).",
+     "added": "Reads 'model hypothesis' as the universal statement that the model and the code agree on every input, and 'refutes' as logical refutation. The code's behaviour is itself modelled as a function g.",
+     "holds": true
+    },
+    {
+     "id": "N4",
+     "kind": "check",
+     "lean": null,
+     "command": "python3 - <<'EOF'\nimport tempfile, os\nfrom pw.kernel import Kernel\ndb = os.path.join(tempfile.mkdtemp(), \"e.db\")\na, b = Kernel(db, actor=\"agent-a\"), Kernel(db, actor=\"agent-b\")\nh = a.claim(\"x\")[\"h\"]\nassert not a.observe(h, \"property_test\", \"pass\", \"run-1\")[\"duplicate\"]\nbefore = a.infer(h)\nfor agent in (b, Kernel(db, actor=\"agent-c\")):\n    assert agent.observe(h, \"property_test\", \"pass\", \"run-1\")[\"duplicate\"]\nassert a.infer(h) == before == b.infer(h), (before, a.infer(h))\nassert sum(e[\"type\"] == \"evidence\" for e in a.events()) <= 1 or len(a.state().evidence) == 1\nprint(\"ok\")\nEOF",
+     "left_out": "The kernel decides that evidence is the same by its source string (eid = sha(target, kind, source)). In observe() the agent chooses that string, so two agents who describe the same run with different source strings are counted twice, and the check cannot detect this. In observe_command the source is the command plus the working-tree state, so the same command spelled differently counts as different evidence. Claim H:ff4bffd7ba; check passed (E:4511d5b660).",
+     "added": "'Same evidence' = same (target, kind, source); 'counts once' = the second and third reports, from other agents, are flagged duplicate and infer is unchanged.",
+     "holds": true
+    },
+    {
+     "id": "N5",
+     "kind": "check",
+     "lean": null,
+     "command": "python3 - <<'EOF'\nimport ast, sys\ntree = ast.parse(open(\"pw/mcp_server.py\").read())\nbad = []\nfor fn in [n for n in tree.body if isinstance(n, ast.FunctionDef) and any(\"tool\" in ast.unparse(d) for d in n.decorator_list)]:\n    for a in fn.args.args:\n        ann = ast.unparse(a.annotation) if a.annotation else \"\"\n        if \"float\" in ann or any(w in a.arg.lower() for w in (\"prior\", \"likelihood\", \"prob\", \"weight\", \"confidence\")):\n            bad.append((fn.name, a.arg, ann))\nassert not bad, bad\nprint(\"ok\")\nEOF",
+     "left_out": "Checks only the MCP surface: no tool takes a float or a parameter named like a prior or likelihood. Does not show that every number used in inference comes from catalog.json. Numbers outside the catalog: the Kernel constructor defaults (dependence, max_atoms), the 0..15 range for sampled inputs, and the prior= arguments of claim/ground (used by the orchestrator, not by agents). Agents can still write probabilities into the free text of claims. Claim H:906c5123b8; check passed (E:ae70142940).",
+     "added": "'State probabilities' = pass a probability-like number as an MCP tool argument; the list of suspicious parameter names is my own choice.",
+     "holds": true
+    },
+    {
+     "id": "N6",
+     "kind": "check",
+     "lean": null,
+     "command": "python3 - <<'EOF'\nimport tempfile, os\nfrom pw.kernel import Kernel\nfrom pw.lean_gate import LeanGate\nclass Reject(LeanGate):\n    def check(self, relation, items, proof): return {\"ok\": False, \"reason\": \"rejected\"}\n    def typecheck(self, items): return {\"ok\": True, \"reason\": \"\"}\nk = Kernel(os.path.join(tempfile.mkdtemp(), \"e.db\"), gate=Reject())\nh = k.claim(\"x\")[\"h\"]\ng = k.ground(h, \"(1:Nat) = 1\")\nn, b = len(k.events()), {a: k.infer(a) for a in (h, g[\"g\"], g[\"f\"])}\nfor rel in (\"holds\", \"not\"):\n    assert not k.prove(rel, [g[\"f\"]], \"rfl\")[\"accepted\"]\nassert len(k.events()) == n\nassert {a: k.infer(a) for a in (h, g[\"g\"], g[\"f\"])} == b\nprint(\"ok\")\nEOF",
+     "left_out": "'Not evidence of anything' is checked only as: a rejected proof appends no event and leaves infer unchanged for the claim, its G and its F. Does not cover the other relations (pred_iff, obj_eq, ...), reject_object with a failed proof, or whether agents themselves act on failed proofs. Claim H:94c1ebe108; check passed (E:28b3db090f).",
+     "added": "Uses a stub gate that rejects every proof instead of real Lean.",
+     "holds": true
+    },
+    {
+     "id": "N7",
+     "kind": "check",
+     "lean": null,
+     "command": "python3 - <<'EOF'\nimport tempfile, os\nfrom pw.kernel import Kernel\nk = Kernel(os.path.join(tempfile.mkdtemp(), \"e.db\"))\n# same target, nothing declared: must be an interval\nh = k.claim(\"a\")[\"h\"]\nk.observe(h, \"property_test\", \"pass\", \"r1\"); k.observe(h, \"property_test\", \"pass\", \"r2\")\nb = k.infer(h); assert b[\"lo\"] < b[\"hi\"] - 1e-6, (\"same target\", b)\n# different targets of one claim (its G and the claim itself), nothing declared: must also be an interval\nh2 = k.claim(\"b\")[\"h\"]\ng = k.ground(h2, \"(1:Nat) = 1\", prior=0.9)\nk.observe(g[\"g\"], \"instance_check\", \"agree\", \"i1\"); k.observe(h2, \"property_test\", \"pass\", \"r3\")\nb2 = k.infer(h2); assert b2[\"lo\"] < b2[\"hi\"] - 1e-6, (\"different targets\", b2)\nprint(\"ok\")\nEOF",
+     "left_out": "Independence assumptions in the model that are not about evidence: 'the fact reported is independent of the hypotheses of the link reporting it' (spec §3), and sampled draws being independent given q (exchangeable_agreement). The check probes only one cross-target case. Claim H:5bf454cef5; check FAILED (E:1cf4c87f52): with evidence on the G and on the H of the same claim, infer returns the point 0.857, so the two pieces are combined as conditionally independent.",
+     "added": "'Never assumed' = without declare_independent, infer must return an interval, not a point, both for evidence on the same target and for evidence on different targets in one component.",
+     "holds": false
+    },
+    {
+     "id": "N8",
+     "kind": "check",
+     "lean": null,
+     "command": "python3 - <<'EOF'\nimport tempfile, os\nfrom pw.kernel import Kernel\nfor dep in (\"pqd\", \"frechet\", \"comonotone\"):\n    k = Kernel(os.path.join(tempfile.mkdtemp(), \"e.db\"), dependence=dep)\n    h = k.claim(\"a\")[\"h\"]\n    k.observe(h, \"property_test\", \"pass\", \"r1\"); e2 = k.observe(h, \"property_test\", \"pass\", \"r2\")\n    k.declare_independent(e2[\"eid\"], \"separate seeds and machines\")\n    p = 0.5 * 0.9 * 0.9 / (0.5 * 0.9 * 0.9 + 0.5 * 0.15 * 0.15)\n    b = k.infer(h); assert abs(b[\"lo\"] - p) < 1e-6 and abs(b[\"hi\"] - p) < 1e-6, (dep, b, p)\nprint(\"ok\")\nEOF",
+     "left_out": "Only two pieces on one target, one of them declared. Does not cover declared pieces on different targets or more than two pieces. Claim H:3a665286d1; check passed (E:d670265e8c).",
+     "added": "'Combined by multiplying likelihoods' = the posterior equals exact Bayes with the product of the catalog likelihoods, whatever copula class is the default.",
+     "holds": true
+    },
+    {
+     "id": "N9",
+     "kind": "check",
+     "lean": null,
+     "command": "! grep -nE 'subprocess\\.(run|Popen|call|check_output)\\(\\s*\\[\\s*\"(ba)?sh\"\\s*,\\s*\"-c\"\\s*,\\s*command' pw/kernel.py pw/check.py pw/mcp_server.py",
+     "left_out": "Other ways of executing code: os.system, eval, and Lean itself, which runs the tactic text an agent supplies. The grep recognises only the bash -c pattern. Claim H:46faab1b2e; check FAILED (E:ba2b85fa4c): pw/kernel.py:403 (observe_command) and pw/kernel.py:428 (_compare, used by sample_model/check_model) run command strings supplied by agents with bash -c.",
+     "added": "'Executes commands' = passes a string supplied by an agent to a shell through subprocess.",
+     "holds": false
+    },
+    {
+     "id": "N10",
+     "kind": "none",
+     "lean": null,
+     "command": null,
+     "left_out": "Everything: 'safe' and 'useful work' are not defined, and no threshold value is given. Any number (e.g. the 0.9 the orchestrator uses) would be invented.",
+     "added": "",
+     "holds": null
+    },
+    {
+     "id": "N11",
+     "kind": "none",
+     "lean": null,
+     "command": null,
+     "left_out": "Everything: the sentence says neither which modules are 'trusted' nor how much 'one person can read'. A line-count limit on e.g. lean_gate.py + kernel.py would invent both.",
+     "added": "",
+     "holds": null
+    },
+    {
+     "id": "N12",
+     "kind": "none",
+     "lean": null,
+     "command": null,
+     "left_out": "Everything: no time budget and no commit frequency or size is given. Checking 'fast enough' for python -m pw.check would need an invented limit, and the time depends on Lean and on the number of saved checks.",
+     "added": "",
+     "holds": null
+    }
+   ],
+   "contradictions": [
+    {
+     "ids": [
+      "N9"
+     ],
+     "why": "The code contradicts N9: Kernel.observe_command and Kernel._compare (sample_model, check_model) run `bash -c <command>`, where the command comes from the agent through MCP. docs/spec.md change 6 makes this deliberate (the kernel runs tests itself so that evidence has a clear provenance), so N9 also contradicts that recorded design and the provenance mechanism N4 relies on.",
+     "shown_in_kernel": false
+    },
+    {
+     "ids": [
+      "N7"
+     ],
+     "why": "The code contradicts N7. In Kernel.infer, evidence blocks on different atoms are multiplied (np.prod over choices), i.e. treated as conditionally independent given the world, with no declaration. The reliability model also assumes facts independent of link hypotheses, and random draws independent given q. The N7 check fails (infer gives the point 0.857 instead of an interval).",
+     "shown_in_kernel": false
+    },
+    {
+     "ids": [
+      "N7",
+      "N8"
+     ],
+     "why": "Not a strict contradiction: the two are compatible if a declaration (declare_independent with a justification) does not count as an 'assumption'. Read literally, 'never assumed' is broken by N8's multiplication after a declaration. Recorded as a tension that depends on the reading.",
+     "shown_in_kernel": false
+    }
+   ]
+  },
+  "worker": {
+   "turns": 40,
+   "cost_usd": 1.25,
+   "seconds": 286,
+   "report": "I wrote `formalizations.json` and committed it as d243853. Three decisions went into Lean and were proved, six became check commands, and three could not be formalized. Two of the checks fail on the current code: N7 and N9.\n\n| | Kind | Result |\n|---|---|---|\n| N1 Fréchet ≤ product ≤ min | lean | Proved, for two probabilities only (the sentence doesn't say how many). |\n| N2 agreeing random checks never lower credibility | lean | Proved, for random checks alone: one more agreement never lowers the worst-case posterior of the model. It doesn't cover mixing them with other evidence on the same model. |\n| N3 one disagreement refutes | lean | Proved, but only as plain logic (one counterexample breaks \"agrees everywhere\"), on `ℕ → ℕ` functions. That the code sets P(M)=0 after a disagreement is not part of the Lean statement. |\n| N4 same evidence counts once | check | Passes. Caveat: \"same\" means the same source string, and in `observe` the agent picks that string. Two agents can report one run under different names and have it counted twice. |\n| N5 agents never state probabilities | check | Passes: no MCP tool takes a float or a prior-like argument. Not covered: some numbers used in inference don't come from the catalog (kernel defaults, the 0–15 input range for sampled checks, `prior=` arguments set by the orchestrator). |\n| N6 failed proof is not evidence | check | Passes, with a stand-in gate that rejects every proof: no event is added and no bound changes. |\n| N7 independence never assumed | check | **Fails.** One piece of evidence on a claim's G and one on the claim itself give the single value 0.857, not an interval. `Kernel.infer` multiplies evidence across different atoms without any declaration. |\n| N8 declared independent → multiply | check | Passes for the default and two other dependence settings. |\n| N9 kernel never runs agent commands | check | **Fails.** `pw/kernel.py:403` (`observe_command`) and `pw/kernel.py:428` (`sample_model`/`check_model`) run the agent's command string with `bash -c`. |\n| N10, N11, N12 | none | No threshold, size or time limit is given; any number I picked would be invented. |\n\nEach check is recorded as evidence in the kernel. The kept N4 result is from my second, cleaner command; the first one effectively used a single agent.\n\n**Contradictions** (none shown in the kernel; there is no `pred_disjoint`-style proof for these):\n- **N9 vs the code and the spec.** Running commands in the kernel is deliberate: change 6 in `docs/spec.md` says the kernel runs the tests itself. N4's provenance also depends on kernel-run commands.\n- **N7 vs the code.** Besides the cross-atom multiplication, the model also assumes a reported fact is independent of whether the link reporting it is reliable, and that random checks are independent of each other once the model's error rate is fixed.\n- **N7 vs N8.** This one depends on wording. They fit together if declaring independence doesn't count as \"assuming\" it; read literally, N8 breaks N7.\n\nI wrote the JSON directly because running my generator script needed approval. `jq` reads it and finds 12 decisions."
+  }
+ },
+ "f2": {
+  "formalizations": {
+   "decisions": [
+    {
+     "id": "N1",
+     "kind": "lean",
+     "lean": {
+      "form": "closed",
+      "prop": "∀ a b : ℝ, 0 ≤ a → a ≤ 1 → 0 ≤ b → b ≤ 1 → max 0 (a + b - 1) ≤ a * b ∧ a * b ≤ min a b"
+     },
+     "command": null,
+     "left_out": "Only two probabilities. The sentence ('the probabilities') covers any number n; the n-ary form max 0 (Σ aᵢ − (n−1)) ≤ Π aᵢ ≤ min aᵢ is not stated. Nothing ties the proposition to pw/credal.py COPULAS (the 'frechet' lower end, the 'independent' product, the 'comonotone' min), so it is a fact about the concept, not about the code.",
+     "added": "Probabilities are taken as reals in [0,1]; the lower Fréchet bound is fixed as max 0 (a + b − 1) (W copula), which the sentence only names.",
+     "holds": true
+    },
+    {
+     "id": "N2",
+     "kind": "lean",
+     "lean": {
+      "form": "closed",
+      "prop": "∀ (π m s : ℝ) (k : ℕ), 0 ≤ π → π ≤ 1 → 0 ≤ m → m ≤ 1 → 0 < s → π / (π + (1 - π) * ∏ i ∈ Finset.range k, (s * m + i) / (s + i)) ≤ π / (π + (1 - π) * ∏ i ∈ Finset.range (k + 1), (s * m + i) / (s + i))"
+     },
+     "command": null,
+     "left_out": "The proposition is about a single hypothesis with prior π and only random agreeing checks, using the Beta-mixture likelihood upper end from credal.exchangeable_agreement. It does not cover the kernel's actual lower bound, where the draws are joined with other evidence on M under a copula class and the result is a linear program over a credal set; nor hand-chosen checks (check_model); nor whether 'credible' means lower probability, upper probability or both (only the lower end, which uses the upper likelihood under falsity, is modelled).",
+     "added": "'Credible' = posterior lower probability π/(π+(1−π)·L_false); the false-model agreement likelihood is fixed to E[q^k] for q ~ Beta with mean m and concentration s>0 (the catalog's sampling model); a true model agrees with probability 1.",
+     "holds": true
+    },
+    {
+     "id": "N3",
+     "kind": "lean",
+     "lean": {
+      "form": "closed",
+      "prop": "∀ (π pf : ℝ), π * 0 / (π * 0 + (1 - π) * pf) = 0"
+     },
+     "command": null,
+     "left_out": "That the code uses likelihood 0 under 'model true' for a disagreement (catalog instance_check disagree = [0.0, 0.65]; kernel.py inserts ((0,0),(1,1)) for any sampled disagreement) is not stated; the proposition only says Bayes' rule with zero likelihood under truth gives posterior 0. Also left out: that the disagreement is genuine (the comparison of Lean value and program output is itself correct), and how the refutation propagates to claims sharing M.",
+     "added": "'Refutes' is read as posterior probability exactly 0, obtained by a likelihood of 0 under the hypothesis; any prior π and any likelihood under falsity are allowed (Lean's x/0 = 0 makes the degenerate case trivially true).",
+     "holds": true
+    },
+    {
+     "id": "N4",
+     "kind": "check",
+     "lean": null,
+     "command": "python3 formalization_checks/n4_dedup.py",
+     "left_out": "Only one scenario: two kernels with different actors recording the same (target, kind, source) on one log. 'The same evidence' is identified with the same source string; evidence that is physically the same but reported under different sources (e.g. a command re-run after an untracked cache file changes the tree hash, see spec §7) is not detected, and is counted twice. observe_command / sample_model provenance is not exercised.",
+     "added": "Identity of evidence = (target, kind, source); 'counts once' = the second report is flagged duplicate, gets the same eid and leaves infer bounds unchanged.",
+     "holds": true
+    },
+    {
+     "id": "N5",
+     "kind": "check",
+     "lean": null,
+     "command": "python3 formalization_checks/n5_no_agent_numbers.py",
+     "left_out": "'Agents never state probabilities' is a rule about agent behaviour; the check only shows the agent-facing interface (MCP tools, kernel evidence entry points) offers no float / probability-named parameter. It does not cover free text an agent writes, nor 'all numbers come from the catalog' in full: Kernel.claim/ground/claim_formal still accept prior= from non-MCP callers (orchestrator), the merge/check threshold (0.9) is a CLI argument, and the sampling bound 15, dependence class and max_atoms are hard-coded in pw/kernel.py rather than in pw/catalog.json.",
+     "added": "'Probability' operationalised as a parameter annotated float or named prior/likelihood/probability/model_prior/prob.",
+     "holds": true
+    },
+    {
+     "id": "N6",
+     "kind": "check",
+     "lean": null,
+     "command": "python3 formalization_checks/n6_failed_proof.py",
+     "left_out": "Only failure reported by the gate (verdict ok=false) for holds/not on one closed proposition; failures that raise (wrong arity/kind) and the other relations are not exercised. 'Evidence of anything' is reduced to 'no event in the log and no change to infer bounds'; agents reading a failure and acting on it (e.g. a worker treating a failed obj_eq as a reason to believe objects differ) is outside the check.",
+     "added": "A gate stub that rejects every proof; the claim/proposition used is 'True'.",
+     "holds": true
+    },
+    {
+     "id": "N7",
+     "kind": "check",
+     "lean": null,
+     "command": "python3 formalization_checks/n7_no_assumed_independence.py",
+     "left_out": "The check only covers evidence pieces on the same target that nobody declared independent: they are not multiplied (default copula class 'pqd', lower bound below the product posterior). It does not cover the independence assumptions the code does make: random draws in sample_model are treated as conditionally independent given the agreement rate q (credal.exchangeable_agreement), evidence blocks on different atoms are multiplied (np.prod in Kernel.infer), and the reliability model assumes the reported fact is independent of the link hypotheses (kernel.py comment at the reliability model). Read literally, the sentence is violated by these.",
+     "added": "'Assumed' = treated as independent by the kernel without a declare_independent event; scope restricted to evidence on one target.",
+     "holds": false
+    },
+    {
+     "id": "N8",
+     "kind": "check",
+     "lean": null,
+     "command": "python3 formalization_checks/n8_independent_product.py",
+     "left_out": "Only two declared-independent pieces with point likelihoods, prior 0.5; interval likelihoods and mixtures of declared and undeclared pieces are not exercised. A concept-level Lean grounding was also registered in the kernel for this claim (Bayes with a product of likelihoods equals the update with the product of likelihood ratios, or some likelihood under truth is 0); it says nothing about the code and is not the formalization reported here.",
+     "added": "'Combined by multiplying' = joint_likelihood under 'independent' returns the product of the pieces' likelihoods, and infer gives exactly the posterior from the multiplied likelihoods.",
+     "holds": true
+    },
+    {
+     "id": "N9",
+     "kind": "check",
+     "lean": null,
+     "command": "python3 formalization_checks/n9_no_agent_commands.py",
+     "left_out": "Syntactic: it only looks for a variable named `command` reaching a process-spawning call in pw/kernel.py. Commands executed elsewhere (mcp_server, lean_gate, orchestrator) or under another name are not detected; the Lean gate running agent tactic text is not counted as executing a command.",
+     "added": "'Commands supplied by an agent' = the `command` argument of observe_command / check_model / sample_model; 'executes' = passed to subprocess/os.system.",
+     "holds": false
+    },
+    {
+     "id": "N10",
+     "kind": "none",
+     "lean": null,
+     "command": null,
+     "left_out": "Everything: neither 'safe' nor 'useful work blocked' has a measure or a target value in the sentence, and no data on merge outcomes exists to hold a threshold against. Any number (the current default 0.9 in pw/check.py and the orchestrator) would be invented.",
+     "added": "nothing",
+     "holds": null
+    },
+    {
+     "id": "N11",
+     "kind": "none",
+     "lean": null,
+     "command": null,
+     "left_out": "Everything: the trusted part is not delimited by the sentence (kernel? Lean gate? catalog? Lean itself?) and 'small enough for one person to read' has no size. A line-count check would invent both the boundary and the limit. (For reference, pw/*.py is about 1.8k lines.)",
+     "added": "nothing",
+     "holds": null
+    },
+    {
+     "id": "N12",
+     "kind": "none",
+     "lean": null,
+     "command": null,
+     "left_out": "Everything: 'fast enough to run on every commit' has no time budget, no stated machine, and no stated log size; a timed `python -m pw.check` with a chosen limit would invent all three. It also depends on how often Lean is invoked during recheck.",
+     "added": "nothing",
+     "holds": null
+    }
+   ],
+   "contradictions": [
+    {
+     "ids": [
+      "N9"
+     ],
+     "why": "The code contradicts N9: Kernel.observe_command runs the agent's command with bash -c (pw/kernel.py:403), and check_model/sample_model run agent command templates through Kernel._compare (pw/kernel.py:428). This is by design (spec §2 change 6: the kernel runs checks itself so evidence is not self-reported), so N9 also conflicts with the design that N4/N6-style provenance relies on. Recorded in the kernel as a failing test observation on N9's claim (E:c16d82de54), not as a Lean proof.",
+     "shown_in_kernel": true
+    },
+    {
+     "ids": [
+      "N7"
+     ],
+     "why": "The code contradicts N7 read literally: sampled checks are combined as conditionally independent given q (credal.exchangeable_agreement, de Finetti), evidence on different atoms is multiplied in Kernel.infer, and the reliability model assumes the reported fact independent of the link hypotheses. Only the narrower reading (undeclared evidence on one target is not multiplied) holds; the check recorded in the kernel passes for that reading, so the contradiction is not shown there.",
+     "shown_in_kernel": false
+    }
+   ]
+  },
+  "worker": {
+   "turns": 44,
+   "cost_usd": 1.18,
+   "seconds": 304,
+   "report": "I've written and committed `formalizations.json` (commit `74e02d4`). Three decisions went into Lean, six became check scripts in `formalization_checks/`, and three couldn't be formalized. The code breaks two of them: N9 outright, and N7 if you read it literally. I couldn't run Python myself here, so the kernel ran every check through `observe_command`. I also didn't confirm that `formalizations.json` parses as valid JSON.\n\n**Lean (N1, N2, N3)**: all three proofs were accepted.\n- **N1**: I stated it only for two probabilities in [0,1]: `max 0 (a+b−1) ≤ a·b ≤ min a b`. It is a fact about the concept and isn't tied to the code in `pw/credal.py`.\n- **N2**: Each additional agreeing random check never lowers the model's posterior lower bound. I used a single model hypothesis and the Beta-mixture formula from `exchangeable_agreement`. It doesn't cover combining these checks with other evidence, or hand-chosen checks.\n- **N3**: When the likelihood under \"model true\" is 0, the posterior is 0. That the catalog and kernel actually use 0 for a disagreement is not part of the statement.\n\n**Checks:**\n\n| Decision | What the check tests | Result |\n|---|---|---|\n| N4 | Two agents report the same evidence; it gets one ID, is flagged as a duplicate, and the bounds don't change. Same evidence reported under a different source is not detected. | pass |\n| N5 | No MCP tool takes a `float` or a probability-named parameter. Some numbers still don't come from the catalog: the 0.9 threshold, the sampling bound of 15, and `prior=` for non-MCP callers. | pass |\n| N6 | A rejected proof leaves the event log and every bound unchanged. | pass |\n| N7 | Evidence nobody declared independent is never multiplied together. | pass (narrow reading only) |\n| N8 | Evidence declared independent gives exactly the posterior from the product of likelihoods. | pass |\n| N9 | Fails if any `command` value from an agent reaches `subprocess`/`os.system` in `pw/kernel.py`. | **fail** |\n\n**None (N10, N11, N12)**: \"safe\", \"useful work\", \"the trusted part\", \"small enough\" and \"fast enough\" have no measure or limit in the sentences. Any check would have to make up the threshold.\n\n**Contradictions:**\n- **N9 against the code**: `observe_command` runs the agent's command with `bash -c` (`pw/kernel.py:403`), and `check_model`/`sample_model` do the same at `pw/kernel.py:428`. This is deliberate: spec §2 change 6 has the kernel run checks itself so evidence isn't self-reported. The kernel holds this only as a failing check (`E:c16d82de54`), not a Lean proof.\n- **N7 against the code**: the code does assume independence in three places. Random draws are treated as independent given the agreement rate, evidence on different atoms is multiplied, and the reliability model assumes the fact is independent of the link hypotheses. The kernel doesn't show this, because the recorded N7 check covers only the narrow reading and passes.\n\nN7 and N8 don't conflict with each other: N8 is about independence that was declared, N7 about independence that was assumed.\n\nFor N8 I also registered a general Bayes-rule statement in Lean before deciding a check fit better. It's still linked to the claim but says nothing about the code; the JSON reports N8 as a check."
+  }
+ },
+ "f3": {
+  "formalizations": {
+   "decisions": [
+    {
+     "id": "N1",
+     "kind": "lean",
+     "lean": {
+      "form": "closed",
+      "prop": "∀ p q : ℝ, 0 ≤ p → p ≤ 1 → 0 ≤ q → q ≤ 1 → max (p + q - 1) 0 ≤ p * q ∧ p * q ≤ min p q"
+     },
+     "command": null,
+     "left_out": "Nothing of the mathematical content. It is not tied to pw/credal.py: the statement is about real numbers, not about the code's frechet/independent copula functions. Claim H:1784a99682, proved in the kernel.",
+     "added": "Fixes 'the probabilities' to two of them (the sentence could mean n), and fixes the domain to [0,1]. Outside [0,1] the statement is false (e.g. p = q = 2).",
+     "holds": true
+    },
+    {
+     "id": "N2",
+     "kind": "lean",
+     "lean": {
+      "form": "closed",
+      "prop": "∀ (π q : ℝ) (n : ℕ), 0 < π → π ≤ 1 → 0 ≤ q → q ≤ 1 → π ≤ π / (π + (1 - π) * q ^ n) ∧ π / (π + (1 - π) * q ^ n) ≤ π / (π + (1 - π) * q ^ (n + 1))"
+     },
+     "command": null,
+     "left_out": "The code's actual likelihood for a wrong model is a credal set of Beta mixtures (pw/credal.py exchangeable_agreement), and its output is an interval [lo, hi]. The proposition covers only one fixed agreement rate q for a wrong model and a single prior. It does not say that the kernel's lower bound is nondecreasing; tests/test_kernel.py::test_random_checks_raise_the_lower_bound checks that at n = 1, 5, 20 only. It also leaves out what 'random' means (the kernel draws the inputs).",
+     "added": "Fixes 'credible' as the Bayes posterior under the catalog's likelihood shape: 1 if the model is right, q^n if it is wrong. Requires a prior strictly above 0. Reads 'never less credible' as two things: the posterior is at least the prior, and it does not drop when one more agreement is added.",
+     "holds": true
+    },
+    {
+     "id": "N3",
+     "kind": "lean",
+     "lean": {
+      "form": "closed",
+      "prop": "∀ (π r : ℝ), (π * 0) / (π * 0 + (1 - π) * r) = 0"
+     },
+     "command": null,
+     "left_out": "Almost everything that matters about the code. The proposition only says that Bayes' rule gives posterior 0 once P(disagree | model right) = 0. It does not show that the catalog really sets instance_check.disagree to [0.0, ...], or that sampled_check does the same. Those facts are what tests/test_kernel.py::test_chosen_checks_never_lower_the_bound_and_one_counterexample_refutes checks. It does not cover retraction either (Kernel.retract can undo a refuting disagreement).",
+     "added": "Reads 'refutes' as 'posterior probability exactly 0', and the hypothesis as universal, so its likelihood of disagreement is 0. Lean's x/0 = 0 convention also makes the case π = 1, r = 0 hold, and that case has no probabilistic meaning.",
+     "holds": true
+    },
+    {
+     "id": "N4",
+     "kind": "check",
+     "lean": null,
+     "command": "python3 -m pytest -q tests/test_kernel.py -k test_exact_bayes_and_dedup",
+     "left_out": "'No matter how many agents': the test uses two reports and does not distinguish agents (the kernel has no agent identity, only a source string). 'Same evidence' is fixed by the code as an identical source string (or command plus tree state for observe_command), so evidence that is the same but labelled differently is not covered.",
+     "added": "Identifies 'same evidence' with 'same (target, kind, source)'. Adds that reporting the same source with a different outcome is an error.",
+     "holds": true
+    },
+    {
+     "id": "N5",
+     "kind": "check",
+     "lean": null,
+     "command": "python3 -c \"import ast,sys; t=ast.parse(open('pw/mcp_server.py').read()); fs=[f for f in t.body if isinstance(f,ast.FunctionDef) and any('tool' in ast.unparse(d) for d in f.decorator_list)]; bad=[(f.name,a.arg) for f in fs for a in f.args.args if (a.annotation is not None and 'float' in ast.unparse(a.annotation)) or any(w in a.arg.lower() for w in ('prior','prob','likelihood','confidence','weight'))]; print(len(fs),bad); sys.exit(1 if bad or not fs else 0)\"",
+     "left_out": "The second half ('all numbers come from the catalog') is not checked: Kernel.ground/ground_at accept prior= arguments in Python (the orchestrator and tests use them), and the sampling domain 0..15 is hard-coded rather than in the catalog. An agent could also put a probability inside a free-text string such as a claim. The check only stops a numeric probability parameter on the MCP surface.",
+     "added": "Equates 'agents' with 'callers of the MCP tools in pw/mcp_server.py'. Detects 'stating a probability' by name and type heuristics: a float annotation, or a parameter named prior/prob/likelihood/confidence/weight.",
+     "holds": true
+    },
+    {
+     "id": "N6",
+     "kind": "check",
+     "lean": null,
+     "command": "python3 -c \"\nimport tempfile,os,sqlite3\nfrom pw.kernel import Kernel\nfrom pw.lean_gate import LeanGate\nclass G(LeanGate):\n    def check(s,*a): return {'ok':False,'reason':'rejected'}\n    def typecheck(s,i): return {'ok':True,'reason':''}\np=os.path.join(tempfile.mkdtemp(),'e.db'); k=Kernel(p,gate=G()); h=k.claim('x')['h']; g=k.ground(h,'True')\nn=lambda: sqlite3.connect(p).execute('select count(*) from events').fetchone()[0]\nsnap=lambda: (n(),k.infer(h),k.infer(g['f']),k.infer(g['g']))\nb=snap()\nfor r in ('holds','not'): assert k.prove(r,[g['f']],'trivial')['accepted'] is False\na=snap(); print(b,a); assert a==b\n\"",
+     "left_out": "'Not evidence of anything' is general. The check covers one small log, the relations holds/not, and only the bounds of the claim, its proposition and its grounding. It does not show that no part of the system (for example an orchestrator or a human reading return values) treats a failure as a signal.",
+     "added": "Defines 'not evidence' as: a rejected proof appends no event and leaves infer() unchanged.",
+     "holds": true
+    },
+    {
+     "id": "N7",
+     "kind": "check",
+     "lean": null,
+     "command": "python3 -m pytest -q tests/test_kernel.py -k \"test_dependent_evidence_is_an_interval_until_independence_is_declared or test_spec_section6_lower_bound\" && python3 -c \"import inspect,sys; from pw.kernel import Kernel; d=inspect.signature(Kernel).parameters['dependence'].default; print(d); sys.exit(0 if d!='independent' else 1)\"",
+     "left_out": "'Never' is not checked fully. Kernel(dependence='independent') exists and assumes independence for all evidence with no declaration, and declare_independent lets an agent assume it with nothing more than a non-empty justification. The check only covers the default configuration and two scenarios. The spec itself (§7) also lists prior independence-like conditions in the reliability model ('reliability is independent of the fact'), and these are assumptions about hypotheses, not evidence.",
+     "added": "Reads 'assumed' as 'used without an explicit declaration, in the default configuration'.",
+     "holds": true
+    },
+    {
+     "id": "N8",
+     "kind": "check",
+     "lean": null,
+     "command": "python3 -m pytest -q tests/test_kernel.py -k \"test_dependent_evidence_is_an_interval_until_independence_is_declared or (test_copula_classes and independent)\"",
+     "left_out": "Only the numbers for two property_test passes (0.9·0.9 vs 0.15·0.15) are checked, not product combination in general, for other kinds, for more than two pieces of evidence, or for sampled checks.",
+     "added": "Fixes the effect as 'the posterior is the point value from the product of the likelihoods'.",
+     "holds": true
+    },
+    {
+     "id": "N9",
+     "kind": "check",
+     "lean": null,
+     "command": "! grep -nE 'subprocess\\.run\\(\\[\"bash\", \"-c\", command' pw/kernel.py",
+     "left_out": "The check is syntactic: it looks for the specific shell-execution call that takes the agent's command string. Other execution paths (os.system, a renamed variable, the Lean gate running agent tactic text) are not detected.",
+     "added": "Equates 'commands supplied by an agent' with the `command` argument of observe_command/sample_model/check_model, and 'executes' with passing that string to bash -c.",
+     "holds": false
+    },
+    {
+     "id": "N10",
+     "kind": "none",
+     "lean": null,
+     "command": null,
+     "left_out": "Everything. 'Strict enough to be safe' and 'without blocking useful work' have no criterion in the sentence. Turning them into a number (e.g. threshold ≥ 0.9) would invent the content.",
+     "added": "",
+     "holds": null
+    },
+    {
+     "id": "N11",
+     "kind": "none",
+     "lean": null,
+     "command": null,
+     "left_out": "Everything. Neither 'the trusted part' (kernel? gate? Lean? catalog?) nor 'small enough for one person to read' is fixed. A line-count limit on a chosen set of files would be invented.",
+     "added": "",
+     "holds": null
+    },
+    {
+     "id": "N12",
+     "kind": "none",
+     "lean": null,
+     "command": null,
+     "left_out": "Everything. 'Fast enough to run on every commit' sets no time budget, and how long `python -m pw.check` takes depends on the stored checks and on the machine. A timeout of N seconds would be invented.",
+     "added": "",
+     "holds": null
+    }
+   ],
+   "contradictions": [
+    {
+     "ids": [
+      "N9"
+     ],
+     "why": "The code contradicts N9. Kernel.observe_command (pw/kernel.py:403) and the sampled/instance model checks (pw/kernel.py:428) run the agent-supplied `command` string with subprocess.run(['bash','-c',command]). This is exposed through the MCP tools observe_command, sample_model and check_model. N9 also contradicts the design in docs/spec.md (change 6: 'テスト等は Kernel が自分で実行して記録する'). The recorded check E:814bcd9bd0 failed.",
+     "shown_in_kernel": false
+    },
+    {
+     "ids": [
+      "N7",
+      "N8"
+     ],
+     "why": "This depends on the reading. N8 presupposes that pieces of evidence can be declared independent and are then combined as independent. If a declaration counts as an assumption, N7 ('never assumed') forbids exactly what N8 describes. They are consistent only if 'assumed' means 'taken without explicit declaration'. The code follows that weaker reading. It also has a Kernel(dependence='independent') mode, which assumes independence without any declaration and violates N7 even on that reading, though it is not the default.",
+     "shown_in_kernel": false
+    }
+   ]
+  },
+  "worker": {
+   "turns": 37,
+   "cost_usd": 0.92,
+   "seconds": 210,
+   "report": "I've placed all 12 decisions and committed `formalizations.json`. Three went into Lean, six became checks the kernel ran against the code, and three couldn't be formalized. One decision, N9, is false of the current code.\n\n**Lean (all three proofs were accepted)**\n- **N1:** the statement is about two probabilities between 0 and 1: `max(p+q−1, 0) ≤ p·q ≤ min(p, q)`. It's pure maths and isn't tied to the code in `pw/credal.py`. It's also false outside 0–1.\n- **N2:** I modelled it with one fixed agreement rate `q` for a wrong model. The probability after `n` agreeing checks is never below the starting value, and never drops when one more check agrees. What's lost: the code actually works with a whole family of agreement rates and returns a range, not one number.\n- **N3:** Bayes' rule gives probability 0 once a correct model can never disagree. This proposition says almost nothing about the code. Whether the catalog really sets that to 0 is covered by an existing test, not by the proof.\n\n**Checks (all passed)**\n- **N4:** the existing duplicate-evidence test. It only tries two reports, and \"same evidence\" means the same source string, because the kernel has no notion of which agent reported it.\n- **N5:** a script that finds no probability-like parameter on the tools agents call. \"All numbers come from the catalog\" is not checked, and is in fact not quite true: the kernel accepts `prior=` when called directly in Python, and the input range for random checks is fixed in code.\n- **N6:** a script showing that a rejected proof adds no log entry and changes no probability.\n- **N7:** existing tests plus a check that the default dependence setting isn't `independent`.\n- **N8:** existing tests that check the product rule, but only for two passing property tests.\n\n**None:** N10, N11 and N12 (\"safe without blocking\", \"small enough for one person to read\", \"fast enough for every commit\") give no criterion. Any threshold, line count or timeout would be my invention.\n\n**Contradictions**\n- **N9 is contradicted by the code.** `pw/kernel.py:403` and `:428` pass the agent's command string straight to `bash -c`. This is how `observe_command`, `sample_model` and `check_model` work, and the spec describes it as intended. My check failed accordingly, and every check in this task was itself an agent command the kernel ran.\n- **N7 and N8 conflict on the strict reading.** If declaring independence counts as assuming it, N7 forbids what N8 describes. The code follows the weaker reading: nothing is assumed without a declaration. Even so, `Kernel(dependence=\"independent\")` assumes independence with no declaration at all, which breaks N7 on either reading; it just isn't the default.\n\nNeither contradiction is proved in the kernel; the N9 conflict exists only as the failed check.\n\nI didn't validate the JSON with a parser before committing, because that command needed approval in this session."
+  }
+ }
+}

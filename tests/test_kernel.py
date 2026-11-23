@@ -343,3 +343,12 @@ def test_a_proposed_decision_that_contradicts_an_established_one_does_not_block_
     assert k.infer(third["h"])["lo"] == pytest.approx(before[1], abs=0.01)
     assert k.infer(new["h"])["hi"] < 0.02                                    # the proposal is all but excluded
     approx(k.infer(f"{old['h']} & {new['h']}"), 0.0, 0.0)
+
+
+def test_what_a_formalization_leaves_out_is_kept_with_it(k):
+    h = k.claim("the bound never exceeds the product of the probabilities")["h"]
+    k.ground(h, "∀ p q : Nat, p * q ≤ p * q", left_out="only two probabilities; the sentence has no count",
+             added="probabilities read as naturals")
+    means = k.status()["claims"][0]["means"][0]
+    assert means["left_out"].startswith("only two") and means["added"] == "probabilities read as naturals"
+    approx(k.infer(h), 0.5, 0.5)          # the notes are for a reader; they move no number

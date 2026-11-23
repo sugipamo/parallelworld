@@ -57,17 +57,22 @@ def reject_object(p: str, object: str, proof: str) -> dict:
 
 
 @mcp.tool()
-def ground_at(h: str, subject: str, type: str, predicate: str, object: str) -> dict:
+def ground_at(h: str, subject: str, type: str, predicate: str, object: str,
+              left_out: str = "", added: str = "") -> dict:
     """For a claim in natural language: state that claim `h` says the code `subject` has a property. Give
       subject    what the claim is about, as "path::name", e.g. "clamp.py::clamp"
       object     a Lean term of type `type` modelling that code's behaviour
       predicate  a Lean term of type `type -> Prop` stating the property
+      left_out   what the sentence says or implies that your formalization does not capture
+      added      what your formalization fixes that the sentence leaves open
     using only Lean core and Gamma, e.g. type "Nat → Nat", predicate "fun f => ∀ n, n ≤ f n",
     object "fun n => n + 1". This introduces two separate uncertain hypotheses: G (the predicate
     expresses the claim's property) and M (the object models the code). M is shared by every
     claim about the same code and object, and is tied to the file's current content.
+    Be exact in `left_out` and `added`: a person reads them to judge the connection.
     Returns ids of G, M, proposition F, specification P and object O."""
-    return _safe(_kernel.ground_at, h, subject_id(subject, _workdir()), type, predicate, object)
+    return _safe(_kernel.ground_at, h, subject_id(subject, _workdir()), type, predicate, object,
+                 left_out=left_out, added=added)
 
 
 @mcp.tool()
@@ -95,10 +100,13 @@ def check_model(m: str, lean_args: str, command: str) -> dict:
 
 
 @mcp.tool()
-def ground(h: str, lean: str) -> dict:
-    """State that claim `h` means the closed Lean proposition `lean`. Use only when the claim
-    has no natural split into an object and a property; otherwise use ground_at."""
-    return _safe(_kernel.ground, h, lean)
+def ground(h: str, lean: str, left_out: str = "", added: str = "") -> dict:
+    """State that claim `h` means the closed Lean proposition `lean`. Use only when the claim is
+    not about a piece of code; a claim about code stated as a closed proposition becomes a fact
+    about the concept and says nothing about the code, so use ground_at for those.
+    `left_out`: what the sentence says that the proposition does not. `added`: what the
+    proposition fixes that the sentence leaves open."""
+    return _safe(_kernel.ground, h, lean, left_out=left_out, added=added)
 
 
 @mcp.tool()
