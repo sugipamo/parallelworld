@@ -80,6 +80,7 @@ def main():
                 prompt += f'- {d["h"]}, place `{at}`: {d["text"]} — a term of type {st.facts[d["h"]]["type"]}\n'
         name = "maintain-" + _sha(report["tree"], *[d["h"] for d in decisions], *[at for _, at in places])[:6]
         tasks = os.path.join(repo, ".pw", f"tasks-{name}.json")
+        os.makedirs(os.path.dirname(tasks), exist_ok=True)
         with open(tasks, "w") as fh:
             json.dump([{"name": name, "prompt": prompt, "requires": []}], fh, ensure_ascii=False)
         print(f"{len(decisions)} decision(s) and {len(places)} place(s) need reading; asking an agent ({name})", flush=True)
