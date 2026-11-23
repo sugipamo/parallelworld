@@ -79,6 +79,22 @@ def test_evidence_flows_through_proved_equivalence(k):
     assert k.infer(h2)["lo"] > 0.6
 
 
+def test_equivalence_of_two_theorems_carries_no_information(k):
+    """Found in the first real two-worker run: both F were proved, then proved equivalent.
+    Any two theorems are equivalent, so the bounds must not move."""
+    h1, h2 = k.claim("A")["h"], k.claim("B")["h"]
+    g1, g2 = k.ground(h1, "(1:Nat) = 1"), k.ground(h2, "(2:Nat) = 2")
+    for h, g in ((h1, g1), (h2, g2)):
+        k.observe(h, "test", "pass", f"run-{h}")
+        k.prove("holds", [g["f"]], "rfl")
+    before = k.infer(h1)
+    approx(before, 0.76 / 0.84, 0.76 / 0.84)
+    k.prove("iff", [g1["f"], g2["f"]], "simp")
+    assert k.infer(h1) == before
+    joint = k.infer(f"{g1['g']} & {g2['g']}")             # asked jointly, dependence is still unknown
+    assert joint["lo"] < joint["hi"]
+
+
 def test_contradictory_formalizations_surface_as_conflict(k):
     h = k.claim("limit is inclusive")["h"]
     g1, g2 = k.ground(h, "(1:Nat) ≤ 1", prior=0.9), k.ground(h, "(1:Nat) < 1", prior=0.8)

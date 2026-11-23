@@ -253,19 +253,23 @@ class Kernel:
         links = [(g, h, st.rep(f)) for g, h, f in st.links]
         proofs = [(p["relation"], [st.rep(f) for f in p["fs"]]) for p in st.proofs if p["relation"] != "iff"]
         groups = [set(l) for l in links] + [set(fs) for _, fs in proofs]
+        # An F that Lean has decided is a constant: sharing it creates no dependence,
+        # so it must not pull otherwise unrelated claims into one component.
+        decided = {fs[0] for rel, fs in proofs if rel in ("holds", "not")}
         comp = set(fm.atoms(q))
+        seeds = set(comp)
         grew = True
         while grew:
             grew = False
             for grp in groups:
-                if grp & comp and not grp <= comp:
+                if grp & (comp - (decided - seeds)) and not grp <= comp:
                     comp |= grp
                     grew = True
         names = sorted(comp)
         n = len(names)
         if n > self.max_atoms:
             raise KernelError(f"component has {n} atoms (> {self.max_atoms}); split the query")
-        links = [l for l in links if l[0] in comp]
+        links = [l for l in links if set(l) <= comp]
         proofs = [p for p in proofs if set(p[1]) <= comp]
 
         bits = (np.arange(2 ** n)[:, None] >> np.arange(n)) & 1
