@@ -52,8 +52,12 @@ def model(h: str, object: str, setup: str = "", call: str = "", domains: list[st
     `setup`, `call` and `domains` are part of what the model hypothesis claims: "on every input from
     these domains, calling the code this way gives what the Lean term gives". The kernel builds and
     runs the checks from them; you do not write check commands.
+    For a file that is not code you can call (a configuration, a schema, a document), leave out
+    setup, call and domains: you are then stating how you read the file, and the reading holds
+    for this exact content only. Write what the file says, not what the claim would like it to say.
     Returns ids of the model hypothesis M and the proposition F = predicate(object);
-    then prove `holds [F]` and support M with sample_model."""
+    then prove `holds [F]` (or `not [F]` if the file does not satisfy the predicate), and for
+    callable code support M with sample_model."""
     st = _kernel.state()
     if h not in st.formal:
         return {"error": f"{h} is not a formal claim; use ground_at"}

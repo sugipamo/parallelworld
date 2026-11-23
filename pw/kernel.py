@@ -137,6 +137,34 @@ def binding(call, setup="", domains=(), bound=15):
     return {"language": "python", "setup": setup.strip(), "call": call.strip(), "domains": domains, "bound": int(bound)}
 
 
+def reader(expr, fmt="json"):
+    """A recorded, mechanical way to read a file as a Lean term.
+
+    `expr` is a Python expression over `data` (the parsed file: JSON, or the text) that
+    evaluates to the Lean term as a string. Helpers: `permille(x)` gives a number as a whole
+    number of thousandths and fails if it is not one; `lean_string(s)` writes a string literal.
+    With a reader nobody has to be believed about what the file says: the term is recomputed
+    whenever the file changes.
+    """
+    if fmt not in ("json", "text") or not expr.strip():
+        raise KernelError("a reader needs an expression and a format: json or text")
+    return {"language": "reader", "format": fmt, "expr": expr.strip()}
+
+
+_READ = """
+import json, sys
+from fractions import Fraction
+def permille(x):
+    v = Fraction(str(x)) * 1000
+    if v.denominator != 1: raise ValueError(f"{x} is not a whole number of thousandths")
+    return int(v)
+def lean_string(s): return json.dumps(s, ensure_ascii=False)
+with open(sys.argv[1], encoding="utf-8") as fh:
+    data = json.load(fh) if sys.argv[2] == "json" else fh.read()
+print(eval(sys.argv[3]))
+"""
+
+
 class KernelError(Exception):
     pass
 
@@ -359,6 +387,28 @@ class Kernel:
                 })
         return {"m": m, "f": f, "p": pred["id"], "o": ob["id"]}
 
+    def read(self, subject, rd, cwd):
+        """The Lean term a reader gives for the file as it is now."""
+        path = os.path.join(cwd, subject.split("::")[0].split("@")[0])
+        r = subprocess.run(["python3", "-c", _READ, path, rd["format"], rd["expr"]], capture_output=True, text=True, timeout=120)
+        if r.returncode != 0:
+            raise KernelError("the reader failed on this file: " + (r.stdout + r.stderr)[-400:])
+        return _norm(r.stdout)
+
+    def attach_derived(self, h, rd, cwd):
+        """For a formal claim about a file: compute the Lean term with a reader instead of
+        having someone state it. The model hypothesis is then only that the reader is right."""
+        st = self.state()
+        if h not in st.formal:
+            raise KernelError(f"{h} is not a formal claim")
+        subject = st.formal[h]["subject"]
+        return self.attach_model(h, self.read(subject, rd, cwd), subject_version=subject_id(subject, cwd),
+                                 binding=rd, model_prior=self.catalog["priors"]["derived"])
+
+    def sign_off(self, m, who, confirmed=True):
+        """A person has compared a stated reading (a model or a connection) with the thing itself."""
+        return self.observe(m, "sign_off", "confirmed" if confirmed else "rejected", f"person:{who}")
+
     def reject_object(self, p, obj, proof):
         """Show a specification is not vacuous: Lean verifies that `obj` does NOT satisfy predicate `p`."""
         st = self.state()
@@ -495,7 +545,7 @@ class Kernel:
         """M is identified by everything it claims: the code version, the term, and the binding."""
         if binding is None:
             return "M:" + _sha(subject, ob["id"])
-        if cwd is not None:                      # the way of calling the code must at least load
+        if cwd is not None and binding["language"] == "python":   # the way of calling the code must at least load
             r = self._run_code(binding, [], cwd)
             if isinstance(r, str):
                 raise KernelError("the binding's setup does not run: " + r)
@@ -507,8 +557,8 @@ class Kernel:
             raise KernelError(f"unknown model hypothesis {m}")
         if self.gate is None:
             raise KernelError("no Lean gate configured; cannot evaluate the object")
-        if not st.models[m]["binding"]:
-            raise KernelError(f"{m} was stated without saying how the code is called, so it cannot be checked")
+        if (st.models[m]["binding"] or {}).get("language") != "python":
+            raise KernelError(f"{m} does not say how to call code, so it cannot be checked by running it")
         return st.algebra.objs[st.models[m]["obj"]], st.models[m]["binding"]
 
     @staticmethod
@@ -622,7 +672,7 @@ class Kernel:
             return {"accepted": False, "reason": verdict["reason"]}
         with self._tx() as (con, st):
             self._append(con, st, "proof", {
-                "relation": relation, "args": list(args), "proof_sha": _sha(proof),
+                "relation": relation, "args": list(args), "proof_sha": _sha(proof), "proof": proof,
                 "axioms": verdict["axioms"], "gamma": verdict["gamma"],
             })
         return {"accepted": True, "axioms": verdict["axioms"], "gamma": verdict["gamma"]}
@@ -784,18 +834,22 @@ class Kernel:
         return {"h": h}
 
     def recheck(self, cwd, n=20):
-        """Hold every standing decision against the code as it is in `cwd`, without anyone's judgement.
+        """Hold every standing decision against the files as they are in `cwd`, without anyone's judgement.
 
-        For each formal claim: if its code changed since it was established, attach the same Lean
-        object to the new version and run the stored random check again; run the stored test
-        commands again on this tree. Then report where the claim stands.
+        A decision says a file satisfies a specification, through a reading of the file as a
+        Lean term. When the file changes, what happens depends on how it was read:
 
-          current         the code is the version the claim was established for
-          re-established  the code changed, but the old model still agrees with it, so the old proof applies
-          uncovered       the code changed and no longer agrees with the model the proof was about.
-                          This does not say the decision is violated: the new code may still meet
-                          it, but nothing shows that until someone models and proves it again.
-          unsupported     nothing was ever attached, or there is no stored check to run again
+          by a reader      the term is recomputed and the stored proofs are tried again
+          as a code model  the same term is checked against the new code by fresh random draws
+          by an agent      nothing can be done here: someone has to read the file again
+
+          current         the file is the version the decision was established for
+          re-established  the file changed and the decision was carried over mechanically
+          violated        Lean has verified that the file, as read, does NOT satisfy the specification
+          uncovered       the file changed and the old proof no longer covers it. This is not a
+                          verdict: the decision may still hold, but nothing shows it
+          stale           the file changed since an agent read it
+          unsupported     no reading was ever attached
         """
         st = self.state()
         standing = [h for h in st.formal if h not in st.withdrawn]
@@ -806,29 +860,40 @@ class Kernel:
             now = current[st.formal[h]["subject"]]
             entry = {"h": h, "text": st.atoms[h]["text"], "subject": now,
                      "spec": st.algebra.preds[st.formal[h]["pred"]]["text"]}
-            models = [x for gs, hh, _ in st.links if hh == h for x in gs if x[0] == "M"]
-            if any(st.models[m]["subject"] == now for m in models):
+            mine = [(x, f) for gs, hh, f in st.links if hh == h for x in gs if x[0] == "M"]
+            if any(st.models[m]["subject"] == now for m, _ in mine):
                 entry["state"] = "current"
+            elif not mine:
+                entry["state"] = "unsupported"
             else:
-                old = next((m for m in reversed(models) if st.models[m]["binding"]), None)
-                if old is None:
-                    entry["state"] = "unsupported"
-                else:
-                    obj = st.algebra.objs[st.models[old]["obj"]]
-                    try:
+                old, old_f = mine[-1]
+                how = (st.models[old]["binding"] or {}).get("language")
+                obj = st.algebra.objs[st.models[old]["obj"]]
+                try:
+                    if how == "reader":
+                        new = self.attach_derived(h, st.models[old]["binding"], cwd)
+                        entry.update(self._carry_proofs(old_f, new["f"]))
+                    elif how == "python":
                         new = self.attach_model(h, obj["text"], subject_version=now, binding=st.models[old]["binding"], cwd=cwd)
                         r = self.sample_model(new["m"], cwd, n=n)
-                    except KernelError as e:
-                        r = {"error": str(e)}
-                    if "error" in r:
-                        entry.update(state="unsupported", error=r["error"])
-                    elif r["disagreements"]:
-                        entry.update(state="uncovered", counterexample=r["disagreements"][0], model=obj["text"])
+                        if "error" in r:
+                            entry.update(state="unsupported", error=r["error"])
+                        elif r["disagreements"]:
+                            entry.update(state="uncovered", counterexample=r["disagreements"][0], model=obj["text"])
+                        else:
+                            entry["state"] = "re-established"
                     else:
-                        entry["state"] = "re-established"
+                        entry["state"] = "stale"
+                except KernelError as e:
+                    entry.update(state="unsupported", error=str(e))
             for kind, command in sorted({(e["kind"], e["command"]) for e in st.evidence.values()
                                          if e["target"] == h and "tree" in e}):
                 self.observe_command(h, kind, command, cwd)
+            st = self.state()
+            refuted = {x for rel, ids in st.algebra.order() if rel == "not" for x in ids}
+            if any(st.rep(f) in refuted for gs, hh, f in st.links
+                   if hh == h and all(st.models[x]["subject"] == now for x in gs if x[0] == "M")):
+                entry["state"] = "violated"
             try:
                 b = self.infer(h, current=current, tree=tree)
                 entry.update(lo=b["lo"], hi=b["hi"])
@@ -856,6 +921,19 @@ class Kernel:
                 "conflicts": [{"a": a, "b": b, "subject": st.formal[a]["subject"],
                                "specs": [st.algebra.preds[st.formal[x]["pred"]]["text"] for x in (a, b)]}
                               for a, b in self._conflicts(st)]}
+
+    def _carry_proofs(self, old_f, new_f):
+        """The file was read again and gives proposition `new_f`. Try what was proved about `old_f`."""
+        st = self.state()
+        if st.rep(old_f) == st.rep(new_f):
+            return {"state": "re-established"}              # the reading did not change
+        for p in st.proofs:
+            if p["relation"] in ("holds", "not") and p["args"] == [old_f] and p.get("proof"):
+                if self.prove(p["relation"], [new_f], p["proof"])["accepted"]:
+                    return {"state": "re-established" if p["relation"] == "holds" else "violated"}
+        if self.prove("not", [new_f], "decide")["accepted"]:  # a decidable specification can simply be evaluated
+            return {"state": "violated"}
+        return {"state": "uncovered", "note": "the stored proof does not go through for the file as it is now"}
 
     def versions(self, cwd):
         """The present version of every piece of code some model is about, as found in `cwd`.

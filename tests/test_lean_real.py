@@ -326,3 +326,70 @@ def test_natural_language_claims_are_held_by_rerunning_their_checks(tmp_path):
     git("commit", "-qam", "v2")
     r = k.recheck(str(repo))["decisions"][0]
     assert r["state"] == "checks fail" and r["lo"] < 0.5
+
+
+TABLE = "List (String × List (String × Nat × Nat))"
+SUMS = "fun c => ∀ k ∈ c, (k.2.map (fun o => o.2.1)).foldr (· + ·) 0 = 1000 ∧ (k.2.map (fun o => o.2.2)).foldr (· + ·) 0 = 1000"
+READ = ('"[" + ", ".join("(" + lean_string(k) + ", [" + ", ".join("(" + lean_string(o) + ", " + str(permille(v[0])) + ", " '
+        '+ str(permille(v[1])) + ")" for o, v in sorted(e["outcomes"].items())) + "])" for k, e in sorted(data["evidence"].items())) + "]"')
+
+
+def _config_repo(tmp_path):
+    import json
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    def write(test_pass, test_fail):
+        (repo / "catalog.json").write_text(json.dumps({"evidence": {
+            "test": {"outcomes": {"pass": test_pass, "fail": test_fail}},
+            "review": {"outcomes": {"agree": [0.8, 0.35], "disagree": [0.2, 0.65]}}}}))
+    write([0.95, 0.4], [0.05, 0.6])
+    git = lambda *a: subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=repo, check=True, capture_output=True)
+    git("init", "-q"); git("add", "-A"); git("commit", "-qm", "v1")
+    return str(repo), write, git
+
+
+def test_a_file_that_is_not_code_read_by_a_reader_is_carried_over_or_found_violated(tmp_path):
+    """Nobody is asked what the file says: the term is recomputed and the stored proof tried again."""
+    from pw.kernel import reader
+    k = Kernel(str(tmp_path / "e.db"), gate=LeanGate())
+    cwd, write, git = _config_repo(tmp_path)
+    d = k.claim_formal("catalog.json::evidence", TABLE, SUMS, gloss="each column of likelihoods sums to 1")
+    a = k.attach_derived(d["h"], reader(READ), cwd)
+    assert k.state().algebra.objs[a["o"]]["text"].startswith('[("review", [("agree", 800, 350)')
+    assert k.prove("holds", [a["f"]], "decide")["accepted"]
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "current" and r["lo"] == pytest.approx(0.99), r
+
+    write([0.9, 0.3], [0.1, 0.7]); git("commit", "-qam", "retune, columns still sum to 1")
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "re-established" and r["lo"] == pytest.approx(0.99), r
+
+    write([0.9, 0.4], [0.05, 0.6]); git("commit", "-qam", "retune, first column now sums to 0.95")
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "violated" and r["hi"] < 0.05, r
+
+    write([0.9, 0.3], [0.1, 0.7]); git("commit", "-qam", "back")
+    assert k.recheck(cwd)["decisions"][0]["state"] == "current"
+    write([0.9005, 0.3], [0.0995, 0.7]); git("commit", "-qam", "a value the reader cannot represent")
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "unsupported" and "thousandths" in r["error"], r
+
+
+def test_a_file_read_by_an_agent_goes_stale_when_it_changes(tmp_path):
+    from pw.kernel import subject_id
+    k = Kernel(str(tmp_path / "e.db"), gate=LeanGate())
+    cwd, write, git = _config_repo(tmp_path)
+    d = k.claim_formal("catalog.json::evidence", TABLE, SUMS)
+    said = '[("review", [("agree", 800, 350), ("disagree", 200, 650)]), ("test", [("fail", 50, 600), ("pass", 950, 400)])]'
+    a = k.attach_model(d["h"], said, subject_version=subject_id("catalog.json::evidence", cwd))
+    assert k.prove("holds", [a["f"]], "decide")["accepted"]
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "current" and r["lo"] == pytest.approx(0.875), r      # proved, but only an agent says what the file contains
+    with pytest.raises(KernelError):
+        k.sample_model(a["m"], cwd)                                             # nothing to run
+    k.sign_off(a["m"], "reviewer")
+    assert k.recheck(cwd)["decisions"][0]["lo"] > 0.98                          # a person compared the reading with the file
+
+    write([0.9, 0.4], [0.05, 0.6]); git("commit", "-qam", "changed")
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "stale" and r["lo"] == pytest.approx(0.5), r           # the old reading, proof and sign-off say nothing now

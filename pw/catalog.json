@@ -4,7 +4,8 @@
     "claim": 0.5,
     "grounding": 0.6,
     "specification": 0.8,
-    "model": 0.75
+    "model": 0.75,
+    "derived": 0.98
   },
   "evidence": {
     "test": {
@@ -47,6 +48,13 @@
       "outcomes": {
         "match": [0.85, 0.45],
         "mismatch": [0.15, 0.55]
+      }
+    },
+    "sign_off": {
+      "targets": ["M", "G"],
+      "outcomes": {
+        "confirmed": [0.98, 0.1],
+        "rejected": [0.02, 0.9]
       }
     }
   },
