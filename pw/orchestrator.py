@@ -41,7 +41,7 @@ def run_task(task, args, repo):
         "claude", "-p", prompt, "--model", args.model,
         "--append-system-prompt", WORKER_RULES,
         "--mcp-config", cfg_path, "--strict-mcp-config",
-        "--allowedTools", "mcp__pw", "--permission-mode", "acceptEdits",
+        "--allowedTools", *args.allow, "--permission-mode", "acceptEdits",
         "--output-format", "json", "--max-budget-usd", str(args.budget),
     ]
     if args.dry_run:
@@ -52,7 +52,14 @@ def run_task(task, args, repo):
     if not os.path.isdir(wt):
         subprocess.run(["git", "worktree", "add", "-b", f"pw/{name}", wt], cwd=repo, check=True)
     r = subprocess.run(cmd, cwd=wt, capture_output=True, text=True)
-    return name, r.returncode, r.stdout[-2000:]
+    with open(os.path.join(repo, ".pw", f"worker-{name}.json"), "w") as fh:
+        fh.write(r.stdout)
+    try:
+        out = json.loads(r.stdout)
+        summary = f"turns={out.get('num_turns')} cost=${out.get('total_cost_usd', 0):.2f}\n{out.get('result', '')}"
+    except ValueError:
+        summary = (r.stdout + r.stderr)[-2000:]
+    return name, r.returncode, summary
 
 
 def main():
@@ -63,6 +70,10 @@ def main():
     ap.add_argument("--threshold", type=float, default=0.9)
     ap.add_argument("--budget", type=float, default=5.0, help="USD cap per worker")
     ap.add_argument("--parallel", type=int, default=4)
+    ap.add_argument("--allow", nargs="+", default=[
+        "mcp__pw", "Read", "Glob", "Grep", "Edit", "Write",
+        "Bash(git add:*)", "Bash(git commit:*)", "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)",
+    ], help="tools workers may use without prompting; checks run through the kernel, not Bash")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     args.db = os.path.join(os.path.abspath(args.repo), ".pw", "events.db")
