@@ -126,3 +126,17 @@ def test_gate_screening_and_axiom_judgement():
     forged = "'pw_goal' does not depend on any axioms\n'pw_goal' depends on axioms: [sorryAx]"
     assert not LeanGate.judge(0, forged, "g")["ok"]
     assert not LeanGate.judge(0, "", "g")["ok"]
+
+
+def test_identity_is_a_metric_and_section6_is_the_triangle_inequality(k):
+    """d(A, B) = 1 - P(A <-> B). Lean gives d(F1, F2) = 0; a connection gives d(H, F) <= 1 - P(G)."""
+    h1, h2 = k.claim("A")["h"], k.claim("B")["h"]
+    g1, g2 = k.ground(h1, "(1:Nat) = 1 ∨ False", prior=0.9), k.ground(h2, "(1:Nat) = 1 ∧ True", prior=0.8)
+    k.prove("iff", [g1["f"], g2["f"]], "simp")
+    k.observe(h1, "property_test", "pass", "r1")
+    k.observe(g2["g"], "back_translation", "mismatch", "b1")
+    d = lambda a, b: 1 - k.infer(f"{a} <-> {b}")["lo"]          # upper distance
+    assert d(g1["f"], g2["f"]) == pytest.approx(0, abs=1e-9)
+    for h, g in ((h1, g1), (h2, g2)):
+        assert d(h, g["f"]) <= 1 - k.infer(g["g"])["lo"] + 1e-9
+    assert d(h1, h2) <= d(h1, g1["f"]) + d(g2["f"], h2) + 1e-9
