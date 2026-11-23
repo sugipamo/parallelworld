@@ -352,3 +352,33 @@ def test_what_a_formalization_leaves_out_is_kept_with_it(k):
     means = k.status()["claims"][0]["means"][0]
     assert means["left_out"].startswith("only two") and means["added"] == "probabilities read as naturals"
     approx(k.infer(h), 0.5, 0.5)          # the notes are for a reader; they move no number
+
+
+def test_a_subject_is_a_file_or_a_part_of_one(tmp_path):
+    """A reading is tied to the content it is about, not to the rest of the file."""
+    from pw.kernel import locate, subject_id
+    cwd = str(tmp_path)
+    md = "# Title\n\nintro\n\n## Rules\n\n- one\n\n```\n# not a heading\n```\n\n### Detail\n\nmore\n\n## Other\n\ntext\n"
+    (tmp_path / "doc.md").write_text(md)
+    assert locate("doc.md::Rules", cwd).decode() == "## Rules\n\n- one\n\n```\n# not a heading\n```\n\n### Detail\n\nmore\n\n"
+    before = subject_id("doc.md::Rules", cwd)
+    (tmp_path / "doc.md").write_text(md.replace("text", "changed elsewhere"))
+    assert subject_id("doc.md::Rules", cwd) == before != subject_id("doc.md::Other", cwd)
+    (tmp_path / "doc.md").write_text(md.replace("- one", "- two"))
+    assert subject_id("doc.md::Rules", cwd) != before
+
+    (tmp_path / "c.json").write_text('{"a": {"x": [1, 2]}, "b": 3}')
+    v = subject_id("c.json::a.x", cwd)
+    (tmp_path / "c.json").write_text('{"b": 4,   "a": {"x": [1, 2]}}')            # other key, order, spacing
+    assert subject_id("c.json::a.x", cwd) == v and locate("c.json::a.x.1", cwd) == b"2"
+
+    py = "LIMIT = 3\n\nclass K:\n    def f(self, n):\n        return n + LIMIT\n\ndef g():\n    return 1\n"
+    (tmp_path / "m.py").write_text(py)
+    f, lim = subject_id("m.py::K.f", cwd), subject_id("m.py::LIMIT", cwd)
+    (tmp_path / "m.py").write_text(py.replace("return 1", "return 2").replace("LIMIT = 3", "LIMIT = 4"))
+    assert subject_id("m.py::K.f", cwd) == f and subject_id("m.py::LIMIT", cwd) != lim
+
+    (tmp_path / "blob.bin").write_bytes(b"\x00\xff\x10")                         # any file at all
+    assert subject_id("blob.bin", cwd).startswith("blob.bin@") and subject_id("blob.bin::x", cwd).startswith("blob.bin::x@")
+    assert subject_id("doc.md::No such heading", cwd) == "doc.md::No such heading@" + subject_id("doc.md", cwd).split("@")[1]
+    assert subject_id("missing.txt::a", cwd) == "missing.txt::a"

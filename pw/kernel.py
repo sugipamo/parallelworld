@@ -8,6 +8,7 @@ Events are of three kinds: model extension (claim / ground / independence),
 evidence (observe), and verified proof. A proof shrinks the space of worlds; evidence
 reweights measures on it. Nothing else changes the state.
 """
+import ast
 import hashlib
 import itertools
 import json
@@ -140,9 +141,10 @@ def binding(call, setup="", domains=(), bound=15):
 def reader(expr, fmt="json"):
     """A recorded, mechanical way to read a file as a Lean term.
 
-    `expr` is a Python expression over `data` (the parsed file: JSON, or the text) that
-    evaluates to the Lean term as a string. Helpers: `permille(x)` gives a number as a whole
-    number of thousandths and fails if it is not one; `lean_string(s)` writes a string literal.
+    `expr` is a Python expression that evaluates to the Lean term as a string. It can use
+    `data` (the whole file: parsed JSON, or the text), `part` (the text of the part the subject
+    names), `re`, `permille(x)` (a number as a whole number of thousandths; fails if it is not
+    one) and `lean_string(s)` (a string literal).
     With a reader nobody has to be believed about what the file says: the term is recomputed
     whenever the file changes.
     """
@@ -152,8 +154,9 @@ def reader(expr, fmt="json"):
 
 
 _READ = """
-import json, sys
+import json, re, sys
 from fractions import Fraction
+part = sys.stdin.read()
 def permille(x):
     v = Fraction(str(x)) * 1000
     if v.denominator != 1: raise ValueError(f"{x} is not a whole number of thousandths")
@@ -185,13 +188,75 @@ def _tree(cwd):
     return "tree:" + _sha(git("rev-parse", "HEAD"), git("status", "--porcelain"), git("diff", "HEAD"))
 
 
+def _md_section(text, title):
+    """The section under the heading `title`: up to the next heading of the same or a higher level."""
+    lines, fenced, start, level = text.splitlines(keepends=True), False, None, 0
+    for i, line in enumerate(lines):
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+        m = None if fenced else re.match(r"(#+)\s+(.*?)\s*#*\s*$", line)
+        if not m:
+            continue
+        if start is None and m.group(2).strip() == title.strip():
+            start, level = i, len(m.group(1))
+        elif start is not None and len(m.group(1)) <= level:
+            return "".join(lines[start:i])
+    return None if start is None else "".join(lines[start:])
+
+
+def _json_part(text, keys):
+    part = json.loads(text)
+    for key in keys.split("."):
+        part = part[int(key)] if isinstance(part, list) else part[key]
+    return json.dumps(part, sort_keys=True, ensure_ascii=False)
+
+
+def _py_part(text, name):
+    """The source of a definition or assignment, by dotted name (Class.method)."""
+    body = ast.parse(text).body
+    node = None
+    for part in name.split("."):
+        node = next((n for n in body if getattr(n, "name", None) == part
+                     or (isinstance(n, ast.Assign) and any(getattr(t, "id", None) == part for t in n.targets))), None)
+        if node is None:
+            return None
+        body = getattr(node, "body", [])
+    return ast.get_source_segment(text, node)
+
+
+def locate(subject, cwd):
+    """The content a subject names, as bytes; None if the file is not there.
+
+    A subject is `path` or `path::part`. The part is a heading in Markdown, a dotted key in
+    JSON, a dotted name in Python. For any other kind of file, or a part that cannot be found,
+    the subject is the whole file: every file can be a subject, whatever is in it.
+    """
+    path, _, part = subject.partition("::")
+    full = os.path.join(cwd, path)
+    if not os.path.isfile(full):
+        return None
+    with open(full, "rb") as fh:
+        raw = fh.read()
+    found = None
+    if part:
+        try:
+            text = raw.decode("utf-8")
+            if path.endswith((".md", ".markdown")):
+                found = _md_section(text, part)
+            elif path.endswith(".json"):
+                found = _json_part(text, part)
+            elif path.endswith(".py"):
+                found = _py_part(text, part)
+        except (UnicodeDecodeError, ValueError, SyntaxError, KeyError, IndexError, TypeError):
+            found = None
+    return raw if found is None else found.encode("utf-8")
+
+
 def subject_id(subject, cwd):
-    """`path::name` plus a hash of the file, so a hypothesis about code dies when the code changes."""
-    path = os.path.join(cwd, subject.split("::")[0])
-    if os.path.isfile(path):
-        with open(path, "rb") as fh:
-            return f"{subject}@{hashlib.sha256(fh.read()).hexdigest()[:10]}"
-    return subject
+    """The subject plus a hash of what it names. A reading holds for exactly this content:
+    it dies when the content changes, and is untouched by changes elsewhere in the file."""
+    content = locate(subject, cwd)
+    return subject if content is None else f"{subject}@{hashlib.sha256(content).hexdigest()[:10]}"
 
 
 def _norm(text):
@@ -389,8 +454,12 @@ class Kernel:
 
     def read(self, subject, rd, cwd):
         """The Lean term a reader gives for the file as it is now."""
-        path = os.path.join(cwd, subject.split("::")[0].split("@")[0])
-        r = subprocess.run(["python3", "-c", _READ, path, rd["format"], rd["expr"]], capture_output=True, text=True, timeout=120)
+        subject = subject.split("@")[0]
+        content = locate(subject, cwd)
+        if content is None:
+            raise KernelError(f"{subject} is not there")
+        r = subprocess.run(["python3", "-c", _READ, os.path.join(cwd, subject.split("::")[0]), rd["format"], rd["expr"]],
+                           input=content.decode("utf-8", "replace"), capture_output=True, text=True, timeout=120)
         if r.returncode != 0:
             raise KernelError("the reader failed on this file: " + (r.stdout + r.stderr)[-400:])
         return _norm(r.stdout)
