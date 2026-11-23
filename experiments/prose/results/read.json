@@ -1,0 +1,92 @@
+{
+ "r1": {
+  "readings": {
+   "axioms": {
+    "read as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+    "proved": "holds"
+   },
+   "largest component": {
+    "read as": "14",
+    "proved": "holds"
+   },
+   "tools": {
+    "read as": "[\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\", \"observe\", \"observe_command\", \"prove\", \"reject_object\", \"sample_model\", \"status\"]",
+    "proved": "holds"
+   },
+   "states": {
+    "read as": "[\"current\", \"re-established\", \"stale\", \"uncovered\", \"unsupported\", \"violated\"]",
+    "proved": "holds"
+   },
+   "default dependence": {
+    "read as": "\"pqd\"",
+    "proved": "holds"
+   }
+  },
+  "worker": {
+   "turns": 15,
+   "cost_usd": 0.27,
+   "seconds": 23,
+   "report": "All five claims hold. I read each passage of `docs/spec.md`, wrote down what it says as a Lean term, and the Lean Gate accepted a `rfl` proof of `holds` for every one.\n\n| Claim | Section | What the passage says | Result |\n|---|---|---|---|\n| H:85b8a5366f | 5. Lean Gate | The allowed axioms are `propext`, `Classical.choice` and `Quot.sound`. Sorted, that is `[\"Classical.choice\", \"Quot.sound\", \"propext\"]` (capital letters sort before lowercase). | holds |\n| H:d4809cf697 | 7. 未解決 | \"連結成分が14原子を超えると解けない\" (a connected component with more than 14 atoms can't be solved), so 14 is the largest size that is still solved. | holds |\n| H:aae40ca93a | 4. 操作（MCPツール） | The table lists 14 tools: `check_model` … `status`, and the sorted list matches the claim exactly. | holds |\n| H:3646b44401 | 9. 時間をまたぐ決定 | 現行 / 再確立 / 違反 / 証明の対象外 / 失効 / 裏付けなし translate to current / re-established / violated / uncovered / stale / unsupported. | holds |\n| H:fffdf43047 | 3. モデル | \"既定の `pqd` は正の依存…\": the default copula class is `pqd`. | holds |\n\nFor H:d4809cf697, the passage only says what fails: more than 14 atoms can't be solved. That 14 is the largest size still solved is my reading of that sentence; the passage doesn't state it directly.\n\nI didn't run `sample_model` or `check_model`: a document has no call or input domains, so the model is my reading of this exact text. I didn't change any file, so there was nothing to commit."
+  }
+ },
+ "r2": {
+  "readings": {
+   "axioms": {
+    "read as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+    "proved": "holds"
+   },
+   "largest component": {
+    "read as": "(14 : Nat)",
+    "proved": "holds"
+   },
+   "tools": {
+    "read as": "[\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\", \"observe\", \"observe_command\", \"prove\", \"reject_object\", \"sample_model\", \"status\"]",
+    "proved": "holds"
+   },
+   "states": {
+    "read as": "[\"current\", \"re-established\", \"stale\", \"uncovered\", \"unsupported\", \"violated\"]",
+    "proved": "holds"
+   },
+   "default dependence": {
+    "read as": "\"pqd\"",
+    "proved": "holds"
+   }
+  },
+  "worker": {
+   "turns": 15,
+   "cost_usd": 0.27,
+   "seconds": 26,
+   "report": "I recorded a reading of each of the five passages in docs/spec.md, and all five match their claims. For each one, `holds` was proved by `rfl`, and the Lean Gate accepted the proof with no axioms. I didn't change any files, so there was nothing to commit. I also didn't run `sample_model` or `check_model`: a document can't be called, so the readings rest only on the passage text.\n\n| Claim | What the passage says | Result |\n|---|---|---|\n| H:85b8a5366f (§5 Lean Gate) | The allowed axioms are `propext`, `Classical.choice` and `Quot.sound`. Sorted, that is `[\"Classical.choice\",\"Quot.sound\",\"propext\"]`. | holds |\n| H:d4809cf697 (§7 未解決) | 「連結成分が14原子を超えると解けない」 (it can't solve a connected component of more than 14 atoms). So 14 is the largest size it still solves. | holds |\n| H:aae40ca93a (§4 操作) | The table lists 14 tools. Sorted, they are exactly the claim's list. | holds |\n| H:3646b44401 (§9 時間をまたぐ決定) | The recheck states are 「現行・再確立・違反・証明の対象外・失効・裏付けなし」, which translate to current, re-established, violated, uncovered, stale and unsupported. Sorted, they match. | holds |\n| H:fffdf43047 (§3 モデル) | 「既定の `pqd` は正の依存…」 (the default `pqd` is positive dependence). The default copula class is `\"pqd\"`. | holds |\n\nTwo of these needed some interpretation:\n- **§7:** the passage only says that more than 14 atoms can't be solved. That 14 itself is still solved is my inference from that wording.\n- **§9:** I counted only the six states listed for formal decisions. The pass/fail states (「検査が通る」「検査が落ちる」, check passes / check fails) that the same section gives for natural-language claims are a separate list, so I left them out.\n\nThe claims had no dependencies on other workers' claims, so I didn't rely on anything from them."
+  }
+ },
+ "r3": {
+  "readings": {
+   "axioms": {
+    "read as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+    "proved": "holds"
+   },
+   "largest component": {
+    "read as": "14",
+    "proved": "holds"
+   },
+   "tools": {
+    "read as": "[\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\", \"observe\", \"observe_command\", \"prove\", \"reject_object\", \"sample_model\", \"status\"]",
+    "proved": "holds"
+   },
+   "states": {
+    "read as": "[\"current\", \"re-established\", \"stale\", \"uncovered\", \"unsupported\", \"violated\"]",
+    "proved": "holds"
+   },
+   "default dependence": {
+    "read as": "\"pqd\"",
+    "proved": "holds"
+   }
+  },
+  "worker": {
+   "turns": 15,
+   "cost_usd": 0.27,
+   "seconds": 25,
+   "report": "I modelled all five claims from their own sections of `docs/spec.md`, and all five hold. For each, the Lean kernel accepted `holds [F]` with the proof `rfl`, using no axioms.\n\n| Claim | Section | What the passage says | Result |\n|---|---|---|---|\n| H:85b8a5366f | §5 Lean Gate | The allowed axioms are `propext`, `Classical.choice` and `Quot.sound`. Sorted, that is `[\"Classical.choice\",\"Quot.sound\",\"propext\"]`. | holds |\n| H:d4809cf697 | §7 未解決 | 「連結成分が14原子を超えると解けない」: a component of more than 14 atoms cannot be solved, so 14 is the largest that still is. | holds |\n| H:aae40ca93a | §4 操作 | The table lists 14 tools. Sorted, they match the claimed list exactly. | holds |\n| H:3646b44401 | §9 時間をまたぐ決定 | The recheck results are 現行 (current), 再確立 (re-established), 違反 (violated), 証明の対象外 (uncovered), 失効 (stale) and 裏付けなし (unsupported). Sorted, they match. | holds |\n| H:fffdf43047 | §3 モデル | 「既定の `pqd` は正の依存」: the default copula class is `pqd`. | holds |\n\nOn H:3646b44401: the same section also gives the states 「検査が通る／検査が落ちる」. I left those out because they are for natural-language claims, not formal decisions. A contradiction between two decisions is reported separately, not as one of these states.\n\nThese are documents, so the models have no setup, call or domains, and there was nothing for `sample_model` or `check_model` to test. No claims were listed as depending on other workers. I changed no files, so there was nothing to commit."
+  }
+ }
+}
