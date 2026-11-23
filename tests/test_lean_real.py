@@ -280,7 +280,9 @@ def test_past_decisions_are_held_against_the_code_as_it_is_now(tmp_path):
     # model of this version and the supported models of the old ones say almost nothing
     mixed = k.infer(d["h"])
     assert mixed["hi"] - mixed["lo"] > 0.2 and mixed["hi"] > 0.99
-    assert k.infer(d["h"], current=k.versions(cwd))["hi"] <= 0.75
+    from pw.kernel import _tree
+    assert k.infer(d["h"], current=k.versions(cwd))["hi"] < 0.95 < mixed["hi"]          # no longer "possibly established"
+    assert k.infer(d["h"], current=k.versions(cwd), tree=_tree(cwd))["hi"] <= 0.75      # and with only this tree's test runs
     assert r["state"] == "uncovered" and r["lo"] <= 0.75 and r["counterexample"]["lean"] != r["counterexample"]["code"], r
 
     # a new decision that cannot hold together with the old one
