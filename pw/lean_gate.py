@@ -125,6 +125,29 @@ class LeanGate:
             return {"ok": False, "reason": "timeout"}
         return self.judge(r.returncode, r.stdout + r.stderr, self.gamma())
 
+    def evaluate(self, typ, obj, args):
+        """Value of the Lean object applied to `args`, as Lean prints it."""
+        try:
+            for t in (typ, obj, args):
+                self.screen(t)
+            lake = self._lake()
+        except GateError as e:
+            return {"ok": False, "reason": str(e)}
+        src = f"import Gamma\n\ndef pw_obj : ({typ}) := ({obj})\n\n#eval pw_obj {args}\n"
+        work = os.path.join(self.lean_dir, "PWCheck")
+        os.makedirs(work, exist_ok=True)
+        path = os.path.join(work, "PWEval_" + hashlib.sha256(src.encode()).hexdigest()[:16] + ".lean")
+        with open(path, "w") as fh:
+            fh.write(src)
+        try:
+            r = subprocess.run([lake, "env", "lean", path], cwd=self.lean_dir, capture_output=True,
+                               text=True, timeout=self.timeout)
+        except subprocess.TimeoutExpired:
+            return {"ok": False, "reason": "timeout"}
+        if r.returncode != 0:
+            return {"ok": False, "reason": (r.stdout + r.stderr)[-800:]}
+        return {"ok": True, "value": r.stdout.strip()}
+
     @staticmethod
     def judge(returncode, output, gamma):
         """Read the audit run. Its whole output must be one axiom report, nothing else."""

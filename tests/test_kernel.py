@@ -147,8 +147,8 @@ T = "Nat → Nat"
 
 def test_same_specification_and_same_object_are_separate_identities(k):
     h1, h2 = k.claim("f never decreases its input")["h"], k.claim("g returns at least its argument")["h"]
-    a = k.ground_at(h1, T, "fun f => ∀ n, n ≤ f n", "fun n => n + 1", prior=0.9)
-    b = k.ground_at(h2, T, "fun f => ∀ n, f n ≥ n", "fun n => 1 + n", prior=0.8)
+    a = k.ground_at(h1, "f", T, "fun f => ∀ n, n ≤ f n", "fun n => n + 1", prior=0.9, model_prior=1)
+    b = k.ground_at(h2, "g", T, "fun f => ∀ n, f n ≥ n", "fun n => 1 + n", prior=0.8, model_prior=1)
     alg = lambda: k.state().algebra
     assert alg().find(a["f"]) != alg().find(b["f"])
 
@@ -167,8 +167,8 @@ def test_same_specification_and_same_object_are_separate_identities(k):
 
 def test_refinement_between_specifications_orders_their_instances(k):
     h1, h2 = k.claim("f is strictly above its input")["h"], k.claim("f is at least its input")["h"]
-    a = k.ground_at(h1, T, "fun f => ∀ n, n < f n", "fun n => n + 1", prior=0.9)
-    b = k.ground_at(h2, T, "fun f => ∀ n, n ≤ f n", "fun n => n + 1", prior=0.9)
+    a = k.ground_at(h1, "f", T, "fun f => ∀ n, n < f n", "fun n => n + 1", prior=0.9)
+    b = k.ground_at(h2, "f", T, "fun f => ∀ n, n ≤ f n", "fun n => n + 1", prior=0.9)
     k.prove("pred_implies", [a["p"], b["p"]], "intro f h n; exact Nat.le_of_lt (h n)")
     approx(k.infer(f"{a['f']} -> {b['f']}"), 1.0, 1.0)
     before = k.infer(h2)["lo"]
@@ -190,3 +190,25 @@ def test_copula_classes(tmp_path, dependence, lo, hi):
     k.observe(h, "property_test", "pass", "r1")
     k.observe(h, "property_test", "pass", "r2")
     approx(k.infer(h), lo, hi)
+
+
+def test_model_hypothesis_is_shared_by_claims_about_the_same_code(k):
+    """'This term models that code' is one hypothesis, however many claims lean on it."""
+    h1, h2 = k.claim("f is at least its input")["h"], k.claim("f is positive")["h"]
+    a = k.ground_at(h1, "f.py::f", T, "fun f => ∀ n, n ≤ f n", "fun n => n + 1")
+    b = k.ground_at(h2, "f.py::f", T, "fun f => ∀ n, 0 < f n", "fun n => n + 1")
+    assert a["m"] == b["m"] and a["g"] != b["g"]
+    other = k.ground_at(k.claim("g is positive")["h"], "g.py::g", T, "fun f => ∀ n, 0 < f n", "fun n => n + 1")
+    assert other["m"] != a["m"] and other["p"] == b["p"] and other["o"] == b["o"]
+
+    for x in (a, b):
+        k.prove("holds", [x["f"]], "intro n; omega")
+    # specification 0.8 and model 0.75 with unknown dependence: both hold with probability in [0.55, 0.75]
+    approx(k.infer(f"{a['g']} & {a['m']}"), 0.55, 0.75)
+    approx(k.infer(h1), 0.55 + 0.45 * 0.5, 0.75 + 0.25 * 0.5)
+    before = k.infer(h1)["lo"], k.infer(h2)["lo"]
+    k.observe(a["m"], "instance_check", "agree", "input-3")      # one check of the model...
+    assert k.infer(h1)["lo"] > before[0] and k.infer(h2)["lo"] > before[1]   # ...supports both claims
+    assert k.status()["models"][a["m"]]["subject"] == "f.py::f"
+    with pytest.raises(KernelError):
+        k.observe(a["m"], "test", "pass", "r")                   # tests are evidence about claims, not models

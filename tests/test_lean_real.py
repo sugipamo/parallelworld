@@ -1,6 +1,7 @@
 """Runs the real Lean kernel. Skipped when Lean is not installed."""
 import os
 import shutil
+import subprocess
 
 import pytest
 
@@ -82,8 +83,8 @@ def test_specification_and_object_identity_with_real_lean(tmp_path):
     """The case from the first two-worker run, now with a non-vacuous notion of sameness."""
     k = Kernel(str(tmp_path / "e.db"), gate=LeanGate())
     h1, h2 = k.claim("clamp stays within [lo, hi]")["h"], k.claim("bound stays within [lo, hi]")["h"]
-    a = k.ground_at(h1, FN, SPEC1, CLAMP, prior=0.9)
-    b = k.ground_at(h2, FN, SPEC2, BOUND, prior=0.8)
+    a = k.ground_at(h1, "clamp", FN, SPEC1, CLAMP)
+    b = k.ground_at(h2, "bound", FN, SPEC2, BOUND)
     assert k.prove("holds", [a["f"]], "intro x lo hi h\nomega")["accepted"]
     r = k.prove("holds", [b["f"]], "intro x lo hi h\nsplit\n· omega\n· split <;> omega")
     assert r["accepted"], r
@@ -97,8 +98,32 @@ def test_specification_and_object_identity_with_real_lean(tmp_path):
     r = k.prove("obj_eq", [a["o"], b["o"]], "funext x lo hi\nomega")
     assert not r["accepted"]
 
-    c = k.ground_at(k.claim("clamp2 stays within [lo, hi]")["h"], FN, SPEC1, "fun x lo hi => min hi (max lo x)")
+    c = k.ground_at(k.claim("clamp2 stays within [lo, hi]")["h"], "clamp2", FN, SPEC1, "fun x lo hi => min hi (max lo x)")
     r = k.prove("obj_eq", [a["o"], c["o"]], "funext x lo hi\nomega")
     assert r["accepted"], r
     alg = k.state().algebra
     assert alg.find(a["f"]) == alg.find(c["f"])          # congruence closure identifies the propositions
+
+
+def test_model_check_compares_lean_with_running_code(tmp_path):
+    k = Kernel(str(tmp_path / "e.db"), gate=LeanGate())
+    repo = tmp_path / "repo"                                  # the event log lives outside the code
+    repo.mkdir()
+    (repo / "clamp.py").write_text("def clamp(x, lo, hi):\n    return min(max(x, lo), hi)\n")
+    (repo / ".gitignore").write_text("__pycache__/\n")       # caches must not look like a changed tree
+    for cmd in ("git init -q", "git add -A", "git -c user.name=t -c user.email=t@t commit -qm init"):
+        subprocess.run(cmd.split(), cwd=repo, check=True)
+    tmp_path = repo
+    run = lambda *a: f'python3 -c "from clamp import clamp; print(clamp{a})"'
+    good = k.ground_at(k.claim("clamp is bounded")["h"], "clamp.py::clamp", FN, SPEC1, CLAMP)
+    r = k.observe_model(good["m"], "7 2 5", run(7, 2, 5), str(tmp_path))
+    assert r["outcome"] == "agree" and r["lean"] == "5" and not r["duplicate"], r
+    assert k.observe_model(good["m"], "7 2 5", run(7, 2, 5), str(tmp_path))["duplicate"]
+    assert k.infer(good["m"])["lo"] > 0.75
+
+    # the if/else term is a wrong model of this code: they differ when lo > hi
+    bad = k.ground_at(k.claim("clamp is bounded (alt)")["h"], "clamp.py::clamp", FN, SPEC1, BOUND)
+    r = k.observe_model(bad["m"], "0 5 3", run(0, 5, 3), str(tmp_path))
+    assert r["outcome"] == "disagree" and (r["lean"], r["code"]) == ("5", "3"), r
+    assert k.infer(bad["m"])["hi"] < 0.75
+    assert "error" in k.observe_model(good["m"], "true", run(1, 2, 3), str(tmp_path))   # ill-typed input

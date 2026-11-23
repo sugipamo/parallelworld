@@ -10,7 +10,7 @@ try:  # mcp 2.x
 except ImportError:  # mcp 1.x
     from mcp.server.fastmcp import FastMCP
 
-from .kernel import Kernel, KernelError
+from .kernel import Kernel, KernelError, subject_id
 from .lean_gate import GateError, LeanGate
 
 mcp = FastMCP("pw")
@@ -31,14 +31,31 @@ def claim(text: str) -> dict:
     return _safe(_kernel.claim, text)
 
 
+def _workdir():
+    return os.environ.get("PW_WORKDIR", os.getcwd())
+
+
 @mcp.tool()
-def ground_at(h: str, type: str, predicate: str, object: str) -> dict:
-    """State that claim `h` says: the object `object : type` satisfies `predicate : type -> Prop`
-    (Lean terms using only Lean core and Gamma). Prefer this whenever a claim is "this code has
-    that property": write the code's behaviour as `object` and the property as `predicate`, e.g.
-    type "Nat → Nat", predicate "fun f => ∀ n, n ≤ f n", object "fun n => n + 1".
-    Returns ids of the connection G, proposition F, specification P and object O."""
-    return _safe(_kernel.ground_at, h, type, predicate, object)
+def ground_at(h: str, subject: str, type: str, predicate: str, object: str) -> dict:
+    """State that claim `h` says: the code `subject` has a property. Give
+      subject    what the claim is about, as "path::name", e.g. "clamp.py::clamp"
+      object     a Lean term of type `type` modelling that code's behaviour
+      predicate  a Lean term of type `type -> Prop` stating the property
+    using only Lean core and Gamma, e.g. type "Nat → Nat", predicate "fun f => ∀ n, n ≤ f n",
+    object "fun n => n + 1". This introduces two separate uncertain hypotheses: G (the predicate
+    expresses the claim's property) and M (the object models the code). M is shared by every
+    claim about the same code and object, and is tied to the file's current content.
+    Returns ids of G, M, proposition F, specification P and object O."""
+    return _safe(_kernel.ground_at, h, subject_id(subject, _workdir()), type, predicate, object)
+
+
+@mcp.tool()
+def check_model(m: str, lean_args: str, command: str) -> dict:
+    """Evidence for a model hypothesis M. The kernel evaluates the Lean object on `lean_args`
+    (e.g. "7 2 5"), runs shell `command`, which must print what the real code returns for the
+    same input (e.g. python3 -c "from clamp import clamp; print(clamp(7, 2, 5))"), and records
+    whether they agree. Check several inputs, including edge cases the claim does not cover."""
+    return _safe(_kernel.observe_model, m, lean_args, command, _workdir())
 
 
 @mcp.tool()
@@ -53,13 +70,13 @@ def observe_command(target: str, kind: str, command: str) -> dict:
     """Have the kernel run a shell check (kind: test | property_test | typecheck) in the worktree
     and record pass/fail as evidence for claim `target`. Re-running the same command on the same
     tree is the same evidence and changes nothing."""
-    return _safe(_kernel.observe_command, target, kind, command, os.environ.get("PW_WORKDIR", os.getcwd()))
+    return _safe(_kernel.observe_command, target, kind, command, _workdir())
 
 
 @mcp.tool()
 def observe(target: str, kind: str, outcome: str, source: str) -> dict:
-    """Record evidence that cannot be produced by a command (kind: review | instance_check |
-    back_translation). `source` must identify the physical origin (e.g. artifact hash)."""
+    """Record evidence that cannot be produced by a command (kind: review for claims,
+    back_translation for G). `source` must identify the physical origin (e.g. artifact hash)."""
     if kind in ("test", "property_test", "typecheck"):
         return {"error": "use observe_command for this kind"}
     return _safe(_kernel.observe, target, kind, outcome, source)
@@ -100,7 +117,7 @@ def infer(query: str) -> dict:
 
 @mcp.tool()
 def status() -> dict:
-    """All claims with current bounds and what they are connected to; the classes of
+    """All claims with current bounds and what they are connected to; model hypotheses; the classes of
     propositions, specifications and objects Lean has identified; accepted proofs."""
     return _safe(_kernel.status)
 

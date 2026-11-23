@@ -38,6 +38,23 @@ def _sha(*parts):
     return hashlib.sha256("\x00".join(parts).encode()).hexdigest()[:10]
 
 
+def _tree(cwd):
+    """Identifies the state of the working tree a check ran against."""
+    def git(*args):
+        r = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+        return r.stdout if r.returncode == 0 else f"nogit:{time.time()}"
+    return "tree:" + _sha(git("rev-parse", "HEAD"), git("status", "--porcelain"), git("diff", "HEAD"))
+
+
+def subject_id(subject, cwd):
+    """`path::name` plus a hash of the file, so a hypothesis about code dies when the code changes."""
+    path = os.path.join(cwd, subject.split("::")[0])
+    if os.path.isfile(path):
+        with open(path, "rb") as fh:
+            return f"{subject}@{hashlib.sha256(fh.read()).hexdigest()[:10]}"
+    return subject
+
+
 def _norm(text):
     return " ".join(text.split())
 
@@ -46,7 +63,8 @@ class State:
     def __init__(self):
         self.atoms = {}      # world atoms: id -> {"kind": H|F|G, "text": str}
         self.prior = {}      # base rates
-        self.links = []      # (g, h, f): connection g says claim h means proposition f
+        self.links = []      # (guards, h, f): if every guard holds, claim h is true iff proposition f is
+        self.models = {}     # M id -> {"subject", "obj"}
         self.evidence = {}   # eid -> dict
         self.proofs = []     # proof events as recorded
         self.algebra = Lindenbaum()
@@ -69,7 +87,14 @@ class State:
             self.algebra.add_prop(p["f"], p["lean"], pred and pred["id"], obj and obj["id"])
             self.atoms[p["g"]] = {"kind": "G", "text": f'{p["h"]} means {p["f"]}'}
             self.prior[p["g"]] = p["prior"]
-            self.links.append((p["g"], p["h"], p["f"]))
+            guards = (p["g"],)
+            if p.get("m"):
+                if p["m"] not in self.atoms:
+                    self.atoms[p["m"]] = {"kind": "M", "text": f'{obj["id"]} models {p["subject"]}'}
+                    self.prior[p["m"]] = p["model_prior"]
+                    self.models[p["m"]] = {"subject": p["subject"], "obj": obj["id"]}
+                guards += (p["m"],)
+            self.links.append((guards, p["h"], p["f"]))
         elif typ == "observe":
             self.evidence[p["eid"]] = dict(p, block="shared")
         elif typ == "independence":
@@ -153,39 +178,47 @@ class Kernel:
         return {"h": h}
 
     def ground(self, h, lean, prior=None):
-        """Connection hypothesis G: claim `h` means the closed Lean proposition `lean`."""
-        return self._ground(h, _norm(lean), None, None, prior)
+        """One connection hypothesis G: claim `h` means the closed Lean proposition `lean`."""
+        lean = _norm(lean)
+        self._screen(lean)
+        return self._ground(h, lean, {"prior": self.catalog["priors"]["grounding"] if prior is None else prior})
 
-    def ground_at(self, h, typ, predicate, obj, prior=None):
-        """Connection hypothesis G: claim `h` says object `obj : typ` satisfies `predicate : typ -> Prop`.
+    def ground_at(self, h, subject, typ, predicate, obj, prior=None, model_prior=None):
+        """Claim `h` says: the thing `subject` satisfies a property. Two separate hypotheses:
 
-        Keeping the specification and the object apart lets Lean say "same
-        specification" and "same object" separately; closed propositions cannot.
+          G  `predicate : typ -> Prop` expresses the property the claim talks about
+          M  `obj : typ` models `subject`     (shared by every claim about that subject and object)
+
+        If both hold, the claim is true iff predicate(obj) is. Keeping specification and
+        object apart also lets Lean say "same specification" and "same object" separately.
         """
         typ, predicate, obj = _norm(typ), _norm(predicate), _norm(obj)
+        for text in (typ, predicate, obj):
+            self._screen(text)
         pred = {"id": "P:" + _sha(typ, predicate), "type": typ, "text": predicate}
         ob = {"id": "O:" + _sha(typ, obj), "type": typ, "text": obj}
-        lean = f"((({predicate}) : ({typ}) → Prop) (({obj}) : ({typ})))"
-        return self._ground(h, lean, pred, ob, prior)
+        priors = self.catalog["priors"]
+        return self._ground(h, f"((({predicate}) : ({typ}) → Prop) (({obj}) : ({typ})))", {
+            "prior": priors["specification"] if prior is None else prior,
+            "pred": pred, "obj": ob, "subject": subject, "m": "M:" + _sha(subject, ob["id"]),
+            "model_prior": priors["model"] if model_prior is None else model_prior,
+        })
 
-    def _ground(self, h, lean, pred, obj, prior):
+    def _screen(self, text):
         if self.gate is not None:
-            for text in (lean, *((pred["type"],) if pred else ())):
-                self.gate.screen(text)
+            self.gate.screen(text)
+
+    def _ground(self, h, lean, extra):
         f = "F:" + _sha(lean)
         g = f"G:{h[2:]}~{f[2:]}"
         with self._tx() as (con, st):
             if h not in st.atoms:
                 raise KernelError(f"unknown claim {h}")
             if g not in st.atoms:
-                prior = self.catalog["priors"]["grounding"] if prior is None else prior
-                event = {"g": g, "h": h, "f": f, "lean": lean, "prior": prior}
-                if pred:
-                    event.update(pred=pred, obj=obj)
-                self._append(con, st, "ground", event)
+                self._append(con, st, "ground", {"g": g, "h": h, "f": f, "lean": lean, **extra})
         out = {"g": g, "f": f}
-        if pred:
-            out.update(p=pred["id"], o=obj["id"])
+        if "m" in extra:
+            out.update(m=extra["m"], p=extra["pred"]["id"], o=extra["obj"]["id"])
         return out
 
     def observe(self, target, kind, outcome, source):
@@ -216,14 +249,30 @@ class Kernel:
 
     def observe_command(self, target, kind, command, cwd, timeout=900):
         """Run a check ourselves and record its result, so evidence is not self-reported."""
-        def git(*args):
-            r = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
-            return r.stdout if r.returncode == 0 else f"nogit:{time.time()}"
-        tree = _sha(git("rev-parse", "HEAD"), git("status", "--porcelain"), git("diff", "HEAD"))
         r = subprocess.run(["bash", "-c", command], cwd=cwd, capture_output=True, text=True, timeout=timeout)
         outcome = "pass" if r.returncode == 0 else "fail"
-        out = self.observe(target, kind, outcome, source=f"cmd:{_sha(command)}@tree:{tree}")
+        out = self.observe(target, kind, outcome, source=f"cmd:{_sha(command)}@{_tree(cwd)}")
         return {**out, "outcome": outcome, "tail": (r.stdout + r.stderr)[-800:]}
+
+    def observe_model(self, m, lean_args, command, cwd, timeout=300):
+        """Evidence for a model hypothesis M: evaluate the Lean object on `lean_args`, run
+        `command` (which must print what the real code returns for the same input), compare."""
+        st = self.state()
+        if m not in st.models:
+            raise KernelError(f"unknown model hypothesis {m}")
+        if self.gate is None:
+            raise KernelError("no Lean gate configured; cannot evaluate the object")
+        obj = st.algebra.objs[st.models[m]["obj"]]
+        lean = self.gate.evaluate(obj["type"], obj["text"], lean_args)
+        if not lean["ok"]:
+            return {"error": "Lean could not evaluate the object: " + lean["reason"]}
+        r = subprocess.run(["bash", "-c", command], cwd=cwd, capture_output=True, text=True, timeout=timeout)
+        if r.returncode != 0:
+            return {"error": "command failed: " + (r.stdout + r.stderr)[-500:]}
+        same = " ".join(r.stdout.split()).lower() == " ".join(lean["value"].split()).lower()
+        out = self.observe(m, "instance_check", "agree" if same else "disagree",
+                           source=f"args:{_sha(_norm(lean_args))}@cmd:{_sha(command)}@{_tree(cwd)}")
+        return {**out, "outcome": "agree" if same else "disagree", "lean": lean["value"], "code": r.stdout.strip()}
 
     def declare_independent(self, eid, justification):
         """Assert evidence `eid` is conditionally independent of all other evidence on its target."""
@@ -278,14 +327,15 @@ class Kernel:
         A = lambda x: ("atom", x)
 
         # T: what a connection means, plus what Lean has verified
-        links = sorted({(g, h, st.rep(f)) for g, h, f in st.links})
+        links = sorted({(gs, h, st.rep(f)) for gs, h, f in st.links})
+        all_of = lambda xs: xs[0] if len(xs) == 1 else ("and", xs[0], all_of(xs[1:]))
         order = alg.order()
         shape = {
             "holds": lambda a: A(a), "not": lambda a: ("not", A(a)),
             "implies": lambda a, b: ("imp", A(a), A(b)),
             "contradiction": lambda a, b: ("not", ("and", A(a), A(b))),
         }
-        theory = [("imp", A(g), ("iff", A(h), A(f))) for g, h, f in links]
+        theory = [("imp", all_of([A(g) for g in gs]), ("iff", A(h), A(f))) for gs, h, f in links]
         theory += [shape[rel](*ids) for rel, ids in order]
 
         # The component of the query. A class Lean has decided is a constant: sharing
@@ -303,32 +353,43 @@ class Kernel:
         names = sorted(comp)
         if len(names) > self.max_atoms:
             raise KernelError(f"component has {len(names)} atoms (> {self.max_atoms}); split the query")
-        links = [l for l in links if set(l) <= comp]
+        links = [l for l in links if {*l[0], l[1], l[2]} <= comp]
         order = [(rel, ids) for rel, ids in order if set(ids) <= comp]
         env, m = stone_space(names, [t for t in theory if fm.atoms(t) <= comp])
         if m == 0:
             raise Conflict(f"no possible world satisfies the proofs over {names}")
 
-        # Reliability model (Bovens-Hartmann): a connection is reliable at its base rate;
-        # reliability is independent of the fact reported; an unconnected claim sits at its base rate.
+        # Reliability model (Bovens-Hartmann). A link is reliable when all its hypotheses hold.
+        #   - each hypothesis sits at its base rate; how hypotheses depend on one another is left open
+        #   - the fact reported is independent of the hypotheses of the link reporting it
+        #   - with no reliable link, a claim is a draw at its base rate, whatever the hypotheses are
         K = CredalSet(m)
         everywhere = np.ones(m, dtype=bool)
+
+        def settings(guards):
+            """Every truth assignment to `guards`, as (event, {guard: value})."""
+            for values in itertools.product((True, False), repeat=len(guards)):
+                event = everywhere.copy()
+                for g, v in zip(guards, values):
+                    event &= env[g] if v else ~env[g]
+                yield event, dict(zip(guards, values))
+
         related = {f for _, ids in order for f in ids}
         for a in names:
             kind = st.atoms[a]["kind"]
-            if kind == "G":
+            if kind in ("G", "M"):
                 K.constrain(env[a], everywhere, st.prior[a])
             elif kind == "H":
-                unconnected = everywhere.copy()
-                for g, h, _ in links:
-                    if h == a:
-                        unconnected &= ~env[g]
-                K.constrain(env[a], unconnected, st.prior[a])
+                mine = [l for l in links if l[1] == a]
+                for event, val in settings(sorted({g for l in mine for g in l[0]})):
+                    if not any(all(val[g] for g in l[0]) for l in mine):
+                        K.constrain(env[a], event, st.prior[a])
             elif a not in related:
                 K.constrain(env[a], everywhere, st.prior[a])
-                for g, _, f in links:
-                    if f == a:
-                        K.constrain(env[a], env[g], st.prior[a])
+                for l in links:
+                    if l[2] == a:
+                        for event, _ in settings(l[0]):
+                            K.constrain(env[a], event, st.prior[a])
         if not K.feasible():
             raise Conflict(f"base rates are incompatible with the verified proofs over {names}")
 
@@ -361,9 +422,12 @@ class Kernel:
         st = self.state()
         alg = st.algebra
         out = {"claims": [], "evidence": len(st.evidence), "proofs": st.proofs,
-               "propositions": alg.classes("F"),
+               "models": {}, "propositions": alg.classes("F"),
                "specifications": {c: [alg.preds[p] for p in ps] for c, ps in alg.classes("P").items()},
                "objects": {c: [alg.objs[o] for o in os_] for c, os_ in alg.classes("O").items()}}
+        for mid, info in st.models.items():
+            b = self.infer(mid)
+            out["models"][mid] = {**info, "lo": b["lo"], "hi": b["hi"]}
         for a, info in st.atoms.items():
             if info["kind"] != "H":
                 continue
@@ -373,11 +437,12 @@ class Kernel:
             except KernelError as e:
                 entry = {"h": a, "text": info["text"], "error": str(e)}
             entry["means"] = []
-            for g, h, f in st.links:
+            for gs, h, f in st.links:
                 if h == a:
                     p = alg.props[f]
                     entry["means"].append({
-                        "g": g, "f": f, "proposition_class": alg.find(f),
+                        "g": gs[0], "m": gs[1] if len(gs) > 1 else None, "f": f,
+                        "proposition_class": alg.find(f),
                         "specification_class": p["pred"] and alg.find(p["pred"]),
                         "object_class": p["obj"] and alg.find(p["obj"]),
                     })
