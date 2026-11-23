@@ -12,6 +12,7 @@ import hashlib
 import itertools
 import json
 import os
+import random
 import sqlite3
 import subprocess
 import time
@@ -20,7 +21,7 @@ from contextlib import contextmanager
 import numpy as np
 
 from . import formula as fm
-from .credal import COPULAS, CredalSet, joint_likelihood, stone_space
+from .credal import COPULAS, CredalSet, exchangeable_agreement, joint_likelihood, stone_space
 from .lindenbaum import RELATIONS, Lindenbaum
 
 CATALOG_PATH = os.path.join(os.path.dirname(__file__), "catalog.json")
@@ -65,6 +66,7 @@ class State:
         self.prior = {}      # base rates
         self.links = []      # (guards, h, f): if every guard holds, claim h is true iff proposition f is
         self.models = {}     # M id -> {"subject", "obj"}
+        self.retracted = {}  # eid -> justification
         self.evidence = {}   # eid -> dict
         self.proofs = []     # proof events as recorded
         self.algebra = Lindenbaum()
@@ -97,6 +99,9 @@ class State:
             self.links.append((guards, p["h"], p["f"]))
         elif typ == "observe":
             self.evidence[p["eid"]] = dict(p, block="shared")
+        elif typ == "retract":
+            self.evidence.pop(p["eid"], None)
+            self.retracted[p["eid"]] = p["justification"]
         elif typ == "independence":
             self.evidence[p["eid"]]["block"] = p["eid"]
         elif typ == "proof":
@@ -232,20 +237,35 @@ class Kernel:
             raise KernelError(f"unknown evidence {kind}/{outcome}; see catalog")
         if target[0] not in spec["targets"]:
             raise KernelError(f"evidence kind {kind} cannot target {target[0]} atoms")
+        return self._record(target, kind, outcome, source, {"likelihood": spec["outcomes"][outcome]})
+
+    def _record(self, target, kind, outcome, source, extra):
         eid = "E:" + _sha(target, kind, source)
         with self._tx() as (con, st):
             if target not in st.atoms:
                 raise KernelError(f"unknown atom {target}")
+            if eid in st.retracted:
+                raise KernelError(f"{eid} was retracted: {st.retracted[eid]}")
             old = st.evidence.get(eid)
             if old is not None:
                 if old["outcome"] != outcome:
                     raise KernelError(f"{eid}: same source already recorded with outcome {old['outcome']}")
                 return {"eid": eid, "duplicate": True}
             self._append(con, st, "observe", {
-                "eid": eid, "target": target, "kind": kind, "outcome": outcome,
-                "source": source, "likelihood": spec["outcomes"][outcome],
+                "eid": eid, "target": target, "kind": kind, "outcome": outcome, "source": source, **extra,
             })
         return {"eid": eid, "duplicate": False}
+
+    def retract(self, eid, justification):
+        """Void a piece of evidence that turned out not to be what it claimed (a harness fault,
+        a wrong command). Kept in the log; the same source cannot be recorded again."""
+        if not justification.strip():
+            raise KernelError("retraction needs a justification")
+        with self._tx() as (con, st):
+            if eid not in st.evidence:
+                raise KernelError(f"unknown evidence {eid}")
+            self._append(con, st, "retract", {"eid": eid, "justification": justification})
+        return {"eid": eid}
 
     def observe_command(self, target, kind, command, cwd, timeout=900):
         """Run a check ourselves and record its result, so evidence is not self-reported."""
@@ -254,25 +274,82 @@ class Kernel:
         out = self.observe(target, kind, outcome, source=f"cmd:{_sha(command)}@{_tree(cwd)}")
         return {**out, "outcome": outcome, "tail": (r.stdout + r.stderr)[-800:]}
 
-    def observe_model(self, m, lean_args, command, cwd, timeout=300):
-        """Evidence for a model hypothesis M: evaluate the Lean object on `lean_args`, run
-        `command` (which must print what the real code returns for the same input), compare."""
+    def _model(self, m):
         st = self.state()
         if m not in st.models:
             raise KernelError(f"unknown model hypothesis {m}")
         if self.gate is None:
             raise KernelError("no Lean gate configured; cannot evaluate the object")
-        obj = st.algebra.objs[st.models[m]["obj"]]
+        return st.algebra.objs[st.models[m]["obj"]]
+
+    def _compare(self, obj, lean_args, commands, cwd, timeout):
+        """[(agree?, lean value, code output)] for each input, or an error string."""
         lean = self.gate.evaluate(obj["type"], obj["text"], lean_args)
         if not lean["ok"]:
-            return {"error": "Lean could not evaluate the object: " + lean["reason"]}
-        r = subprocess.run(["bash", "-c", command], cwd=cwd, capture_output=True, text=True, timeout=timeout)
-        if r.returncode != 0:
-            return {"error": "command failed: " + (r.stdout + r.stderr)[-500:]}
-        same = " ".join(r.stdout.split()).lower() == " ".join(lean["value"].split()).lower()
+            return "Lean could not evaluate the object: " + lean["reason"]
+        out = []
+        for value, command in zip(lean["values"], commands):
+            r = subprocess.run(["bash", "-c", command], cwd=cwd, capture_output=True, text=True, timeout=timeout)
+            if r.returncode != 0:
+                return "command failed: " + (r.stdout + r.stderr)[-500:]
+            code = " ".join(r.stdout.split())
+            out.append((code.lower() == value.lower(), value, code))
+        return out
+
+    def observe_model(self, m, lean_args, command, cwd, timeout=300):
+        """A chosen check of model hypothesis M: evaluate the Lean object on `lean_args`, run
+        `command` (which must print what the real code returns for the same input), compare.
+
+        M is universal, so if M holds agreement is certain: one disagreement refutes M. An
+        input picked by hand is not a random draw, so agreeing checks of this kind support M
+        only as much as one of them does.
+        """
+        obj = self._model(m)
+        res = self._compare(obj, [lean_args], [command], cwd, timeout)
+        if isinstance(res, str):
+            return {"error": res}
+        same, lean, code = res[0]
         out = self.observe(m, "instance_check", "agree" if same else "disagree",
                            source=f"args:{_sha(_norm(lean_args))}@cmd:{_sha(command)}@{_tree(cwd)}")
-        return {**out, "outcome": "agree" if same else "disagree", "lean": lean["value"], "code": r.stdout.strip()}
+        return {**out, "outcome": "agree" if same else "disagree", "lean": lean, "code": code}
+
+    def sample_model(self, m, command, cwd, n=10, bound=15, seed=None, timeout=300):
+        """Random checks of model hypothesis M. The kernel draws the inputs itself.
+
+        `command` is a shell template with {0}, {1}, ... for the arguments; it must print
+        what the real code returns. Arguments are drawn uniformly: Nat from 0..bound, Int
+        from -bound..bound. Because the draws are random they are exchangeable, and each
+        further agreement raises the lower probability of M (see credal.exchangeable_agreement).
+        What gets supported is agreement on almost all inputs *under this distribution*.
+        """
+        obj = self._model(m)
+        domains = [t.strip() for t in obj["type"].split("→")][:-1]
+        if not domains or any(d not in ("Nat", "Int") for d in domains):
+            raise KernelError(f"can only draw Nat and Int arguments, not {obj['type']}")
+        spec = self.catalog["sampling"]
+        rng = random.Random(seed)
+        draws = sorted({tuple(rng.randint(0 if d == "Nat" else -bound, bound) for d in domains) for _ in range(n)})
+        lean_args = [" ".join(str(v) if v >= 0 else f"({v})" for v in d) for d in draws]
+        commands = []
+        for d in draws:
+            c = command
+            for i, v in enumerate(d):
+                c = c.replace("{%d}" % i, str(v))
+            commands.append(c)
+        res = self._compare(obj, lean_args, commands, cwd, timeout)
+        if isinstance(res, str):
+            return {"error": res}
+        tree, dist = _tree(cwd), f"uniform {' × '.join(domains)} within {bound}"
+        new, disagreements = 0, []
+        for d, (same, lean, code) in zip(draws, res):
+            r = self._record(m, "sampled_check", "agree" if same else "disagree",
+                             f"draw:{d}@cmd:{_sha(command)}@{tree}",
+                             {"args": list(d), "distribution": dist, **spec})
+            new += not r["duplicate"]
+            if not same:
+                disagreements.append({"args": list(d), "lean": lean, "code": code})
+        return {"drawn": len(draws), "new": new, "agree": len(draws) - len(disagreements),
+                "disagreements": disagreements, "distribution": dist}
 
     def declare_independent(self, eid, justification):
         """Assert evidence `eid` is conditionally independent of all other evidence on its target."""
@@ -398,11 +475,17 @@ class Kernel:
         for e in st.evidence.values():
             t = st.rep(e["target"])
             if t in comp:
-                blocks.setdefault((t, e["block"]), []).append(e["likelihood"])
-        choices = [
-            [np.where(env[t], pt, pf) for pt, pf in joint_likelihood(likes, self.dependence)]
-            for (t, _), likes in sorted(blocks.items())
-        ]
+                blocks.setdefault((t, e["block"]), []).append(e)
+        choices = []
+        for (t, _), evs in sorted(blocks.items()):
+            items = [((e["likelihood"][0],) * 2, (e["likelihood"][1],) * 2) for e in evs if "likelihood" in e]
+            draws = [e for e in evs if e["kind"] == "sampled_check"]
+            if any(e["outcome"] == "disagree" for e in draws):
+                items.append(((0, 0), (1, 1)))          # a counterexample refutes a universal hypothesis
+            elif draws:
+                rng = exchangeable_agreement(len(draws), draws[0]["agree_rate_if_wrong"], draws[0]["min_concentration"])
+                items.append(((1, 1), rng))
+            choices.append([np.where(env[t], pt, pf) for pt, pf in joint_likelihood(items, self.dependence)])
         candidates = (np.prod(combo, axis=0) if combo else np.ones(m) for combo in itertools.product(*choices))
         b = K.bounds(np.asarray(fm.evaluate(q, env), dtype=bool) & everywhere, candidates)
         if b is None:

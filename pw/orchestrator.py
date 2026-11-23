@@ -23,7 +23,8 @@ You are one of several parallel workers. Shared knowledge lives in the `pw` MCP 
 - For each claim listed under "Required claims", call `claim` with the EXACT text, then gather
   evidence with `observe_command` (the kernel runs the check; you do not report results yourself).
 - Where a claim has precise mathematical content, connect it to Lean with `ground_at` (subject,
-  object, predicate), try `prove`, and support the model with `check_model` on a few inputs.
+  object, predicate), try `prove`, support the model with `sample_model`, and try to break it
+  with `check_model` on edge cases.
   A failed proof proves nothing; do not treat it as evidence.
 - If `status` shows another worker's specification or object that you believe is the same as
   yours, try `pred_iff` / `obj_eq`. Only prove what is true: different code is usually a

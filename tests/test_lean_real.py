@@ -5,7 +5,7 @@ import subprocess
 
 import pytest
 
-from pw.kernel import Kernel
+from pw.kernel import Kernel, KernelError
 from pw.lean_gate import LeanGate
 
 LAKE = os.environ.get("PW_LAKE") or shutil.which("lake")
@@ -127,3 +127,30 @@ def test_model_check_compares_lean_with_running_code(tmp_path):
     assert r["outcome"] == "disagree" and (r["lean"], r["code"]) == ("5", "3"), r
     assert k.infer(bad["m"])["hi"] < 0.75
     assert "error" in k.observe_model(good["m"], "true", run(1, 2, 3), str(tmp_path))   # ill-typed input
+
+
+def test_kernel_drawn_checks_with_real_lean(tmp_path):
+    k = Kernel(str(tmp_path / "e.db"), gate=LeanGate())
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "clamp.py").write_text("def clamp(x, lo, hi):\n    return min(max(x, lo), hi)\n")
+    (repo / ".gitignore").write_text("__pycache__/\n")
+    for cmd in ("git init -q", "git add -A", "git -c user.name=t -c user.email=t@t commit -qm init"):
+        subprocess.run(cmd.split(), cwd=repo, check=True)
+    template = 'python3 -c "from clamp import clamp; print(clamp({0}, {1}, {2}))"'
+
+    good = k.ground_at(k.claim("clamp is bounded")["h"], "clamp.py::clamp", FN, SPEC1, CLAMP)
+    r = k.sample_model(good["m"], template, str(repo), n=12, seed=1)
+    assert r["agree"] == r["drawn"] == r["new"] and not r["disagreements"], r
+    assert k.infer(good["m"])["lo"] == pytest.approx(0.75 * (r["drawn"] + 1) / (0.75 * (r["drawn"] + 1) + 0.25))
+    assert k.sample_model(good["m"], template, str(repo), n=12, seed=1)["new"] == 0   # same draws: same evidence
+
+    # the if/else term agrees with this code only when lo <= hi; random draws find that out
+    bad = k.ground_at(k.claim("clamp is bounded (alt)")["h"], "clamp.py::clamp", FN, SPEC1, BOUND)
+    r = k.sample_model(bad["m"], template, str(repo), n=12, seed=1)
+    assert r["disagreements"], r
+    assert k.infer(bad["m"])["hi"] == 0.0
+
+    with pytest.raises(KernelError):
+        other = k.ground_at(k.claim("p")["h"], "x", "Bool → Bool", "fun f => True", "fun b => b")
+        k.sample_model(other["m"], "echo {0}", str(repo))

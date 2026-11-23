@@ -212,3 +212,50 @@ def test_model_hypothesis_is_shared_by_claims_about_the_same_code(k):
     assert k.status()["models"][a["m"]]["subject"] == "f.py::f"
     with pytest.raises(KernelError):
         k.observe(a["m"], "test", "pass", "r")                   # tests are evidence about claims, not models
+
+
+def _model(k):
+    h = k.claim("f is at least its input")["h"]
+    g = k.ground_at(h, "f.py::f", T, "fun f => ∀ n, n ≤ f n", "fun n => n + 1")
+    return h, g["m"]
+
+
+def test_chosen_checks_never_lower_the_bound_and_one_counterexample_refutes(k):
+    """A model hypothesis is universal: if it holds, every instance agrees."""
+    h, m = _model(k)
+    approx(k.infer(m), 0.75, 0.75)
+    k.observe(m, "instance_check", "agree", "in-1")
+    one = k.infer(m)
+    assert one["lo"] == pytest.approx(0.75 / (0.75 + 0.25 * 0.35))
+    for i in range(2, 6):
+        k.observe(m, "instance_check", "agree", f"in-{i}")
+    five = k.infer(m)
+    assert five["lo"] == pytest.approx(one["lo"]) and five["hi"] > one["hi"]   # hand-picked: no further support
+    bad = k.observe(m, "instance_check", "disagree", "in-6")
+    approx(k.infer(m), 0.0, 0.0)
+    approx(k.infer(h), 0.5, 0.5)            # the claim is back at its base rate
+    k.retract(bad["eid"], "the command printed a float where Lean prints a Nat")
+    assert k.infer(m)["lo"] == pytest.approx(one["lo"])
+    with pytest.raises(KernelError):
+        k.observe(m, "instance_check", "disagree", "in-6")
+
+
+def test_random_checks_raise_the_lower_bound(k):
+    """Exchangeable draws: with the uniform prior as the least concentrated one, k agreements
+    leave at most 1 / (k + 1) for a wrong model (Laplace's rule of succession)."""
+    from pw.credal import exchangeable_agreement
+    for n in (1, 5, 20):
+        lo, hi = exchangeable_agreement(n, 0.5, 2)
+        assert lo == pytest.approx(0.5 ** n) and hi == pytest.approx(1 / (n + 1))
+    assert exchangeable_agreement(5, 0.35, 1e-9)[1] == pytest.approx(0.35, abs=1e-6)   # no bound: no learning
+
+    h, m = _model(k)
+    spec = k.catalog["sampling"]
+    lows = []
+    for i in range(20):
+        k._record(m, "sampled_check", "agree", f"draw-{i}", {"args": [i], **spec})
+        if i + 1 in (1, 5, 20):
+            lows.append(k.infer(m)["lo"])
+    assert lows == pytest.approx([0.75 * n1 / (0.75 * n1 + 0.25) for n1 in (2, 6, 21)])   # 0.857, 0.947, 0.984
+    k._record(m, "sampled_check", "disagree", "draw-x", {"args": [99], **spec})
+    approx(k.infer(m), 0.0, 0.0)

@@ -50,11 +50,22 @@ def ground_at(h: str, subject: str, type: str, predicate: str, object: str) -> d
 
 
 @mcp.tool()
+def sample_model(m: str, command: str, n: int = 10) -> dict:
+    """Support a model hypothesis M with random checks. The kernel draws `n` inputs itself
+    (Nat and Int arguments only), evaluates the Lean object on each, and runs `command` with
+    {0}, {1}, ... replaced by the arguments; the command must print what the real code returns,
+    e.g. python3 -c "from clamp import clamp; print(clamp({0}, {1}, {2}))".
+    Every agreement raises confidence in M; a single disagreement refutes it."""
+    return _safe(_kernel.sample_model, m, command, _workdir(), n)
+
+
+@mcp.tool()
 def check_model(m: str, lean_args: str, command: str) -> dict:
-    """Evidence for a model hypothesis M. The kernel evaluates the Lean object on `lean_args`
-    (e.g. "7 2 5"), runs shell `command`, which must print what the real code returns for the
-    same input (e.g. python3 -c "from clamp import clamp; print(clamp(7, 2, 5))"), and records
-    whether they agree. Check several inputs, including edge cases the claim does not cover."""
+    """Try to refute a model hypothesis M on an input you choose (e.g. "7 2 5"): the kernel
+    evaluates the Lean object on it and runs `command`, which must print what the real code
+    returns for the same input. A disagreement refutes M. Agreements on hand-picked inputs add
+    little support however many there are; use sample_model for support and this for edge
+    cases, especially ones outside what the claim covers."""
     return _safe(_kernel.observe_model, m, lean_args, command, _workdir())
 
 

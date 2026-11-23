@@ -1,5 +1,5 @@
 {
-  "_note": "UNCALIBRATED PLACEHOLDERS. Each outcome is [P(outcome | target true), P(outcome | target false)]. Replace with rates measured from history.",
+  "_note": "UNCALIBRATED PLACEHOLDERS. Each outcome is [P(outcome | target true), P(outcome | target false)]. instance_check: the target is universal, so agreement is certain if it is true. sampling: if a model is wrong, a random input still agrees with probability q ~ Beta(mean = agree_rate_if_wrong, concentration >= min_concentration). Replace with rates measured from history.",
   "priors": {
     "claim": 0.5,
     "grounding": 0.6,
@@ -10,50 +10,48 @@
     "test": {
       "targets": ["H"],
       "outcomes": {
-        "pass": [  0.95,   0.4
-        ], "fail": [  0.05,   0.6
-        ]
+        "pass": [0.95, 0.4],
+        "fail": [0.05, 0.6]
       }
     },
     "property_test": {
       "targets": ["H"],
       "outcomes": {
-        "pass": [  0.9,   0.15
-        ], "fail": [  0.1,   0.85
-        ]
+        "pass": [0.9, 0.15],
+        "fail": [0.1, 0.85]
       }
     },
     "typecheck": {
       "targets": ["H"],
       "outcomes": {
-        "pass": [  0.99,   0.7
-        ], "fail": [  0.01,   0.3
-        ]
+        "pass": [0.99, 0.7],
+        "fail": [0.01, 0.3]
       }
     },
     "review": {
       "targets": ["H"],
       "outcomes": {
-        "agree": [  0.8,   0.35
-        ], "disagree": [  0.2,   0.65
-        ]
+        "agree": [0.8, 0.35],
+        "disagree": [0.2, 0.65]
       }
     },
     "instance_check": {
       "targets": ["M", "G"],
       "outcomes": {
-        "agree": [  0.97,   0.35
-        ], "disagree": [  0.03,   0.65
-        ]
+        "agree": [1.0, 0.35],
+        "disagree": [0.0, 0.65]
       }
     },
     "back_translation": {
       "targets": ["G"],
       "outcomes": {
-        "match": [  0.85,   0.45
-        ], "mismatch": [  0.15,   0.55
-        ]
+        "match": [0.85, 0.45],
+        "mismatch": [0.15, 0.55]
       }
     }
+  },
+  "sampling": {
+    "agree_rate_if_wrong": 0.5,
+    "min_concentration": 2
   }
 }

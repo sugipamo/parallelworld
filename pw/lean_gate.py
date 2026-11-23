@@ -125,15 +125,15 @@ class LeanGate:
             return {"ok": False, "reason": "timeout"}
         return self.judge(r.returncode, r.stdout + r.stderr, self.gamma())
 
-    def evaluate(self, typ, obj, args):
-        """Value of the Lean object applied to `args`, as Lean prints it."""
+    def evaluate(self, typ, obj, args_list):
+        """Values of the Lean object applied to each entry of `args_list`, as Lean prints them."""
         try:
-            for t in (typ, obj, args):
+            for t in (typ, obj, *args_list):
                 self.screen(t)
             lake = self._lake()
         except GateError as e:
             return {"ok": False, "reason": str(e)}
-        src = f"import Gamma\n\ndef pw_obj : ({typ}) := ({obj})\n\n#eval pw_obj {args}\n"
+        src = f"import Gamma\n\ndef pw_obj : ({typ}) := ({obj})\n\n" + "".join(f"#eval pw_obj {a}\n" for a in args_list)
         work = os.path.join(self.lean_dir, "PWCheck")
         os.makedirs(work, exist_ok=True)
         path = os.path.join(work, "PWEval_" + hashlib.sha256(src.encode()).hexdigest()[:16] + ".lean")
@@ -144,9 +144,10 @@ class LeanGate:
                                text=True, timeout=self.timeout)
         except subprocess.TimeoutExpired:
             return {"ok": False, "reason": "timeout"}
-        if r.returncode != 0:
+        values = r.stdout.strip().splitlines()
+        if r.returncode != 0 or len(values) != len(args_list):
             return {"ok": False, "reason": (r.stdout + r.stderr)[-800:]}
-        return {"ok": True, "value": r.stdout.strip()}
+        return {"ok": True, "values": [v.strip() for v in values]}
 
     @staticmethod
     def judge(returncode, output, gamma):

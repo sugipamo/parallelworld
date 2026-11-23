@@ -4,6 +4,7 @@
   CredalSet        convex set of probability measures cut out by linear constraints
   CredalSet.bounds lower / upper probability after conditioning (generalized Bayes rule)
   joint_likelihood what a class of copulas allows for evidence observed together
+  exchangeable_agreement  what repeated random checks say about a universal hypothesis
 
 Computing the coherent range of one event from constraints on others is de
 Finetti's fundamental theorem of probability; it is a linear program.
@@ -30,28 +31,50 @@ def stone_space(atoms, theory):
 
 
 # Copula classes for k pieces of evidence on one target. Each maps the marginal
-# likelihoods p_1..p_k to the range of P(all observed | target state).
+# probabilities, given as intervals [lo_i, hi_i], to the range of P(all observed | target state).
 #   independent  the product copula Pi
 #   comonotone   the upper Frechet bound M: the pieces are one piece seen k times
 #   pqd          positive dependence: every copula between Pi and M
 #   frechet      no knowledge at all: every copula between W and M
 COPULAS = {
-    "independent": lambda p: (p.prod(), p.prod()),
-    "comonotone": lambda p: (p.min(), p.min()),
-    "pqd": lambda p: (p.prod(), p.min()),
-    "frechet": lambda p: (max(0.0, p.sum() - (len(p) - 1)), p.min()),
+    "independent": lambda lo, hi: (lo.prod(), hi.prod()),
+    "comonotone": lambda lo, hi: (lo.min(), hi.min()),
+    "pqd": lambda lo, hi: (lo.prod(), hi.min()),
+    "frechet": lambda lo, hi: (max(0.0, lo.sum() - (len(lo) - 1)), hi.min()),
 }
 
 
-def joint_likelihood(likes, dependence):
+def joint_likelihood(items, dependence):
     """Extreme likelihood pairs (P(all | true), P(all | false)) under a copula class.
 
-    Only the ratio matters, and the posterior is monotone in it, so the two
-    pairs with the smallest and largest ratio are enough.
+    items: one ((t_lo, t_hi), (f_lo, f_hi)) per piece of evidence. Only the ratio
+    matters, and the posterior is monotone in it, so the two pairs with the
+    smallest and largest ratio are enough.
     """
-    a = np.asarray(likes, dtype=float)
-    (t_lo, t_hi), (f_lo, f_hi) = COPULAS[dependence](a[:, 0]), COPULAS[dependence](a[:, 1])
+    a = np.asarray(items, dtype=float)            # shape (k, 2 states, 2 ends)
+    t_lo, t_hi = COPULAS[dependence](a[:, 0, 0], a[:, 0, 1])
+    f_lo, f_hi = COPULAS[dependence](a[:, 1, 0], a[:, 1, 1])
     return sorted({(t_lo, f_hi), (t_hi, f_lo)})
+
+
+def exchangeable_agreement(k, mean, min_concentration):
+    """Range of P(k randomly drawn checks all agree | the hypothesis is false).
+
+    If the hypothesis is false, an unknown fraction q of inputs still agrees. Draws
+    are independent given q, hence exchangeable (de Finetti). q has a Beta prior
+    with the given mean and any concentration s >= min_concentration:
+
+        E[q^k] = prod_{i<k} (s*mean + i) / (s + i)
+
+    which decreases in s. s -> infinity gives mean^k (the draws are independent);
+    s -> 0 would give `mean` for every k (a wrong hypothesis is wrong either
+    everywhere or nowhere a random draw can see), which is why s is bounded below:
+    without that bound random checks cannot raise the lower probability at all.
+    mean = 1/2, s = 2 is the uniform prior and gives Laplace's 1 / (k + 1).
+    """
+    s = float(min_concentration)
+    hi = float(np.prod([(s * mean + i) / (s + i) for i in range(k)]))
+    return mean ** k, hi
 
 
 class CredalSet:
