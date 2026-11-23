@@ -9,7 +9,10 @@
    "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則",
    {
     "at": "pw/kernel.py::Kernel.__init__",
-    "reader": "lean_string(re.search(r'dependence=\"(\\w+)\"', part).group(1))"
+    "read": {
+     "find": "dependence=\"(\\w+)\"",
+     "as": "string"
+    }
    }
   ]
  },
@@ -21,7 +24,11 @@
    "docs/spec.md::5. Lean Gate",
    {
     "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
-    "reader": "\"[\" + \", \".join(lean_string(x) for x in sorted(re.findall(r'\"([^\"]+)\"', part))) + \"]\""
+    "read": {
+     "find_all": "\"([^\"]+)\"",
+     "as": "string",
+     "sort": true
+    }
    }
   ]
  },
@@ -33,7 +40,10 @@
    "docs/spec.md::7. 未解決",
    {
     "at": "pw/kernel.py::Kernel.__init__",
-    "reader": "re.search(r'max_atoms=(\\d+)', part).group(1)"
+    "read": {
+     "find": "max_atoms=(\\d+)",
+     "as": "nat"
+    }
    }
   ]
  },
@@ -45,7 +55,11 @@
    "docs/spec.md::4. 操作（MCPツール）",
    {
     "at": "pw/mcp_server.py",
-    "reader": "\"[\" + \", \".join(lean_string(x) for x in sorted(re.findall(r\"@mcp\\.tool\\(\\)\\ndef (\\w+)\\(\", data))) + \"]\""
+    "read": {
+     "find_all": "@mcp\\.tool\\(\\)\\ndef (\\w+)\\(",
+     "as": "string",
+     "sort": true
+    }
    }
   ]
  },
@@ -56,15 +70,24 @@
   "places": [
    {
     "at": "pw/orchestrator.py::main",
-    "reader": "str(permille(re.search(r'\"--threshold\", type=float, default=([0-9.]+)', part).group(1)))"
+    "read": {
+     "find": "\"--threshold\", type=float, default=([0-9.]+)",
+     "as": "permille"
+    }
    },
    {
     "at": "pw/check.py::main",
-    "reader": "str(permille(re.search(r'\"--threshold\", type=float, default=([0-9.]+)', part).group(1)))"
+    "read": {
+     "find": "\"--threshold\", type=float, default=([0-9.]+)",
+     "as": "permille"
+    }
    },
    {
     "at": "pw/maintain.py::main",
-    "reader": "str(permille(re.search(r'\"--threshold\", type=float, default=([0-9.]+)', part).group(1)))"
+    "read": {
+     "find": "\"--threshold\", type=float, default=([0-9.]+)",
+     "as": "permille"
+    }
    }
   ]
  },
@@ -75,11 +98,17 @@
   "places": [
    {
     "at": "lean/lean-toolchain",
-    "reader": "lean_string(data.strip().split(':v')[-1])"
+    "read": {
+     "find": ":v([0-9.]+)",
+     "as": "string"
+    }
    },
    {
     "at": "experiments/selfcheck/lean/lean-toolchain",
-    "reader": "lean_string(data.strip().split(':v')[-1])"
+    "read": {
+     "find": ":v([0-9.]+)",
+     "as": "string"
+    }
    }
   ]
  }

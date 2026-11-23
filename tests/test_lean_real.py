@@ -472,11 +472,14 @@ def test_a_fact_stated_in_several_places(tmp_path):
 
     # the list of facts lives in a file; what is no longer declared no longer stands
     import json
-    (repo / "pw-facts.json").write_text(json.dumps([{"name": "largest", "type": "Nat", "places": [
-        {"at": "k.py", "reader": "str(len(data.splitlines()))"}]}]))
+    (repo / "pw-facts.json").write_text(json.dumps([{"name": "default name", "type": "String", "places": [
+        {"at": "k.py", "read": {"find": 'dependence="(\\w+)"'}}]}]))
     k.sync_facts(str(repo / "pw-facts.json"))
     rep = k.recheck(cwd)["decisions"]
-    assert [(d["fact"], d["state"]) for d in rep] == [("largest", "current")] and rep[0]["places"][0]["reads as"] == "3"
+    assert [(d["fact"], d["state"]) for d in rep] == [("default name", "current")] and rep[0]["places"][0]["reads as"] == '"frechet"'
+    (repo / "pw-facts.json").write_text(json.dumps([{"name": "x", "type": "Nat", "places": [{"at": "k.py", "reader": "str(len(data))"}]}]))
+    with pytest.raises(KernelError):
+        k.sync_facts(str(repo / "pw-facts.json"))                                  # no expressions in a list of facts
 
 
 def test_a_list_is_read_off_the_whole_place(tmp_path):
@@ -534,3 +537,22 @@ def test_the_record_is_text_in_the_repository_and_is_not_believed_where_it_can_b
     log.write_text("\n".join(lines) + "\nnot json\n")
     with pytest.raises(KernelError):
         Kernel(str(log), gate=LeanGate()).state()
+
+
+def test_a_fact_keeps_its_readings_when_its_declaration_changes(tmp_path):
+    """How a place is read, or which places are listed, can change without the fact becoming another one."""
+    from pw.kernel import pattern, reader
+    k = Kernel(str(tmp_path / "e.jsonl"), gate=LeanGate())
+    (tmp_path / "doc.md").write_text("## Limits\n\nAt most 14 atoms.\n")
+    (tmp_path / "k.py").write_text("LIMIT = 14\n")
+    (tmp_path / "c.txt").write_text("limit: 14\n")
+    cwd = str(tmp_path)
+    h = k.claim_fact("limit", "Nat", ["doc.md::Limits", {"at": "k.py::LIMIT", "reader": reader('re.search(r"= (\\d+)", part).group(1)', "text")}])["h"]
+    m = k.read_place(h, "doc.md::Limits", "14", cwd=cwd, quote="At most 14 atoms.")["m"]
+    k.sign_off(m, "reviewer")
+    again = k.claim_fact("limit", "Nat", ["doc.md::Limits", {"at": "k.py::LIMIT", "reader": pattern(find=r"= (\d+)", kind="nat")},
+                                          {"at": "c.txt", "reader": pattern(find=r"limit: (\d+)", kind="nat")}])["h"]
+    assert again == h
+    r = k.recheck(cwd)["decisions"]
+    assert len(r) == 1 and r[0]["state"] in ("current", "re-established") and len(r[0]["places"]) == 3, r
+    assert [p for p in r[0]["places"] if p["at"] == "doc.md::Limits"][0]["m"] == m and all(p["lo"] > 0.9 for p in r[0]["places"])

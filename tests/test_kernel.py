@@ -387,3 +387,30 @@ def test_a_subject_is_a_file_or_a_part_of_one(tmp_path):
     assert subject_id("blob.bin", cwd).startswith("blob.bin@") and subject_id("blob.bin::x", cwd).startswith("blob.bin::x@")
     assert subject_id("doc.md::No such heading", cwd) == "doc.md::No such heading@" + subject_id("doc.md", cwd).split("@")[1]
     assert subject_id("missing.txt::a", cwd) == "missing.txt::a"
+
+
+def test_a_place_is_read_by_a_description_not_by_code():
+    from pw.kernel import _read_pattern, pattern
+    text = 'def __init__(self, max_atoms=14, dependence="pqd"):\nALLOWED = {"propext", "Quot.sound", "propext", "Classical.choice"}\nthreshold 0.9 and -3\n'
+    assert _read_pattern(pattern(find=r'dependence="(\w+)"'), text) == '"pqd"'
+    assert _read_pattern(pattern(find=r"max_atoms=(\d+)", kind="nat"), text) == "14"
+    assert _read_pattern(pattern(find=r"threshold ([0-9.]+)", kind="permille"), text) == "900"
+    assert _read_pattern(pattern(find=r"and (-?\d+)", kind="int"), text) == "(-3)"
+    names = r'"([^"]+)"'
+    part = text.splitlines()[1]
+    assert _read_pattern(pattern(find_all=names), part) == '["propext", "Quot.sound", "propext", "Classical.choice"]'
+    assert _read_pattern(pattern(find_all=names, sort=True, unique=True), part) == '["Classical.choice", "Quot.sound", "propext"]'
+    assert _read_pattern(pattern(find_all=r"(\d+)", kind="nat", sort=True), "9 10 2") == "[2, 9, 10]"       # by size, not as text
+    assert _read_pattern(pattern(find_all=r"zzz(\d)", kind="nat"), text) == "[]"
+    assert _read_pattern(pattern(find=r"^ALLOWED = (.)"), text) == '"{"'                                    # ^ is a line start
+    for found, why in ((r'"(\w+)"', "matches 5 times"), (r"nothing (here)", "matches 0 times")):
+        with pytest.raises(KernelError, match=why):
+            _read_pattern(pattern(find=found), text)
+    with pytest.raises(KernelError):
+        _read_pattern(pattern(find=r"threshold ([0-9.]+)", kind="nat"), text)                               # 0.9 is not a natural number
+    with pytest.raises(KernelError):
+        _read_pattern(pattern(find=r"(0\.[0-9]+)", kind="permille"), "0.9005")                              # not a whole number of thousandths
+    for bad in (dict(find="no group"), dict(find="(a)(b)"), dict(find="(a)", find_all="(b)"), dict(), dict(find="(a)", kind="float"),
+                dict(find=r"(?<=x)(a)"), dict(find=r"(a)\1"), dict(find=r"(?P<n>a)"), dict(find="(a")):
+        with pytest.raises(KernelError):
+            pattern(**bad)

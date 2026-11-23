@@ -138,8 +138,74 @@ def binding(call, setup="", domains=(), bound=15):
     return {"language": "python", "setup": setup.strip(), "call": call.strip(), "domains": domains, "bound": int(bound)}
 
 
+# How a matched piece of text becomes a Lean term.
+_KINDS = {"string": "String", "nat": "Nat", "int": "Int", "permille": "Nat"}
+
+
+def _term(kind, text):
+    if kind == "string":
+        return text, json.dumps(text, ensure_ascii=False)
+    if kind == "nat" and re.fullmatch(r"\d+", text):
+        return int(text), str(int(text))
+    if kind == "int" and re.fullmatch(r"-?\d+", text):
+        return int(text), str(int(text)) if int(text) >= 0 else f"({int(text)})"
+    if kind == "permille" and re.fullmatch(r"-?\d+(\.\d+)?", text) and (Fraction(text) * 1000).denominator == 1 and Fraction(text) >= 0:
+        return int(Fraction(text) * 1000), str(int(Fraction(text) * 1000))
+    raise KernelError(f"{text!r} is not a {kind}")
+
+
+def pattern(find=None, find_all=None, kind="string", sort=False, unique=False):
+    """A declarative way to read a place: what to look for, and what kind of value it is.
+
+      find      a regular expression with one group; it must match exactly once, and the
+                group is the value
+      find_all  the same, but every match counts and the result is a list
+      kind      "string", "nat", "int", or "permille" (a decimal number, as thousandths)
+      sort      order the list (strings by code point, numbers by size)
+      unique    drop repeated entries
+
+    Nothing is evaluated: the same description means the same thing to any implementation.
+    Patterns are limited to what common regular-expression engines agree on (no look-around,
+    no back-references, no named groups); `^` and `$` match at line ends.
+    """
+    if (find is None) == (find_all is None):
+        raise KernelError("give exactly one of find and find_all")
+    rx = find if find is not None else find_all
+    if kind not in _KINDS:
+        raise KernelError(f"a value is one of {sorted(_KINDS)}, not {kind!r}")
+    if re.search(r"\(\?[=!<P]|\\[1-9]", rx):
+        raise KernelError("look-around, back-references and named groups are not accepted in a pattern")
+    try:
+        if re.compile(rx).groups != 1:
+            raise KernelError("the pattern needs exactly one group: the part in ( ) is the value")
+    except re.error as e:
+        raise KernelError(f"not a regular expression: {e}")
+    out = {"language": "pattern", "as": kind}
+    out["find" if find is not None else "find_all"] = rx
+    if find_all is not None:
+        out.update(sort=bool(sort), unique=bool(unique))
+    return out
+
+
+def _read_pattern(rd, text):
+    found = re.findall(rd.get("find") or rd["find_all"], text, re.M)
+    if "find" in rd:
+        if len(found) != 1:
+            raise KernelError(f"the pattern matches {len(found)} times here; it has to match exactly once")
+        return _term(rd["as"], found[0])[1]
+    values = [_term(rd["as"], x) for x in found]
+    if rd.get("unique"):
+        values = list({v[1]: v for v in values}.values())
+    if rd.get("sort"):
+        values.sort(key=lambda v: v[0])
+    return "[" + ", ".join(v[1] for v in values) + "]"
+
+
 def reader(expr, fmt="json"):
-    """A recorded, mechanical way to read a file as a Lean term.
+    """A recorded, mechanical way to read a file as a Lean term, as a Python expression.
+
+    For callers of this module only. It ties the record to this implementation and runs code,
+    so a project's list of facts cannot use it: there, places are read with `pattern`.
 
     `expr` is a Python expression that evaluates to the Lean term as a string. It can use
     `data` (the whole file: parsed JSON, or the text), `part` (the text of the part the subject
@@ -297,8 +363,8 @@ class State:
         if typ == "claim":
             self.atoms[p["h"]] = {"kind": "H", "text": p["text"]}
             self.prior[p["h"]] = p["prior"]
-            if p.get("fact"):
-                self.facts[p["h"]] = dict(p["fact"], readings=[])
+            if p.get("fact"):                    # declared, or declared again with other places or readers
+                self.facts[p["h"]] = dict(p["fact"], readings=self.facts.get(p["h"], {}).get("readings", []))
             if p.get("pred"):
                 self.formal[p["h"]] = {"subject": p["subject"], "pred": p["pred"]["id"]}
                 self.algebra.add_pred(p["pred"]["id"], p["pred"]["type"], p["pred"]["text"])
@@ -494,6 +560,8 @@ class Kernel:
         content = locate(subject, cwd)
         if content is None:
             raise KernelError(f"{subject} is not there")
+        if rd["language"] == "pattern":
+            return _read_pattern(rd, content.decode("utf-8", "replace"))
         r = subprocess.run(["python3", "-c", _READ, os.path.join(cwd, subject.split("::")[0]), rd["format"], rd["expr"]],
                            input=content.decode("utf-8", "replace"), capture_output=True, text=True, timeout=120)
         if r.returncode != 0:
@@ -529,9 +597,10 @@ class Kernel:
             self._screen(value)
             self._well_typed((typ, value))
         fact = {"name": name, "type": typ, "places": places, "value": value}
-        h = "H:" + _sha("fact", json.dumps(fact, sort_keys=True, ensure_ascii=False))
+        h = "H:" + _sha("fact", name, typ)       # the same fact, however its places come to be listed or read
         with self._tx() as (con, st):
-            if h not in st.atoms:
+            declared = {k: v for k, v in st.facts.get(h, {}).items() if k != "readings"}
+            if declared != fact:
                 self._append(con, st, "claim", {
                     "h": h, "text": _norm(gloss) or f"the same {name} is stated in {len(places)} place(s)",
                     "prior": self.catalog["priors"]["claim"], "fact": fact})
@@ -641,13 +710,30 @@ class Kernel:
         return entry
 
     def sync_facts(self, path):
-        """Make the standing facts those declared in a file (a JSON list of
-        {"name", "type", "places", "value"?}); facts no longer declared are withdrawn."""
+        """Make the standing facts those declared in a file; facts no longer declared are withdrawn.
+
+        The file is a JSON list of {"name", "type", "places", "value"?, "gloss"?}. A place is
+        "path" or "path::part" (someone has to read it), or {"at": ..., "read": {...}} where
+        "read" describes how to read it mechanically: see `pattern`.
+        """
         with open(path, encoding="utf-8") as fh:
             declared = json.load(fh)
         keep = set()
         for d in declared:
-            places = [p if isinstance(p, str) else {"at": p["at"], "reader": reader(p["reader"], p.get("format", "text"))} for p in d["places"]]
+            places = []
+            for p in d["places"]:
+                if isinstance(p, str):
+                    places.append(p)
+                elif "read" in p and set(p) == {"at", "read"}:
+                    r = p["read"]
+                    extra = set(r) - {"find", "find_all", "as", "sort", "unique"}
+                    if extra:
+                        raise KernelError(f"{d['name']}, {p['at']}: unknown keys in \"read\": {sorted(extra)}")
+                    places.append({"at": p["at"], "reader": pattern(r.get("find"), r.get("find_all"), r.get("as", "string"),
+                                                                    r.get("sort", False), r.get("unique", False))})
+                else:
+                    raise KernelError(f"{d['name']}: a place is a string or {{\"at\": ..., \"read\": {{...}}}}; "
+                                      "expressions are not accepted in a list of facts")
             keep.add(self.claim_fact(d["name"], d["type"], places, d.get("value"), d.get("gloss", ""))["h"])
         st = self.state()
         for h in st.facts:
