@@ -393,3 +393,13 @@ def test_a_file_read_by_an_agent_goes_stale_when_it_changes(tmp_path):
     write([0.9, 0.4], [0.05, 0.6]); git("commit", "-qam", "changed")
     r = k.recheck(cwd)["decisions"][0]
     assert r["state"] == "stale" and r["lo"] == pytest.approx(0.5), r           # the old reading, proof and sign-off say nothing now
+
+
+def test_a_statement_settled_by_unfolding_alone_is_accepted(gate):
+    """An equation between two equal literals leaves nothing for the caller's tactics to do."""
+    v = gate.check("holds", [("Prop", '(fun l => l = ["declare_independent", "prove"]) ["declare_independent", "prove"]')], "rfl")
+    assert v["ok"], v
+    assert gate.check("holds", [("Prop", "(fun n => n = 14) 14")], "decide")["ok"]
+    assert not gate.check("holds", [("Prop", "(fun n => n = 14) 16")], "rfl")["ok"]
+    assert gate.check("not", [("Prop", "(fun n => n = 14) 16")], "decide")["ok"]
+    assert not gate.check("holds", [("Prop", "(1 : Nat) = 2")], "exact sorryAx _")["ok"]

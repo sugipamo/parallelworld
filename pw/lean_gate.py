@@ -55,7 +55,13 @@ class LeanGate:
         self.timeout = timeout
 
     def screen(self, text):
-        m = _FORBIDDEN.search(text)
+        # What is inside a plain string literal is data, not Lean: "declare_independent" names
+        # a tool. Strings are set aside only in text with no backslash at all (escapes and raw
+        # strings make it unclear where a string ends), and a quote written as a character
+        # literal is refused, so that nothing can pose as a string and hide code.
+        if "'\"'" in text:
+            raise GateError("a double quote as a character literal is not accepted")
+        m = _FORBIDDEN.search(text if "\\" in text else re.sub(r'"[^"\n]*"', '""', text))
         if m:
             raise GateError(f"forbidden token {m.group(0)!r} in Lean text")
 
@@ -76,10 +82,13 @@ class LeanGate:
         defs = "\n".join(f"def S{i} : ({t}) := ({b})" for i, (t, b) in enumerate(items))
         names = " ".join(f"PWStmt.S{i}" for i in range(len(items)))
         goal = re.sub(r"\bS(\d)\b", r"PWStmt.S\1", _GOALS[relation])
-        body = "\n".join("  " + line for line in proof.strip().splitlines())
+        body = "\n".join("    " + line for line in proof.strip().splitlines())
+        # Unfolding and simplifying the statement can already settle it (an equation between
+        # two equal literals, say). Then there is nothing left for the caller's tactics to do.
         return (
             "import Gamma\n\nnamespace PWStmt\n" + defs + "\nend PWStmt\n\n"
-            f"theorem pw_goal : {goal} := by\n  unfold {names}\n  try dsimp only\n{body}\n"
+            f"theorem pw_goal : {goal} := by\n  unfold {names}\n  try dsimp only\n"
+            f"  first\n  | done\n  | (\n{body}\n    )\n"
         )
 
     def _lake(self):

@@ -120,6 +120,11 @@ def test_gate_screening_and_axiom_judgement():
     for bad in ("sorry", "exact foo\naxiom cheat : False", "simp\n#eval 1", "native_decide"):
         with pytest.raises(GateError):
             gate.render("holds", [("Prop", "True")], bad)
+    # a string is data: the name of a tool is not a command. But nothing may pose as a string.
+    gate.render("holds", [("Prop", 'x = ["declare_independent", "open", "theorem"]')], "rfl")
+    for bad in ('"a\\" axiom cheat : False "', "'\"' axiom cheat : False '\"'", '"unterminated axiom cheat : False'):
+        with pytest.raises(GateError):
+            gate.render("holds", [("Prop", bad)], "rfl")
     src = gate.render("iff", [("Prop", "1 = 1"), ("Prop", "2 = 2")], "simp")
     assert "theorem pw_goal : _root_.Iff PWStmt.S0 PWStmt.S1" in src and "#print" not in src
     assert LeanGate.judge(0, "'pw_goal' depends on axioms: [propext, Quot.sound]", "g")["ok"]
