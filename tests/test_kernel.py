@@ -11,6 +11,9 @@ class FakeGate(LeanGate):
         self.render(relation, items, proof)
         return {"ok": True, "axioms": [], "gamma": "fake"}
 
+    def typecheck(self, items):
+        return {"ok": True, "reason": ""}
+
 
 @pytest.fixture
 def k(tmp_path):

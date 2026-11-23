@@ -25,6 +25,14 @@ def main():
     report = kernel.recheck(repo)
     bad = bool(report["conflicts"])
     for d in report["decisions"]:
+        if d.get("natural_language"):
+            # held only by its own checks: the bound says how far those checks go, and is not a gate
+            ok = d["state"] == "checks pass"
+            bad |= not ok
+            print(f"{'ok  ' if ok else 'FAIL'} {d['state']:<15} [{d['lo']:.3f}, {d['hi']:.3f}] {d['h']} \"{d['text'][:90]}\" ({d['checks']} check(s), not formal)")
+            if "failed" in d:
+                print(f"       failing check: {d['failed'][:200]}")
+            continue
         ok = d["state"] in ("current", "re-established") and d["lo"] >= args.threshold
         bad |= not ok
         print(f"{'ok  ' if ok else 'FAIL'} {d['state']:<15} [{d['lo']:.3f}, {d['hi']:.3f}] {d['h']} {d['subject'].split('@')[0]} satisfies {d['spec']}")

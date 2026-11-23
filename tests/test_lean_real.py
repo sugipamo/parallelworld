@@ -236,3 +236,32 @@ def test_past_decisions_are_held_against_the_code_as_it_is_now(tmp_path):
     k.withdraw(d["h"], "superseded: callers now detect overflow by the sentinel")
     rep = k.recheck(cwd)
     assert rep["conflicts"] == [] and [x["h"] for x in rep["decisions"]] == [e["h"]]
+
+
+def test_a_formalization_that_is_not_lean_is_refused_when_stated(tmp_path):
+    k = Kernel(str(tmp_path / "e.db"), gate=LeanGate())
+    h = k.claim("f is nice")["h"]
+    with pytest.raises(KernelError):
+        k.ground(h, "f is nice")
+    with pytest.raises(KernelError):
+        k.ground_at(h, "f.py::f", "Nat → Nat", "fun f => ∀ n, n ≤ f n", "fun n => n + true")
+    with pytest.raises(KernelError):
+        k.claim_formal("f.py::f", "Nat → Nat", "Spec.DoesNotExist")
+    assert k.state().links == []
+
+
+def test_natural_language_claims_are_held_by_rerunning_their_checks(tmp_path):
+    k = Kernel(str(tmp_path / "e.db"), gate=LeanGate())
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "api.py").write_text("def tool(text):\n    return text\n")
+    git = lambda *a: subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=repo, check=True, capture_output=True)
+    git("init", "-q"); git("add", "-A"); git("commit", "-qm", "v1")
+    h = k.claim("no tool takes a probability as an argument")["h"]
+    k.observe_command(h, "test", "! grep -q probability api.py", str(repo))
+    r = k.recheck(str(repo))["decisions"]
+    assert [(x["state"], x["natural_language"]) for x in r] == [("checks pass", True)] and r[0]["lo"] < 0.9
+    (repo / "api.py").write_text("def tool(text, probability):\n    return text\n")
+    git("commit", "-qam", "v2")
+    r = k.recheck(str(repo))["decisions"][0]
+    assert r["state"] == "checks fail" and r["lo"] < 0.5

@@ -83,7 +83,7 @@ class LeanGate:
         )
 
     def _lake(self):
-        """Locate lake and insist its Lean version is the one Gamma pins."""
+        """Locate lake, insist its Lean version is the one Gamma pins, and make sure Gamma is built."""
         lake = os.environ.get("PW_LAKE") or shutil.which("lake") or os.path.expanduser("~/.elan/bin/lake")
         if not os.path.exists(lake):
             raise GateError("Lean (lake) is not installed; no proof can be accepted")
@@ -92,6 +92,9 @@ class LeanGate:
         r = subprocess.run([lake, "--version"], cwd=self.lean_dir, capture_output=True, text=True)
         if f"Lean version {want})" not in r.stdout:
             raise GateError(f"Gamma pins Lean {want} but lake reports: {r.stdout.strip()}")
+        b = subprocess.run([lake, "build"], cwd=self.lean_dir, capture_output=True, text=True, timeout=self.timeout)
+        if b.returncode != 0:
+            raise GateError("Gamma failed to build: " + (b.stdout + b.stderr)[-500:])
         return lake
 
     def check(self, relation, items, proof):
@@ -113,9 +116,6 @@ class LeanGate:
         def run(*cmd, **kw):
             return subprocess.run(cmd, cwd=self.lean_dir, capture_output=True, text=True, timeout=self.timeout, **kw)
         try:
-            b = run(lake, "build")
-            if b.returncode != 0:
-                return {"ok": False, "reason": "Gamma failed to build: " + (b.stdout + b.stderr)[-500:]}
             lean = os.path.join(os.path.dirname(lake), "lean")
             path = run(lake, "env", "printenv", "LEAN_PATH").stdout.strip()
             env = dict(os.environ, LEAN_PATH=f"{path}:{work}")
@@ -126,6 +126,28 @@ class LeanGate:
         except subprocess.TimeoutExpired:
             return {"ok": False, "reason": "timeout"}
         return self.judge(r.returncode, r.stdout + r.stderr, self.gamma())
+
+    def typecheck(self, items):
+        """Does Lean accept each (type, term) under Gamma? Catches a formalization that is not Lean at all."""
+        try:
+            for typ, body in items:
+                self.screen(typ)
+                self.screen(body)
+            lake = self._lake()
+        except GateError as e:
+            return {"ok": False, "reason": str(e)}
+        src = "import Gamma\n\n" + "".join(f"example : ({t}) := ({b})\n" for t, b in items)
+        work = os.path.join(self.lean_dir, "PWCheck")
+        os.makedirs(work, exist_ok=True)
+        path = os.path.join(work, "PWType_" + hashlib.sha256(src.encode()).hexdigest()[:16] + ".lean")
+        with open(path, "w") as fh:
+            fh.write(src)
+        try:
+            r = subprocess.run([lake, "env", "lean", path], cwd=self.lean_dir, capture_output=True,
+                               text=True, timeout=self.timeout)
+        except subprocess.TimeoutExpired:
+            return {"ok": False, "reason": "timeout"}
+        return {"ok": r.returncode == 0, "reason": (r.stdout + r.stderr)[-800:]}
 
     def evaluate(self, typ, obj, args_list):
         """Values of the Lean object applied to each entry of `args_list`, as Lean prints them."""

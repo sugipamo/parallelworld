@@ -253,6 +253,7 @@ class Kernel:
         typ, predicate = _norm(typ), _norm(predicate)
         self._screen(typ)
         self._screen(predicate)
+        self._well_typed((f"({typ}) → Prop", predicate))
         pred = {"id": "P:" + _sha(typ, predicate), "type": typ, "text": predicate}
         h = "H:" + _sha("formal", subject, pred["id"])
         with self._tx() as (con, st):
@@ -273,6 +274,7 @@ class Kernel:
         pred = dict(st.algebra.preds[st.formal[h]["pred"]], id=st.formal[h]["pred"])
         obj = _norm(obj)
         self._screen(obj)
+        self._well_typed((pred["type"], obj))
         subject = subject_version or st.formal[h]["subject"]
         ob = {"id": "O:" + _sha(pred["type"], obj), "type": pred["type"], "text": obj}
         lean = f"((({pred['text']}) : ({pred['type']}) → Prop) (({obj}) : ({pred['type']})))"
@@ -302,6 +304,7 @@ class Kernel:
         """One connection hypothesis G: claim `h` means the closed Lean proposition `lean`."""
         lean = _norm(lean)
         self._screen(lean)
+        self._well_typed(("Prop", lean))
         return self._ground(h, lean, {"prior": self.catalog["priors"]["grounding"] if prior is None else prior})
 
     def ground_at(self, h, subject, typ, predicate, obj, prior=None, model_prior=None):
@@ -316,6 +319,7 @@ class Kernel:
         typ, predicate, obj = _norm(typ), _norm(predicate), _norm(obj)
         for text in (typ, predicate, obj):
             self._screen(text)
+        self._well_typed((f"({typ}) → Prop", predicate), (typ, obj))
         pred = {"id": "P:" + _sha(typ, predicate), "type": typ, "text": predicate}
         ob = {"id": "O:" + _sha(typ, obj), "type": typ, "text": obj}
         priors = self.catalog["priors"]
@@ -328,6 +332,13 @@ class Kernel:
     def _screen(self, text):
         if self.gate is not None:
             self.gate.screen(text)
+
+    def _well_typed(self, *items):
+        """Refuse a formalization Lean does not accept, at the moment it is stated."""
+        if self.gate is not None:
+            v = self.gate.typecheck(list(items))
+            if not v["ok"]:
+                raise KernelError("Lean does not accept this under Gamma: " + v["reason"])
 
     def _ground(self, h, lean, extra):
         f = "F:" + _sha(lean)
@@ -678,8 +689,8 @@ class Kernel:
         if not justification.strip():
             raise KernelError("withdrawing a decision needs a justification")
         with self._tx() as (con, st):
-            if h not in st.formal:
-                raise KernelError(f"{h} is not a formal claim")
+            if st.atoms.get(h, {}).get("kind") != "H":
+                raise KernelError(f"unknown claim {h}")
             self._append(con, st, "withdraw", {"h": h, "justification": justification})
         return {"h": h}
 
@@ -730,6 +741,22 @@ class Kernel:
                 entry.update(lo=b["lo"], hi=b["hi"])
             except KernelError as e:
                 entry.update(lo=0.0, hi=1.0, error=str(e))
+            report.append(entry)
+        # A claim in natural language can only be held by the commands recorded for it: run them again.
+        st = self.state()
+        for h, info in st.atoms.items():
+            if info["kind"] != "H" or h in st.formal or h in st.withdrawn:
+                continue
+            commands = sorted({(e["kind"], e["command"]) for e in st.evidence.values() if e["target"] == h and "tree" in e})
+            if not commands:
+                continue
+            runs = [self.observe_command(h, kind, command, cwd) for kind, command in commands]
+            failed = [c for (k_, c), r in zip(commands, runs) if r["outcome"] != "pass"]
+            b = self.infer(h, current=current, tree=tree)
+            entry = {"h": h, "text": info["text"], "natural_language": True, "lo": b["lo"], "hi": b["hi"],
+                     "state": "checks fail" if failed else "checks pass", "checks": len(commands)}
+            if failed:
+                entry["failed"] = failed[0]
             report.append(entry)
         st = self.state()
         return {"decisions": report, "tree": tree,
