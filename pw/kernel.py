@@ -247,6 +247,43 @@ def _sha(*parts):
 
 
 LOG = "pw-log.jsonl"     # the record, kept in the repository it is about
+RULES = "pw-rules.json"              # a project's own decision about when a reading stands
+CALIBRATION = "pw-calibration.json"  # what pw.calibrate measured about the readers
+
+# What can be said of a reading, and so what a rule may ask for.
+CONDITIONS = {
+    "computed": "the place is read by a declared pattern",
+    "confirmed by a person": "a person compared the reading with the place",
+    "blind": "read by a measured reader that was shown the place and nothing else",
+    "words occur in the place": "the value read occurs literally in the quoted sentence (a list: in the place)",
+    "agrees with a computed place": "another place of the fact, read by a pattern, has the same value",
+    "agrees with another place read blind": "another place of the fact, read blind in another session, has the same value",
+    "read the same by a second model": "two measured readers of different models, each blind, read this place the same",
+}
+
+
+def load_rules(cwd):
+    """The rules for when a reading stands: the repository's own, or the default ones."""
+    own = os.path.join(cwd, RULES)
+    with open(own if os.path.exists(own) else os.path.join(os.path.dirname(__file__), "rules.json"), encoding="utf-8") as fh:
+        rules = json.load(fh)
+    for rule in rules["a reading stands if any of"]:
+        unknown = [c for c in rule if c not in CONDITIONS]
+        if unknown or not rule:
+            raise KernelError(f"a rule may ask for {sorted(CONDITIONS)}; not {unknown}")
+    return rules
+
+
+def measured_readers(cwd, rules):
+    """The reader models whose latest measurement in this repository meets the rules' bar."""
+    path = os.path.join(cwd, CALIBRATION)
+    if not os.path.exists(path):
+        return set()
+    with open(path, encoding="utf-8") as fh:
+        latest = {run["model"]: run for run in json.load(fh)}
+    bar = rules["a blind reader counts if measured"]
+    return {m for m, run in latest.items()
+            if run["read rate"][0] >= bar["read at least"] and run["stuck rate"][1] <= bar["stuck at most"]}
 
 
 def _tree(cwd):
@@ -377,11 +414,13 @@ class State:
                 self.prior[p["m"]] = p["model_prior"]
                 self.models[p["m"]] = {"subject": p["subject"], "obj": p["obj"]["id"], "binding": p.get("binding"),
                                        "quote": p.get("quote"), "anchor": p.get("anchor", False),
-                                       "by": set(), "blind": set(), "literal": False}
+                                       "by": set(), "blind": set(), "models": set(), "literal": False}
             info = self.models[p["m"]]
             info["by"].add(p.get("actor", "anon"))                 # who read it this way
             if p.get("blind"):
                 info["blind"].add(p.get("actor", "anon"))          # ...shown nothing but the place
+                if p.get("model"):
+                    info["models"].add(p["model"])                 # ...and which model that reader was
             info["literal"] = info["literal"] or bool(p.get("literal"))
             if (p["place"], p["m"]) not in self.facts[p["h"]]["readings"]:
                 self.facts[p["h"]]["readings"].append((p["place"], p["m"]))
@@ -613,7 +652,7 @@ class Kernel:
                     "prior": self.catalog["priors"]["claim"], "fact": fact})
         return {"h": h}
 
-    def read_place(self, h, place, obj=None, cwd=None, quote=None, blind=False):
+    def read_place(self, h, place, obj=None, cwd=None, quote=None, blind=False, model=None):
         """Record how one place of a fact reads, for its content as it is now. Without `obj`
         the place's reader computes it.
 
@@ -663,10 +702,11 @@ class Kernel:
             known = st.models.get(m, {})
             # who read it matters only for a reading someone stated; a computed one is the same whoever runs it
             if ((place, m) not in st.facts[h]["readings"]
-                    or (how is None and (self.actor not in known.get("by", ()) or (blind and self.actor not in known.get("blind", ()))))):
+                    or (how is None and (self.actor not in known.get("by", ()) or (blind and self.actor not in known.get("blind", ()))
+                                         or (blind and model and model not in known.get("models", ()))))):
                 self._append(con, st, "reading", {
                     "h": h, "place": place, "subject": version, "m": m, "obj": ob, "binding": how, "quote": quote,
-                    "blind": bool(blind) and how is None, "literal": literal,
+                    "blind": bool(blind) and how is None, "model": model if blind and how is None else None, "literal": literal,
                     "anchor": quote is not None and "List" not in fact["type"],
                     "model_prior": self.catalog["priors"]["derived" if how else "model"]})
         return {"m": m, "o": ob["id"], "read as": obj}
@@ -730,18 +770,31 @@ class Kernel:
         else:
             verdict, new = self._agreement(h, guards, [p["reads as"] for p in entry["places"]])
             entry["state"] = {"holds": "re-established" if new and reread else "current", "not": "violated"}.get(verdict, "uncovered")
+        # Whether each reading stands is decided by the project's rules, not by a number.
         st = self.state()
-        for p in entry["places"]:                    # how well each reading stands on its own
-            p["lo"] = self.infer(p["m"], current=current, alone=True)["lo"]
+        rules = load_rules(cwd)
+        measured = measured_readers(cwd, rules)
+        confirmed = {e["target"] for e in st.evidence.values() if e["kind"] == "sign_off" and e["outcome"] == "confirmed"}
+        for p in entry["places"]:
             info = st.models[p["m"]]
+            others = [st.models[q["m"]] for q in entry["places"] if q is not p and st.models[q["m"]]["obj"] == info["obj"]]
+            readers = info["models"] & measured
+            has = {
+                "computed": bool(info["binding"]),
+                "confirmed by a person": p["m"] in confirmed,
+                "blind": bool(readers),
+                "words occur in the place": info["literal"],
+                "agrees with a computed place": any(o["binding"] for o in others),
+                "agrees with another place read blind": any(not o["binding"] and o["models"] & measured and o["blind"] - info["blind"] for o in others),
+                "read the same by a second model": len(readers) > 1,
+            }
+            met = next((rule for rule in rules["a reading stands if any of"] if all(has[c] for c in rule)), None)
+            p["stands"] = met is not None
+            p["why"] = " + ".join(met) if met else "no rule is met"
             if not info["binding"]:
-                p["blind by"] = sorted(info["blind"])
-                p["confirmed"] = any(e["target"] == p["m"] and e["kind"] == "sign_off" for e in st.evidence.values())
-        try:
-            b = self.infer(h, current=current)
-            entry.update(lo=b["lo"], hi=b["hi"])
-        except KernelError as e:
-            entry.update(lo=0.0, hi=1.0, error=str(e))
+                p["has"] = {c: v for c, v in has.items() if c != "computed"}
+                p["unmeasured readers"] = sorted(info["models"] - measured) + (
+                    ["a reader whose model was not recorded"] if info["blind"] and not info["models"] else [])
         return entry
 
     def sync_facts(self, path):
@@ -1053,16 +1106,12 @@ class Kernel:
         return items
 
     # ---- inference -------------------------------------------------------
-    def infer(self, query, current=None, tree=None, alone=False):
+    def infer(self, query, current=None, tree=None):
         """Lower and upper probability [lo, hi] of a formula, given all evidence and proofs.
 
         `current` maps a piece of code ("path::name") to its present version, and `tree` names
         the present working tree. Given them, only what was learnt about the code as it is now
         counts: models of other versions and check runs on other trees are set aside.
-
-        `alone` asks about the queried atoms by themselves: their base rates and the evidence
-        about them, leaving out everything they are connected to. For a single reading this is
-        how well it stands on what was learnt about it, whatever the other readings are like.
         """
         st = self.state()
         if current is not None:
@@ -1096,7 +1145,7 @@ class Kernel:
         decided = alg.decided()
         comp = set(fm.atoms(q))
         seeds = set(comp)
-        grew = not alone
+        grew = True
         while grew:
             grew = False
             for grp in map(fm.atoms, theory):
@@ -1175,32 +1224,6 @@ class Kernel:
             if len(agreeing) > 1:
                 blocks.setdefault((g, "shared"), []).append(
                     {"kind": "concurrence", "likelihood": derived["independent_formalization"]})
-        # What stands behind a reading that an agent stated, without anyone confirming it:
-        #   the words it reports occur in the place;
-        #   a blind reader arrived at the value that another place's declared pattern computes;
-        #   or two readers, each blind, arrived at the same value.
-        for fh, fact in st.facts.items():
-            if fh in st.withdrawn:
-                continue
-            present = {}
-            for at, rm in fact["readings"]:
-                base = st.models[rm]["subject"].split("@")[0]
-                if current is None or current.get(base, st.models[rm]["subject"]) == st.models[rm]["subject"]:
-                    present.setdefault(at, []).append(rm)
-            for at, rms in present.items():
-                for rm in rms:
-                    info = st.models[rm]
-                    if info["binding"] or rm not in comp:
-                        continue
-                    if info["literal"]:
-                        blocks.setdefault((rm, "shared"), []).append({"kind": "literal", "likelihood": derived["literal_in_place"]})
-                    if not info["blind"]:
-                        continue
-                    others = [st.models[x] for a2, xs in present.items() if a2 != at for x in xs if st.models[x]["obj"] == info["obj"]]
-                    if any(o["binding"] for o in others):
-                        blocks.setdefault((rm, "shared"), []).append({"kind": "computed", "likelihood": derived["agrees_with_computed"]})
-                    elif len(info["blind"]) > 1 or any(o["blind"] - info["blind"] for o in others if not o["binding"]):
-                        blocks.setdefault((rm, "shared"), []).append({"kind": "independent", "likelihood": derived["agrees_with_independent"]})
         choices = []
         for (t, _), evs in sorted(blocks.items()):
             items = [((e["likelihood"][0],) * 2, (e["likelihood"][1],) * 2) for e in evs if "likelihood" in e]

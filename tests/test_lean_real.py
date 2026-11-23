@@ -426,7 +426,8 @@ def test_a_fact_stated_in_several_places(tmp_path):
 
     r = k.recheck(cwd)["decisions"][0]
     assert r["state"] == "stale" and [u["at"] for u in r["unread"]] == ["doc.md::Model", "doc.md::Changes"], r
-    assert r["places"] == [{"at": "k.py::K.__init__", "reads as": '"pqd"', "m": r["places"][0]["m"], "by": "reader", "lo": 0.98}]
+    assert r["places"] == [{"at": "k.py::K.__init__", "reads as": '"pqd"', "m": r["places"][0]["m"], "by": "reader",
+                            "stands": True, "why": "computed"}]
     with pytest.raises(KernelError):
         k.read_place(h, "doc.md::Model", "14", cwd=cwd)                     # not a value of the fact's type
     with pytest.raises(KernelError):
@@ -436,11 +437,9 @@ def test_a_fact_stated_in_several_places(tmp_path):
     a = k.read_place(h, "doc.md::Model", '"pqd"', cwd=cwd, quote="The default class is `pqd`.")
     b = k.read_place(h, "doc.md::Changes", '"pqd"', cwd=cwd)
     r = k.recheck(cwd)["decisions"][0]
-    assert r["state"] == "current" and 0.7 < r["lo"] < 0.9, r               # they agree, on two agents' word
+    assert r["state"] == "current" and [p["stands"] for p in r["places"]] == [False, False, True], r   # they agree, on two agents' word
     k.sign_off(a["m"], "reviewer"); k.sign_off(b["m"], "reviewer")
-    assert k.recheck(cwd)["decisions"][0]["lo"] > 0.9                      # now on a person's word; three readings must all be right
-
-    assert all(p["lo"] > 0.9 for p in k.recheck(cwd)["decisions"][0]["places"])            # each reading stands on its own
+    assert all(p["stands"] for p in k.recheck(cwd)["decisions"][0]["places"])                      # now on a person's word
 
     # an edit elsewhere in the quoted place leaves its reading alone; the unquoted one must be read again
     (repo / "doc.md").write_text(doc.format(a="pqd", b="pqd").replace("## Changes\n", "## Changes\n\nA note.\n")
@@ -460,7 +459,7 @@ def test_a_fact_stated_in_several_places(tmp_path):
     assert r["state"] == "stale" and [u["at"] for u in r["unread"]] == ["doc.md::Model"], r
     k.read_place(h, "doc.md::Model", '"frechet"', cwd=cwd)
     r = k.recheck(cwd)["decisions"][0]
-    assert r["state"] == "violated" and r["hi"] < 0.3, r
+    assert r["state"] == "violated", r
     assert {p["at"]: p["reads as"] for p in r["places"]} == {"doc.md::Model": '"frechet"', "doc.md::Changes": '"pqd"', "k.py::K.__init__": '"pqd"'}
 
     # everything follows: the fact changed, and no decision had to be rewritten
@@ -556,10 +555,19 @@ def test_a_fact_keeps_its_readings_when_its_declaration_changes(tmp_path):
     assert again == h
     r = k.recheck(cwd)["decisions"]
     assert len(r) == 1 and r[0]["state"] in ("current", "re-established") and len(r[0]["places"]) == 3, r
-    assert [p for p in r[0]["places"] if p["at"] == "doc.md::Limits"][0]["m"] == m and all(p["lo"] > 0.9 for p in r[0]["places"])
+    assert [p for p in r[0]["places"] if p["at"] == "doc.md::Limits"][0]["m"] == m and all(p["stands"] for p in r[0]["places"])
 
 
-def test_what_stands_behind_a_reading_no_person_confirmed(tmp_path):
+def _measure(cwd, **readers):
+    """Write what pw.calibrate would: for each model, how many of 27 planted changes it read."""
+    import json
+    from pw.calibrate import interval
+    runs = [{"model": m, "read rate": list(interval(k, 27)), "stuck rate": list(interval(27 - k, 27))} for m, k in readers.items()]
+    with open(os.path.join(cwd, "pw-calibration.json"), "w") as fh:
+        json.dump(runs, fh)
+
+
+def test_a_reading_stands_by_the_rules_not_by_a_number(tmp_path):
     from pw.kernel import pattern
     log = str(tmp_path / "pw-log.jsonl")
     (tmp_path / "doc.md").write_text("## Limits\n\nAt most 14 atoms.\n")
@@ -567,48 +575,60 @@ def test_what_stands_behind_a_reading_no_person_confirmed(tmp_path):
     (tmp_path / "k.py").write_text("LIMIT = 14\n")
     cwd = str(tmp_path)
     a, b = Kernel(log, gate=LeanGate(), actor="reader-a"), Kernel(log, gate=LeanGate(), actor="reader-b")
-    lo = lambda h, at: next(p["lo"] for d in a.recheck(cwd)["decisions"] if d["h"] == h for p in d["places"] if p["at"] == at)
+    def place(h, at):
+        return next(p for d in a.recheck(cwd)["decisions"] if d["h"] == h for p in d["places"] if p["at"] == at)
+    quote = dict(cwd=cwd, quote="At most 14 atoms.")
 
     # a place the kernel computes says the same
     h = a.claim_fact("limit", "Nat", ["doc.md::Limits", {"at": "k.py::LIMIT", "reader": pattern(find=r"= (\d+)", kind="nat")}])["h"]
-    a.read_place(h, "doc.md::Limits", "14", cwd=cwd, quote="At most 14 atoms.")
-    assert lo(h, "doc.md::Limits") == pytest.approx(0.675 / 0.7625)            # the words are there; nothing else
-    a.read_place(h, "doc.md::Limits", "14", cwd=cwd, quote="At most 14 atoms.", blind=True)
-    assert lo(h, "doc.md::Limits") > 0.94                                       # read blind, and the code says 14 too
+    assert place(h, "k.py::LIMIT")["why"] == "computed" if a.read_place(h, "doc.md::Limits", "14", **quote) else False
+    p = place(h, "doc.md::Limits")
+    assert not p["stands"] and p["has"]["words occur in the place"] and p["has"]["agrees with a computed place"] and not p["has"]["blind"]
+    a.read_place(h, "doc.md::Limits", "14", blind=True, model="opus", **quote)
+    p = place(h, "doc.md::Limits")
+    assert not p["stands"] and p["unmeasured readers"] == ["opus"]                    # blind, but nobody measured this reader here
+    _measure(cwd, opus=20)
+    assert not place(h, "doc.md::Limits")["stands"]                                   # measured, and not good enough
+    _measure(cwd, opus=27)
+    p = place(h, "doc.md::Limits")
+    assert p["stands"] and p["why"] == "blind + words occur in the place + agrees with a computed place"
 
-    # a reading is judged on what was learnt about it: more places in the fact do not change that
-    one = lo(h, "doc.md::Limits")
-    (tmp_path / "c.txt").write_text("limit 14\n")
-    (tmp_path / "d.txt").write_text("limit 14\n")
-    a.claim_fact("limit", "Nat", ["doc.md::Limits", "notes.md::Size",
-                                  {"at": "k.py::LIMIT", "reader": pattern(find=r"= (\d+)", kind="nat")},
-                                  {"at": "c.txt", "reader": pattern(find=r"limit (\d+)", kind="nat")},
-                                  {"at": "d.txt", "reader": pattern(find=r"limit (\d+)", kind="nat")}])
-    a.read_place(h, "notes.md::Size", "14", cwd=cwd, quote="Components have up to 14 atoms.", blind=True)
-    assert lo(h, "doc.md::Limits") == pytest.approx(one) == pytest.approx(lo(h, "notes.md::Size"))
-    assert lo(h, "k.py::LIMIT") == pytest.approx(0.98)
+    # no computed place: one model is not enough, two are
+    g = a.claim_fact("size", "Nat", ["notes.md::Size"])["h"]
+    size = dict(cwd=cwd, quote="Components have up to 14 atoms.")
+    a.read_place(g, "notes.md::Size", "14", blind=True, model="opus", **size)
+    assert not place(g, "notes.md::Size")["stands"]
+    b.read_place(g, "notes.md::Size", "14", blind=True, model="opus", **size)
+    assert not place(g, "notes.md::Size")["stands"]                                   # a second reader of the same model
+    b.read_place(g, "notes.md::Size", "14", blind=True, model="sonnet", **size)
+    assert not place(g, "notes.md::Size")["stands"]                                   # the second model is not measured
+    _measure(cwd, opus=27, sonnet=27)
+    assert place(g, "notes.md::Size")["why"] == "blind + words occur in the place + read the same by a second model"
 
-    # no computed place: two prose places
-    g = a.claim_fact("size", "Nat", ["notes.md::Size", "doc.md::Limits"])["h"]
-    a.read_place(g, "notes.md::Size", "14", cwd=cwd, quote="Components have up to 14 atoms.", blind=True)
-    assert lo(g, "notes.md::Size") < 0.9                                        # one reader agreeing with itself
-    b.read_place(g, "notes.md::Size", "14", cwd=cwd, quote="Components have up to 14 atoms.", blind=True)
-    assert lo(g, "notes.md::Size") > 0.9                                        # a second reader, also blind
-
-    a.read_place(g, "doc.md::Limits", "14", cwd=cwd, quote="At most 14 atoms.", blind=True)
-    assert next(x for x in a.recheck(cwd)["decisions"] if x["h"] == g)["state"] == "current"
-
-    # the second reader sees something else: nobody is believed
-    (tmp_path / "notes.md").write_text("## Size\n\nComponents have up to 14 atoms, sixteen in tests.\n")
-    a.read_place(g, "notes.md::Size", "14", cwd=cwd, blind=True)
-    b.read_place(g, "notes.md::Size", "16", cwd=cwd, blind=True)
-    d = next(x for x in a.recheck(cwd)["decisions"] if x["h"] == g)
-    assert d["state"] == "disputed" and "reader-a" in d["unread"][0]["why"] and "reader-b" in d["unread"][0]["why"], d
-    wrong = next(m for p, m in a.state().facts[g]["readings"] if a.state().algebra.objs[a.state().models[m]["obj"]]["text"] == "16")
-    a.sign_off(wrong, "reviewer", confirmed=False)                              # a person settles it
-    assert next(x for x in a.recheck(cwd)["decisions"] if x["h"] == g)["state"] in ("current", "re-established")
-
-    # a value that is not in the words (a translation, say) gets no credit for being literal
+    # a person's word is a rule too; and the project can decide otherwise
     t = a.claim_fact("unit", "String", ["doc.md::Limits"])["h"]
-    a.read_place(t, "doc.md::Limits", '"原子"', cwd=cwd, quote="At most 14 atoms.", blind=True)
-    assert lo(t, "doc.md::Limits") == pytest.approx(0.75)
+    m = a.read_place(t, "doc.md::Limits", '"原子"', blind=True, model="opus", **quote)["m"]     # a translation: not in the words
+    assert not place(t, "doc.md::Limits")["stands"]
+    a.sign_off(m, "reviewer")
+    assert place(t, "doc.md::Limits")["why"] == "confirmed by a person"
+    import json
+    (tmp_path / "pw-rules.json").write_text(json.dumps({"a blind reader counts if measured": {"read at least": 0.85, "stuck at most": 0.15},
+                                                        "a reading stands if any of": [["computed"]]}))
+    assert not place(t, "doc.md::Limits")["stands"] and not place(h, "doc.md::Limits")["stands"]
+    (tmp_path / "pw-rules.json").write_text(json.dumps({"a blind reader counts if measured": {}, "a reading stands if any of": [["looks right"]]}))
+    with pytest.raises(KernelError):
+        a.recheck(cwd)
+
+
+def test_readers_who_disagree_stop_the_fact(tmp_path):
+    log = str(tmp_path / "pw-log.jsonl")
+    (tmp_path / "notes.md").write_text("## Size\n\nComponents have up to 14 atoms, sixteen in tests.\n")
+    cwd = str(tmp_path)
+    a, b = Kernel(log, gate=LeanGate(), actor="reader-a"), Kernel(log, gate=LeanGate(), actor="reader-b")
+    g = a.claim_fact("size", "Nat", ["notes.md::Size"])["h"]
+    a.read_place(g, "notes.md::Size", "14", cwd=cwd, blind=True, model="opus")
+    wrong = b.read_place(g, "notes.md::Size", "16", cwd=cwd, blind=True, model="sonnet")["m"]
+    d = a.recheck(cwd)["decisions"][0]
+    assert d["state"] == "disputed" and "reader-a" in d["unread"][0]["why"] and "reader-b" in d["unread"][0]["why"], d
+    a.sign_off(wrong, "reviewer", confirmed=False)                                    # a person settles it
+    assert a.recheck(cwd)["decisions"][0]["state"] == "current"

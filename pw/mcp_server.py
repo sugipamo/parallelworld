@@ -74,7 +74,7 @@ def read_place(h: str, place: str, object: str, quote: str) -> dict:
     one entry); the kernel checks the quote is there and shows it to the person who confirms your
     reading. Write what the place itself says. The kernel compares the places; you prove nothing."""
     return _safe(lambda: _kernel.read_place(h, place, object, cwd=_workdir(), quote=quote,
-                                            blind=os.environ.get("PW_BLIND") == "1"))
+                                            blind=os.environ.get("PW_BLIND") == "1", model=os.environ.get("PW_MODEL")))
 
 
 @mcp.tool()

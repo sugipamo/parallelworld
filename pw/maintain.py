@@ -9,8 +9,8 @@ One round of the loop that managing a project comes down to:
   2. have an agent read each place that changed or was never read. The reader is blind: it is
      given the text of that one place and no way to look at anything else, so that its reading
      agreeing with another place means something;
-  3. where a reading still rests on one agent's word (no computed place says the same, and no
-     second reader), have a second model read the place, blind as well;
+  3. where a reading does not stand by the project's rules (pw-rules.json), have a second model
+     read the place, blind as well;
   4. hold everything against the files once more and report.
 
 What is left after that is for a person: places that do not say the same thing, readers who
@@ -63,7 +63,7 @@ def blind_read(repo, lean_dir, model, actor, items, budget):
     with open(cfg, "w") as fh:
         json.dump({"mcpServers": {"pw": {"command": sys.executable, "args": ["-m", "pw.mcp_server"], "env": {
             "PW_DB": os.path.join(repo, LOG), "PW_AGENT": actor, "PW_WORKDIR": repo, "PW_LEAN_DIR": lean_dir,
-            "PW_BLIND": "1", "PYTHONPATH": ROOT}}}}, fh)
+            "PW_BLIND": "1", "PW_MODEL": model, "PYTHONPATH": ROOT}}}}, fh)
     prompt = BLIND
     for h, place, typ, what in items:
         text = locate(place, repo).decode("utf-8", "replace")
@@ -127,7 +127,7 @@ def main():
         report = kernel.recheck(repo)
     if args.second_model:
         alone = [(d, p["at"]) for d in report["decisions"] if "fact" in d and d["state"] in ("current", "re-established")
-                 for p in d["places"] if p["by"] == "stated" and p["lo"] < args.threshold and not p["confirmed"]]
+                 for p in d["places"] if p["by"] == "stated" and not p["stands"]]
         if alone:
             read_blind(kernel, repo, args, alone, args.second_model, "second")
             report = kernel.recheck(repo)

@@ -1,0 +1,25 @@
+{
+  "_note": "When a reading of a place stands, for this repository. A decision, not an estimate. The bar for readers is what 27 planted changes can show at most (27 of 27 read gives 0.872 and 0.128); to raise it, measure with more trials first (python -m pw.calibrate --per-place N).",
+  "a blind reader counts if measured": {
+    "read at least": 0.85,
+    "stuck at most": 0.15
+  },
+  "a reading stands if any of": [
+    [
+      "computed"
+    ],
+    [
+      "confirmed by a person"
+    ],
+    [
+      "blind",
+      "words occur in the place",
+      "agrees with a computed place"
+    ],
+    [
+      "blind",
+      "words occur in the place",
+      "read the same by a second model"
+    ]
+  ]
+}

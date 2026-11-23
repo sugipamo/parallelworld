@@ -22,8 +22,8 @@ FACTS = "pw-facts.json"      # a project's list of facts and the places that sta
 def show(report, threshold, unconfirmed="fail"):
     """Print where every decision stands. Returns True if anything needs attention.
 
-    With unconfirmed="warn", a decision that holds mechanically but rests on a reading nobody has
-    confirmed is reported and does not count as needing attention.
+    With unconfirmed="warn", a decision that holds mechanically but rests on a reading that does
+    not stand by the rules is reported and does not count as needing attention.
     """
     bad = bool(report["conflicts"])
     mark = lambda ok, soft=False: "ok  " if ok else ("WARN" if soft and unconfirmed == "warn" else "FAIL")
@@ -36,19 +36,20 @@ def show(report, threshold, unconfirmed="fail"):
             if "failed" in d:
                 print(f"       failing check: {d['failed'][:200]}")
             continue
-        ok = d["state"] in ("current", "re-established") and d["lo"] >= threshold
         if "fact" in d:
-            # The places agree if every reading is right. The bound on that falls as places are added
-            # (any one reading may be the wrong one), so each reading is held to the threshold by itself.
-            weak = [p for p in d["places"] if p["lo"] < threshold]
-            ok = d["state"] in ("current", "re-established") and not weak
-            soft = d["state"] in ("current", "re-established")          # the places agree; only confirmation is missing
-            bad |= not ok and not (soft and unconfirmed == "warn")
-            print(f"{mark(ok, soft)} {d['state']:<15} [{d['lo']:.3f}, {d['hi']:.3f}] {d['h']} fact: {d['fact']}")
+            # Lean says whether the places agree; the project's rules say whether each reading stands.
+            agree = d["state"] in ("current", "re-established")
+            loose = [p for p in d["places"] if not p["stands"]]
+            ok = agree and not loose
+            bad |= not ok and not (agree and unconfirmed == "warn")
+            print(f"{mark(ok, agree)} {d['state']:<15} {d['h']} fact: {d['fact']}")
             if not ok or len({p["reads as"] for p in d["places"]}) > 1:
                 for p in d["places"]:
-                    how = "" if p["by"] == "reader" else f"   (stated, {p['m']}" + (", on one agent's word)" if p in weak else ")")
-                    print(f"       {p['at']} reads as {p['reads as'][:100]}{how}")
+                    print(f"       {p['at']} reads as {p['reads as'][:100]}   ({p['why'] if p['stands'] else 'does not stand'})")
+                    if not p["stands"]:
+                        print("          " + ", ".join(f"{c}: {'yes' if v else 'no'}" for c, v in p["has"].items()))
+                        if p["unmeasured readers"]:
+                            print(f"          read blind by {', '.join(p['unmeasured readers'])}: not a measured reader here (python -m pw.calibrate --model ...)")
             for u in d.get("unread", []):
                 print(f"       {u['at']}: {u['why'][:160]}")
             if d["state"] == "violated":
@@ -58,11 +59,12 @@ def show(report, threshold, unconfirmed="fail"):
             elif d["state"] == "disputed":
                 print("       a person has to say which reading is right: python -m pw.confirm --who NAME M:... and --reject M:...")
             elif not ok:
-                print("       the places agree, but a reading has nothing behind it except the agent that made it:")
+                print("       the places agree, but a reading does not stand by the rules (pw-rules.json):")
                 print("       python -m pw.maintain (a second, blind reading) or python -m pw.confirm (a person)")
             if "error" in d:
                 print(f"       {d['error'][:300]}")
             continue
+        ok = d["state"] in ("current", "re-established") and d["lo"] >= threshold
         soft = d["state"] in ("current", "re-established")
         bad |= not ok and not (soft and unconfirmed == "warn")
         print(f"{mark(ok, soft)} {d['state']:<15} [{d['lo']:.3f}, {d['hi']:.3f}] {d['h']} {d['subject'].split('@')[0]} satisfies {d['spec']}")
@@ -95,7 +97,7 @@ def main():
     ap.add_argument("--verify", action="store_true",
                     help="run every recorded proof through Lean again instead of believing the record (use this in CI)")
     ap.add_argument("--unconfirmed", choices=("fail", "warn"), default="fail",
-                    help="what to do about decisions that hold mechanically but rest on a reading nobody has confirmed")
+                    help="what to do about decisions that hold mechanically but rest on a reading that does not stand by the rules")
     args = ap.parse_args()
     repo = os.path.abspath(args.repo)
     kernel = Kernel(args.db or os.path.join(repo, LOG), gate=LeanGate(args.lean_dir), actor="check")
