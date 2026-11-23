@@ -441,3 +441,57 @@ def test_planted_changes_have_known_answers():
     assert 0.88 < lo < 0.89 and hi == 1.0                                           # thirty out of thirty: at least 0.88
     lo, hi = interval(0, 30)
     assert lo == 0.0 and 0.11 < hi < 0.12
+
+
+def test_a_proposed_place_is_checked_against_the_file(tmp_path):
+    import json
+    from pw.discover import Refused, _agree, merge, screen
+    repo = str(tmp_path)
+    (tmp_path / "guide.md").write_text("# Guide\n\n## Limits\n\nAt most 14 atoms are solved. The class is `fast`.\n\n## Other\n\nNothing.\n")
+    (tmp_path / "app.py").write_text('LIMIT = 14\n\ndef run(threshold=0.9, mode="fast"):\n    return threshold\n\nNAMES = ["b", "a"]\n')
+    (tmp_path / "pw-log.jsonl").write_text("{}\n")
+
+    def refused(*a, **kw):
+        with pytest.raises(Refused) as e:
+            screen(repo, *a, **kw)
+        return str(e.value)
+
+    p = screen(repo, "Nat", "guide.md::Limits", 14, "At most 14 atoms are solved.")
+    assert p == {"at": "guide.md::Limits", "read": None, "value": 14, "quote": "At most 14 atoms are solved."}
+    assert screen(repo, "Nat", "guide.md::Limits", "14", "At most 14 atoms are solved.")["value"] == 14      # JSON text is accepted too
+    assert "word for word" in refused("Nat", "guide.md::Limits", 14, "At most 14 atoms can be solved.")
+    assert "word for word" in refused("Nat", "guide.md::Other", 14, "At most 14 atoms are solved.")          # the quote is in another part
+    assert "does not occur in the quote" in refused("Nat", "guide.md::Limits", 15, "At most 14 atoms are solved.")
+    assert "no heading" in refused("Nat", "guide.md::Limit", 14, "At most 14 atoms are solved.")
+    assert "no file" in refused("Nat", "missing.md", 14, "x")
+    assert "not a value of type Nat" in refused("Nat", "guide.md::Limits", '"14"', "At most 14 atoms are solved.")
+    for own in ("pw-log.jsonl", "../guide.md", ".git/config"):
+        assert "not a file of the project" in refused("Nat", own, 14, "x")
+
+    p = screen(repo, "Nat", "app.py::LIMIT", 14, "LIMIT = 14", find=r"LIMIT = (\d+)")
+    assert p["read"] == {"find": r"LIMIT = (\d+)", "as": "nat"}
+    p = screen(repo, "Nat", "app.py::run", 900, "def run(threshold=0.9", find=r"threshold=([0-9.]+)", kind="permille")
+    assert p["read"]["as"] == "permille"                                             # a computed value need not be in the quote
+    assert "needs a pattern" in refused("Nat", "app.py::run", 900, "def run(threshold=0.9")
+    assert "not the value you gave" in refused("Nat", "app.py::LIMIT", 15, "LIMIT = 14", find=r"LIMIT = (\d+)")
+    assert "does not work" in refused("Nat", "app.py", 14, "LIMIT = 14", find=r"(\d+)")                      # matches more than once
+    p = screen(repo, "List String", "app.py::NAMES", ["a", "b"], 'NAMES = ["b", "a"]', find_all=r'"(\w)"')
+    assert p["read"] == {"find_all": r'"(\w)"', "as": "string", "sort": True}
+    (tmp_path / "notes.txt").write_text("14\n")
+    assert "only Markdown, JSON and Python" in refused("Nat", "notes.txt::x", 14, "14")
+
+    facts = [{"name": "limit", "type": "Nat", "places": ["guide.md::Limits"]}]
+    merged, added = merge(facts, [
+        {"fact": "limit", "place": screen(repo, "Nat", "app.py::LIMIT", 14, "LIMIT = 14", find=r"LIMIT = (\d+)")},
+        {"fact": "limit", "place": screen(repo, "Nat", "guide.md::Limits", 14, "At most 14 atoms are solved.")},     # already listed
+        {"new": {"name": "class", "type": "String", "gloss": "the class"}, "places": [
+            screen(repo, "String", "guide.md::Limits", "fast", "The class is `fast`."),
+            screen(repo, "String", "app.py::run", "fast", 'mode="fast"', find=r'mode="(\w+)"')]}])
+    assert facts[0]["places"] == ["guide.md::Limits"]                                # the input is left alone
+    assert merged[0]["places"] == ["guide.md::Limits", {"at": "app.py::LIMIT", "read": {"find": r"LIMIT = (\d+)", "as": "nat"}}]
+    assert merged[1] == {"name": "class", "type": "String", "gloss": "the class",
+                         "places": ["guide.md::Limits", {"at": "app.py::run", "read": {"find": r'mode="(\w+)"', "as": "string"}}]}
+    assert len(added) == 3 and _agree([p for _, p in added[1:]]) and not _agree([{"value": 1}, {"value": 2}])
+    k = Kernel(str(tmp_path / "e.db"), gate=FakeGate())
+    (tmp_path / "facts.json").write_text(json.dumps(merged))
+    assert len(k.sync_facts(str(tmp_path / "facts.json"))) == 2                      # what is merged is a valid declaration
