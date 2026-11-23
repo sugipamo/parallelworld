@@ -1,13 +1,12 @@
-"""Knowledge kernel: append-only event log + interval inference.
+"""Knowledge kernel: append-only event log, and the model that ties the layers together.
 
-State changes are events of exactly three kinds:
-  * model extension   (claim / ground / independence)
-  * Bayesian evidence (observe)
-  * verified proof    (proof)   -- only ever written after the Lean gate accepts
+  lindenbaum.py   formal layer: what Lean has verified, as a presented Boolean algebra
+  credal.py       probabilistic layer: credal sets, generalized Bayes rule
+  this file       the events, and the reliability model connecting claims to propositions
 
-Inference never stores a joint distribution. It solves linear programs over the
-possible worlds of the connected component of the query, so every dependence
-that is not stated stays unknown and shows up as interval width.
+Events are of three kinds: model extension (claim / ground / independence),
+evidence (observe), and verified proof. A proof shrinks the space of worlds; evidence
+reweights measures on it. Nothing else changes the state.
 """
 import hashlib
 import itertools
@@ -19,12 +18,12 @@ import time
 from contextlib import contextmanager
 
 import numpy as np
-from scipy.optimize import linprog
 
 from . import formula as fm
+from .credal import COPULAS, CredalSet, joint_likelihood, stone_space
+from .lindenbaum import RELATIONS, Lindenbaum
 
 CATALOG_PATH = os.path.join(os.path.dirname(__file__), "catalog.json")
-RELATIONS = {"holds": 1, "not": 1, "iff": 2, "implies": 2, "contradiction": 2}
 
 
 class KernelError(Exception):
@@ -45,34 +44,29 @@ def _norm(text):
 
 class State:
     def __init__(self):
-        self.atoms = {}      # id -> {"kind": H|F|G, "text": str}
-        self.prior = {}      # H, G, F -> base rate
-        self.links = []      # (g, h, f)
+        self.atoms = {}      # world atoms: id -> {"kind": H|F|G, "text": str}
+        self.prior = {}      # base rates
+        self.links = []      # (g, h, f): connection g says claim h means proposition f
         self.evidence = {}   # eid -> dict
-        self.proofs = []     # dict
-        self._parent = {}    # union-find over F (Lean-proved iff)
+        self.proofs = []     # proof events as recorded
+        self.algebra = Lindenbaum()
 
     def rep(self, a):
-        if a not in self._parent:
-            return a
-        while self._parent[a] != a:
-            self._parent[a] = self._parent[self._parent[a]]
-            a = self._parent[a]
-        return a
-
-    def union(self, a, b):
-        ra, rb = sorted((self.rep(a), self.rep(b)))
-        self._parent[rb] = ra  # keep lexicographically smallest as representative
+        return self.algebra.find(a)
 
     def apply(self, typ, p):
         if typ == "claim":
             self.atoms[p["h"]] = {"kind": "H", "text": p["text"]}
             self.prior[p["h"]] = p["prior"]
         elif typ == "ground":
+            pred, obj = p.get("pred"), p.get("obj")
+            if pred:
+                self.algebra.add_pred(pred["id"], pred["type"], pred["text"])
+                self.algebra.add_obj(obj["id"], obj["type"], obj["text"])
             if p["f"] not in self.atoms:
                 self.atoms[p["f"]] = {"kind": "F", "text": p["lean"]}
-                self._parent[p["f"]] = p["f"]
                 self.prior[p["f"]] = self.prior[p["h"]]
+            self.algebra.add_prop(p["f"], p["lean"], pred and pred["id"], obj and obj["id"])
             self.atoms[p["g"]] = {"kind": "G", "text": f'{p["h"]} means {p["f"]}'}
             self.prior[p["g"]] = p["prior"]
             self.links.append((p["g"], p["h"], p["f"]))
@@ -82,12 +76,14 @@ class State:
             self.evidence[p["eid"]]["block"] = p["eid"]
         elif typ == "proof":
             self.proofs.append(p)
-            if p["relation"] == "iff":
-                self.union(*p["fs"])
+            self.algebra.relate(p["relation"], p["args"])
 
 
 class Kernel:
-    def __init__(self, db_path, gate=None, catalog=None, actor=None, max_atoms=14):
+    def __init__(self, db_path, gate=None, catalog=None, actor=None, max_atoms=14, dependence="pqd"):
+        if dependence not in COPULAS:
+            raise KernelError(f"dependence must be one of {sorted(COPULAS)}")
+        self.dependence = dependence   # copula class for evidence on one target not declared independent
         self.db_path = db_path
         self.gate = gate
         self.actor = actor or os.environ.get("PW_AGENT", "anon")
@@ -157,10 +153,25 @@ class Kernel:
         return {"h": h}
 
     def ground(self, h, lean, prior=None):
-        """Introduce connection hypothesis G: 'H means the Lean proposition F'."""
-        lean = _norm(lean)
+        """Connection hypothesis G: claim `h` means the closed Lean proposition `lean`."""
+        return self._ground(h, _norm(lean), None, None, prior)
+
+    def ground_at(self, h, typ, predicate, obj, prior=None):
+        """Connection hypothesis G: claim `h` says object `obj : typ` satisfies `predicate : typ -> Prop`.
+
+        Keeping the specification and the object apart lets Lean say "same
+        specification" and "same object" separately; closed propositions cannot.
+        """
+        typ, predicate, obj = _norm(typ), _norm(predicate), _norm(obj)
+        pred = {"id": "P:" + _sha(typ, predicate), "type": typ, "text": predicate}
+        ob = {"id": "O:" + _sha(typ, obj), "type": typ, "text": obj}
+        lean = f"((({predicate}) : ({typ}) → Prop) (({obj}) : ({typ})))"
+        return self._ground(h, lean, pred, ob, prior)
+
+    def _ground(self, h, lean, pred, obj, prior):
         if self.gate is not None:
-            self.gate.screen(lean)
+            for text in (lean, *((pred["type"],) if pred else ())):
+                self.gate.screen(text)
         f = "F:" + _sha(lean)
         g = f"G:{h[2:]}~{f[2:]}"
         with self._tx() as (con, st):
@@ -168,8 +179,14 @@ class Kernel:
                 raise KernelError(f"unknown claim {h}")
             if g not in st.atoms:
                 prior = self.catalog["priors"]["grounding"] if prior is None else prior
-                self._append(con, st, "ground", {"g": g, "h": h, "f": f, "lean": lean, "prior": prior})
-        return {"g": g, "f": f}
+                event = {"g": g, "h": h, "f": f, "lean": lean, "prior": prior}
+                if pred:
+                    event.update(pred=pred, obj=obj)
+                self._append(con, st, "ground", event)
+        out = {"g": g, "f": f}
+        if pred:
+            out.update(p=pred["id"], o=obj["id"])
+        return out
 
     def observe(self, target, kind, outcome, source):
         """Bayesian evidence. Likelihood comes from the catalog, never from the caller.
@@ -218,145 +235,151 @@ class Kernel:
             self._append(con, st, "independence", {"eid": eid, "justification": justification})
         return {"eid": eid}
 
-    def prove(self, relation, fs, proof):
-        """Ask the Lean gate to verify a relation between formal propositions.
+    def prove(self, relation, args, proof):
+        """Ask the Lean gate to verify a relation (see lindenbaum.RELATIONS).
 
         Nothing is recorded unless the gate accepts. A failed attempt is NOT evidence.
         """
-        if RELATIONS.get(relation) != len(fs):
-            raise KernelError(f"relation must be one of {RELATIONS} with matching arity")
+        kinds = RELATIONS.get(relation)
+        if kinds is None or len(kinds) != len(args):
+            raise KernelError(f"relation must be one of {sorted(RELATIONS)} with matching arity")
         if self.gate is None:
             raise KernelError("no Lean gate configured; proofs cannot be accepted")
-        st = self.state()
-        for f in fs:
-            if st.atoms.get(f, {}).get("kind") != "F":
-                raise KernelError(f"unknown formal proposition {f}")
-        verdict = self.gate.check(relation, [st.atoms[f]["text"] for f in fs], proof)
+        alg = self.state().algebra
+        items = []
+        for want, x in zip(kinds, args):
+            if alg.kind(x) != want:
+                raise KernelError(f"{relation} needs a {want} id, got {x}")
+            if want == "F":
+                items.append(("Prop", alg.props[x]["text"]))
+            elif want == "P":
+                items.append((f"({alg.preds[x]['type']}) → Prop", alg.preds[x]["text"]))
+            else:
+                items.append((alg.objs[x]["type"], alg.objs[x]["text"]))
+        verdict = self.gate.check(relation, items, proof)
         if not verdict["ok"]:
             return {"accepted": False, "reason": verdict["reason"]}
         with self._tx() as (con, st):
             self._append(con, st, "proof", {
-                "relation": relation, "fs": list(fs), "proof_sha": _sha(proof),
+                "relation": relation, "args": list(args), "proof_sha": _sha(proof),
                 "axioms": verdict["axioms"], "gamma": verdict["gamma"],
             })
         return {"accepted": True, "axioms": verdict["axioms"], "gamma": verdict["gamma"]}
 
     # ---- inference -------------------------------------------------------
     def infer(self, query):
-        """Bounds [lo, hi] on P(query | all evidence), under all verified proofs."""
+        """Lower and upper probability [lo, hi] of a formula, given all evidence and proofs."""
         st = self.state()
+        alg = st.algebra
         q = fm.rename(fm.parse(query), st.rep)
         for a in fm.atoms(q):
             if a not in st.atoms:
                 raise KernelError(f"unknown atom {a}")
+        A = lambda x: ("atom", x)
 
-        links = [(g, h, st.rep(f)) for g, h, f in st.links]
-        proofs = [(p["relation"], [st.rep(f) for f in p["fs"]]) for p in st.proofs if p["relation"] != "iff"]
-        groups = [set(l) for l in links] + [set(fs) for _, fs in proofs]
-        # An F that Lean has decided is a constant: sharing it creates no dependence,
-        # so it must not pull otherwise unrelated claims into one component.
-        decided = {fs[0] for rel, fs in proofs if rel in ("holds", "not")}
+        # T: what a connection means, plus what Lean has verified
+        links = sorted({(g, h, st.rep(f)) for g, h, f in st.links})
+        order = alg.order()
+        shape = {
+            "holds": lambda a: A(a), "not": lambda a: ("not", A(a)),
+            "implies": lambda a, b: ("imp", A(a), A(b)),
+            "contradiction": lambda a, b: ("not", ("and", A(a), A(b))),
+        }
+        theory = [("imp", A(g), ("iff", A(h), A(f))) for g, h, f in links]
+        theory += [shape[rel](*ids) for rel, ids in order]
+
+        # The component of the query. A class Lean has decided is a constant: sharing
+        # it creates no dependence, so it does not pull unrelated claims together.
+        decided = alg.decided()
         comp = set(fm.atoms(q))
         seeds = set(comp)
         grew = True
         while grew:
             grew = False
-            for grp in groups:
+            for grp in map(fm.atoms, theory):
                 if grp & (comp - (decided - seeds)) and not grp <= comp:
                     comp |= grp
                     grew = True
         names = sorted(comp)
-        n = len(names)
-        if n > self.max_atoms:
-            raise KernelError(f"component has {n} atoms (> {self.max_atoms}); split the query")
+        if len(names) > self.max_atoms:
+            raise KernelError(f"component has {len(names)} atoms (> {self.max_atoms}); split the query")
         links = [l for l in links if set(l) <= comp]
-        proofs = [p for p in proofs if set(p[1]) <= comp]
-
-        bits = (np.arange(2 ** n)[:, None] >> np.arange(n)) & 1
-        env = {a: bits[:, i].astype(bool) for i, a in enumerate(names)}
-        ok = np.ones(2 ** n, dtype=bool)
-        for g, h, f in links:                       # G -> (H <-> F): what a connection means
-            ok &= ~env[g] | (env[h] == env[f])
-        for rel, fs in proofs:                      # Lean theorems remove impossible worlds
-            a = env[fs[0]]
-            b = env[fs[-1]]
-            ok &= {"holds": a, "not": ~a, "implies": ~a | b, "contradiction": ~(a & b)}[rel]
-        if not ok.any():
+        order = [(rel, ids) for rel, ids in order if set(ids) <= comp]
+        env, m = stone_space(names, [t for t in theory if fm.atoms(t) <= comp])
+        if m == 0:
             raise Conflict(f"no possible world satisfies the proofs over {names}")
-        env = {a: v[ok] for a, v in env.items()}
-        m = int(ok.sum())
-        one = np.ones(m)
 
-        # prior constraints, each as a row r with r . mu = 0
-        rows = []
-        cond = lambda a, c, p: rows.append((a & c).astype(float) - p * c.astype(float))  # P(a | c) = p
-        touched = {f for _, fs in proofs for f in fs}
+        # Reliability model (Bovens-Hartmann): a connection is reliable at its base rate;
+        # reliability is independent of the fact reported; an unconnected claim sits at its base rate.
+        K = CredalSet(m)
+        everywhere = np.ones(m, dtype=bool)
+        related = {f for _, ids in order for f in ids}
         for a in names:
             kind = st.atoms[a]["kind"]
             if kind == "G":
-                cond(env[a], one.astype(bool), st.prior[a])
+                K.constrain(env[a], everywhere, st.prior[a])
             elif kind == "H":
-                # where no connection of H holds, H keeps its base rate
-                free = np.ones(m, dtype=bool)
+                unconnected = everywhere.copy()
                 for g, h, _ in links:
                     if h == a:
-                        free &= ~env[g]
-                cond(env[a], free, st.prior[a])
-            elif a not in touched:
-                # an F untouched by non-iff proofs keeps a base rate, unrelated to its connections
-                cond(env[a], one.astype(bool), st.prior[a])
+                        unconnected &= ~env[g]
+                K.constrain(env[a], unconnected, st.prior[a])
+            elif a not in related:
+                K.constrain(env[a], everywhere, st.prior[a])
                 for g, _, f in links:
                     if f == a:
-                        cond(env[a], env[g], st.prior[a])
-
-        def lp(c, weights):
-            A = np.vstack(rows + [weights]) if rows else weights[None, :]
-            b = np.zeros(len(A))
-            b[-1] = 1.0
-            return linprog(c, A_eq=A, b_eq=b, bounds=(0, None), method="highs")
-
-        if lp(np.zeros(m), one).status != 0:
+                        K.constrain(env[a], env[g], st.prior[a])
+        if not K.feasible():
             raise Conflict(f"base rates are incompatible with the verified proofs over {names}")
 
-        # evidence: per target, blocks of evidence with unknown mutual redundancy
+        # Evidence: virtual evidence on one atom; pieces on the same atom are joined by a copula class.
         blocks = {}
         for e in st.evidence.values():
             t = st.rep(e["target"])
             if t in comp:
                 blocks.setdefault((t, e["block"]), []).append(e["likelihood"])
-        choices = []
-        for (t, _), likes in sorted(blocks.items()):
-            a = np.array(likes)
-            indep = (a[:, 0].prod(), a[:, 1].prod())   # no redundancy inside the block
-            dup = (a[:, 0].min(), a[:, 1].min())       # fully redundant
-            opts = {indep, dup}
-            choices.append([np.where(env[t], pt, pf) for pt, pf in opts])
+        choices = [
+            [np.where(env[t], pt, pf) for pt, pf in joint_likelihood(likes, self.dependence)]
+            for (t, _), likes in sorted(blocks.items())
+        ]
+        candidates = (np.prod(combo, axis=0) if combo else np.ones(m) for combo in itertools.product(*choices))
+        b = K.bounds(np.asarray(fm.evaluate(q, env), dtype=bool) & everywhere, candidates)
+        if b is None:
+            raise Conflict(f"the recorded evidence has probability zero over {names}")
+        return {"lo": b[0], "hi": b[1], "atoms": names, "worlds": m}
 
-        qv = np.asarray(fm.evaluate(q, env), dtype=float) * one
-        lo, hi = 1.0, 0.0
-        for combo in itertools.product(*choices):
-            L = one.copy()
-            for w in combo:
-                L = L * w
-            r1, r2 = lp(L * qv, L), lp(-L * qv, L)
-            if r1.status != 0 or r2.status != 0:
-                raise Conflict(f"the recorded evidence has probability zero over {names}")
-            lo, hi = min(lo, r1.fun), max(hi, -r2.fun)
-        lo, hi = max(0.0, round(lo, 9)), min(1.0, round(hi, 9))
-        return {"lo": lo, "hi": hi, "atoms": names, "worlds": m}
+    def distance(self, a, b):
+        """Frechet-Nikodym distance d(a, b) = P(a and b disagree), as an interval.
+
+        Lean makes it exactly 0 between equal propositions; a connection bounds it by
+        1 - P(G); the triangle inequality does the rest.
+        """
+        r = self.infer(f"({a}) <-> ({b})")
+        return {"lo": round(1 - r["hi"], 9), "hi": round(1 - r["lo"], 9)}
 
     def status(self):
         st = self.state()
-        out = {"claims": [], "classes": {}, "proofs": st.proofs, "evidence": len(st.evidence)}
+        alg = st.algebra
+        out = {"claims": [], "evidence": len(st.evidence), "proofs": st.proofs,
+               "propositions": alg.classes("F"),
+               "specifications": {c: [alg.preds[p] for p in ps] for c, ps in alg.classes("P").items()},
+               "objects": {c: [alg.objs[o] for o in os_] for c, os_ in alg.classes("O").items()}}
         for a, info in st.atoms.items():
-            if info["kind"] == "H":
-                try:
-                    b = self.infer(a)
-                    entry = {"h": a, "text": info["text"], "lo": b["lo"], "hi": b["hi"]}
-                except KernelError as e:
-                    entry = {"h": a, "text": info["text"], "error": str(e)}
-                entry["groundings"] = [{"g": g, "f": f, "class": st.rep(f)} for g, h, f in st.links if h == a]
-                out["claims"].append(entry)
-            elif info["kind"] == "F":
-                out["classes"].setdefault(st.rep(a), []).append({"f": a, "lean": info["text"]})
+            if info["kind"] != "H":
+                continue
+            try:
+                b = self.infer(a)
+                entry = {"h": a, "text": info["text"], "lo": b["lo"], "hi": b["hi"]}
+            except KernelError as e:
+                entry = {"h": a, "text": info["text"], "error": str(e)}
+            entry["means"] = []
+            for g, h, f in st.links:
+                if h == a:
+                    p = alg.props[f]
+                    entry["means"].append({
+                        "g": g, "f": f, "proposition_class": alg.find(f),
+                        "specification_class": p["pred"] and alg.find(p["pred"]),
+                        "object_class": p["obj"] and alg.find(p["obj"]),
+                    })
+            out["claims"].append(entry)
         return out

@@ -22,8 +22,11 @@ You are one of several parallel workers. Shared knowledge lives in the `pw` MCP 
 - Before relying on anything another worker may have established, call `status` / `infer`.
 - For each claim listed under "Required claims", call `claim` with the EXACT text, then gather
   evidence with `observe_command` (the kernel runs the check; you do not report results yourself).
-- Where a claim has precise mathematical content, `ground` it to a Lean proposition and try
-  `prove`. A failed proof proves nothing; do not treat it as evidence.
+- Where a claim has precise mathematical content, connect it to Lean with `ground_at` (object +
+  predicate) and try `prove`. A failed proof proves nothing; do not treat it as evidence.
+- If `status` shows another worker's specification or object that you believe is the same as
+  yours, try `pred_iff` / `obj_eq`. Only prove what is true: different code is usually a
+  different object even when it meets the same specification.
 - Never state probabilities. Commit your work on the current branch when done.
 """
 

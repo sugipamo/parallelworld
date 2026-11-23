@@ -32,11 +32,14 @@ _FORBIDDEN = re.compile(
 )
 
 _GOALS = {
-    "holds": "PWStmt.S0",
-    "not": "_root_.Not PWStmt.S0",
-    "iff": "_root_.Iff PWStmt.S0 PWStmt.S1",
-    "implies": "PWStmt.S0 → PWStmt.S1",
-    "contradiction": "_root_.Not (_root_.And PWStmt.S0 PWStmt.S1)",
+    "holds": "S0",
+    "not": "_root_.Not S0",
+    "iff": "_root_.Iff S0 S1",
+    "implies": "S0 → S1",
+    "contradiction": "_root_.Not (_root_.And S0 S1)",
+    "pred_iff": "∀ x, _root_.Iff (S0 x) (S1 x)",
+    "pred_implies": "∀ x, S0 x → S1 x",
+    "obj_eq": "_root_.Eq S0 S1",
 }
 
 
@@ -62,15 +65,19 @@ class LeanGate:
         h.update(",".join(sorted(ALLOWED_AXIOMS)).encode())
         return h.hexdigest()[:12]
 
-    def render(self, relation, props, proof):
-        for t in (*props, proof):
-            self.screen(t)
-        defs = "\n".join(f"def S{i} : Prop := ({p})" for i, p in enumerate(props))
-        names = " ".join(f"PWStmt.S{i}" for i in range(len(props)))
+    def render(self, relation, items, proof):
+        """items: [(Lean type, Lean term)] in the order the goal refers to them as S0, S1."""
+        for typ, body in items:
+            self.screen(typ)
+            self.screen(body)
+        self.screen(proof)
+        defs = "\n".join(f"def S{i} : ({t}) := ({b})" for i, (t, b) in enumerate(items))
+        names = " ".join(f"PWStmt.S{i}" for i in range(len(items)))
+        goal = re.sub(r"\bS(\d)\b", r"PWStmt.S\1", _GOALS[relation])
         body = "\n".join("  " + line for line in proof.strip().splitlines())
         return (
             "import Gamma\n\nnamespace PWStmt\n" + defs + "\nend PWStmt\n\n"
-            f"theorem pw_goal : {_GOALS[relation]} := by\n  unfold {names}\n{body}\n"
+            f"theorem pw_goal : {goal} := by\n  unfold {names}\n  try dsimp only\n{body}\n"
         )
 
     def _lake(self):
@@ -85,9 +92,9 @@ class LeanGate:
             raise GateError(f"Gamma pins Lean {want} but lake reports: {r.stdout.strip()}")
         return lake
 
-    def check(self, relation, props, proof):
+    def check(self, relation, items, proof):
         try:
-            src = self.render(relation, props, proof)
+            src = self.render(relation, items, proof)
             lake = self._lake()
         except GateError as e:
             return {"ok": False, "reason": str(e)}

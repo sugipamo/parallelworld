@@ -7,8 +7,8 @@ from pw.lean_gate import GateError, LeanGate
 
 class FakeGate(LeanGate):
     """Accepts every proof. Stands in for Lean so kernel semantics can be tested alone."""
-    def check(self, relation, props, proof):
-        self.render(relation, props, proof)
+    def check(self, relation, items, proof):
+        self.render(relation, items, proof)
         return {"ok": True, "axioms": [], "gamma": "fake"}
 
 
@@ -54,8 +54,8 @@ def test_dependent_evidence_is_an_interval_until_independence_is_declared(k):
     h = k.claim("cache never returns stale data")["h"]
     k.observe(h, "property_test", "pass", "run-1")
     e2 = k.observe(h, "property_test", "pass", "run-2")
-    single, both = 0.9 / 1.05, 0.81 / (0.81 + 0.0225)
-    approx(k.infer(h), single, both)      # anywhere between "same evidence twice" and "two pieces"
+    both = 0.81 / (0.81 + 0.0225)
+    approx(k.infer(h), 0.81 / (0.81 + 0.15), 0.9 / (0.9 + 0.0225))   # every positively dependent copula
     k.declare_independent(e2["eid"], "different generator seed and different machine")
     approx(k.infer(h), both, both)
 
@@ -116,8 +116,8 @@ def test_gate_screening_and_axiom_judgement():
     gate = LeanGate()
     for bad in ("sorry", "exact foo\naxiom cheat : False", "simp\n#eval 1", "native_decide"):
         with pytest.raises(GateError):
-            gate.render("holds", ["True"], bad)
-    src = gate.render("iff", ["1 = 1", "2 = 2"], "simp")
+            gate.render("holds", [("Prop", "True")], bad)
+    src = gate.render("iff", [("Prop", "1 = 1"), ("Prop", "2 = 2")], "simp")
     assert "theorem pw_goal : _root_.Iff PWStmt.S0 PWStmt.S1" in src and "#print" not in src
     assert LeanGate.judge(0, "'pw_goal' depends on axioms: [propext, Quot.sound]", "g")["ok"]
     assert LeanGate.judge(0, "'pw_goal' does not depend on any axioms", "g")["axioms"] == []
@@ -140,3 +140,53 @@ def test_identity_is_a_metric_and_section6_is_the_triangle_inequality(k):
     for h, g in ((h1, g1), (h2, g2)):
         assert d(h, g["f"]) <= 1 - k.infer(g["g"])["lo"] + 1e-9
     assert d(h1, h2) <= d(h1, g1["f"]) + d(g2["f"], h2) + 1e-9
+
+
+T = "Nat → Nat"
+
+
+def test_same_specification_and_same_object_are_separate_identities(k):
+    h1, h2 = k.claim("f never decreases its input")["h"], k.claim("g returns at least its argument")["h"]
+    a = k.ground_at(h1, T, "fun f => ∀ n, n ≤ f n", "fun n => n + 1", prior=0.9)
+    b = k.ground_at(h2, T, "fun f => ∀ n, f n ≥ n", "fun n => 1 + n", prior=0.8)
+    alg = lambda: k.state().algebra
+    assert alg().find(a["f"]) != alg().find(b["f"])
+
+    k.prove("pred_iff", [a["p"], b["p"]], "intro f; exact Iff.rfl")      # same specification
+    assert alg().find(a["p"]) == alg().find(b["p"])
+    assert alg().find(a["f"]) != alg().find(b["f"])                      # ...of different objects
+    approx(k.infer(f"{h1} <-> {h2}"), 0.0, 1.0)
+
+    k.prove("obj_eq", [a["o"], b["o"]], "funext n; omega")               # same object
+    assert alg().find(a["f"]) == alg().find(b["f"])                      # congruence: P(a) = P'(a')
+    approx(k.infer(f"{h1} <-> {h2}"), 0.7, 1.0)
+    approx(k.distance(h1, h2), 0.0, 0.3)
+    s = k.status()
+    assert len(s["specifications"]) == 1 and len(s["objects"]) == 1 and len(s["propositions"]) == 1
+
+
+def test_refinement_between_specifications_orders_their_instances(k):
+    h1, h2 = k.claim("f is strictly above its input")["h"], k.claim("f is at least its input")["h"]
+    a = k.ground_at(h1, T, "fun f => ∀ n, n < f n", "fun n => n + 1", prior=0.9)
+    b = k.ground_at(h2, T, "fun f => ∀ n, n ≤ f n", "fun n => n + 1", prior=0.9)
+    k.prove("pred_implies", [a["p"], b["p"]], "intro f h n; exact Nat.le_of_lt (h n)")
+    approx(k.infer(f"{a['f']} -> {b['f']}"), 1.0, 1.0)
+    before = k.infer(h2)["lo"]
+    k.prove("holds", [a["f"]], "intro n; omega")
+    assert k.infer(h2)["lo"] > before          # the stronger instance is a theorem, so the weaker one is true
+    with pytest.raises(KernelError):
+        k.prove("pred_iff", [a["f"], b["f"]], "x")   # wrong kind of id
+
+
+@pytest.mark.parametrize("dependence,lo,hi", [
+    ("independent", 0.81 / 0.8325, 0.81 / 0.8325),
+    ("comonotone", 0.9 / 1.05, 0.9 / 1.05),
+    ("pqd", 0.81 / 0.96, 0.9 / 0.9225),
+    ("frechet", 0.8 / 0.95, 1.0),
+])
+def test_copula_classes(tmp_path, dependence, lo, hi):
+    k = Kernel(str(tmp_path / "e.db"), dependence=dependence)
+    h = k.claim("x")["h"]
+    k.observe(h, "property_test", "pass", "r1")
+    k.observe(h, "property_test", "pass", "r2")
+    approx(k.infer(h), lo, hi)

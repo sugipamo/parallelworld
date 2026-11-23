@@ -32,10 +32,19 @@ def claim(text: str) -> dict:
 
 
 @mcp.tool()
+def ground_at(h: str, type: str, predicate: str, object: str) -> dict:
+    """State that claim `h` says: the object `object : type` satisfies `predicate : type -> Prop`
+    (Lean terms using only Lean core and Gamma). Prefer this whenever a claim is "this code has
+    that property": write the code's behaviour as `object` and the property as `predicate`, e.g.
+    type "Nat → Nat", predicate "fun f => ∀ n, n ≤ f n", object "fun n => n + 1".
+    Returns ids of the connection G, proposition F, specification P and object O."""
+    return _safe(_kernel.ground_at, h, type, predicate, object)
+
+
+@mcp.tool()
 def ground(h: str, lean: str) -> dict:
-    """State that claim `h` means the Lean proposition `lean` (a term of type Prop, using only
-    Lean core and Gamma). This introduces a connection hypothesis G whose correctness stays
-    uncertain. Returns ids of G and F."""
+    """State that claim `h` means the closed Lean proposition `lean`. Use only when the claim
+    has no natural split into an object and a property; otherwise use ground_at."""
     return _safe(_kernel.ground, h, lean)
 
 
@@ -64,11 +73,22 @@ def declare_independent(eid: str, justification: str) -> dict:
 
 
 @mcp.tool()
-def prove(relation: str, fs: list[str], proof: str) -> dict:
-    """Submit Lean tactic text proving a relation between formal propositions:
-    holds [F] | not [F] | iff [F1,F2] | implies [F1,F2] | contradiction [F1,F2].
-    Accepted only if the Lean kernel checks it with approved axioms and no sorry."""
-    return _safe(_kernel.prove, relation, fs, proof)
+def prove(relation: str, args: list[str], proof: str) -> dict:
+    """Submit Lean tactic text proving a relation. The goal is stated for you; write tactics only.
+      holds [F] | not [F] | iff [F1,F2] | implies [F1,F2] | contradiction [F1,F2]
+      pred_iff [P1,P2]      ∀ x, P1 x ↔ P2 x   the two specifications are the same
+      pred_implies [P1,P2]  ∀ x, P1 x → P2 x   P1 refines P2
+      obj_eq [O1,O2]        O1 = O2            the two objects are the same
+    Accepted only if the Lean kernel checks it with approved axioms and no sorry. Note that
+    `iff` between two propositions that are each already proved says nothing; to say two claims
+    are about the same thing, use pred_iff and obj_eq."""
+    return _safe(_kernel.prove, relation, args, proof)
+
+
+@mcp.tool()
+def distance(a: str, b: str) -> dict:
+    """Bounds on the probability that two claims or propositions disagree (0 = identical)."""
+    return _safe(_kernel.distance, a, b)
 
 
 @mcp.tool()
@@ -80,7 +100,8 @@ def infer(query: str) -> dict:
 
 @mcp.tool()
 def status() -> dict:
-    """All claims with current bounds, formal equivalence classes, and accepted proofs."""
+    """All claims with current bounds and what they are connected to; the classes of
+    propositions, specifications and objects Lean has identified; accepted proofs."""
     return _safe(_kernel.status)
 
 
