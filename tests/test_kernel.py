@@ -102,9 +102,11 @@ def test_gate_screening_and_axiom_judgement():
         with pytest.raises(GateError):
             gate.render("holds", ["True"], bad)
     src = gate.render("iff", ["1 = 1", "2 = 2"], "simp")
-    assert "theorem pw_goal : _root_.Iff PWStmt.S0 PWStmt.S1" in src and src.endswith("#print axioms pw_goal\n")
+    assert "theorem pw_goal : _root_.Iff PWStmt.S0 PWStmt.S1" in src and "#print" not in src
     assert LeanGate.judge(0, "'pw_goal' depends on axioms: [propext, Quot.sound]", "g")["ok"]
     assert LeanGate.judge(0, "'pw_goal' does not depend on any axioms", "g")["axioms"] == []
     assert not LeanGate.judge(0, "'pw_goal' depends on axioms: [sorryAx]", "g")["ok"]
     assert not LeanGate.judge(1, "error: unsolved goals", "g")["ok"]
+    forged = "'pw_goal' does not depend on any axioms\n'pw_goal' depends on axioms: [sorryAx]"
+    assert not LeanGate.judge(0, forged, "g")["ok"]
     assert not LeanGate.judge(0, "", "g")["ok"]

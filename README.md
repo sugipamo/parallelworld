@@ -17,4 +17,5 @@ python -m pw.orchestrator tasks.json --dry-run     # 起動コマンドの確認
 python -m pw.orchestrator tasks.json               # claude-opus-5-5 のワーカーを起動（課金あり）
 ```
 
-`prove` には Lean 4（elan / lake）が必要。入っていなければ証明はすべて不受理になる。
+`prove` には `lean/lean-toolchain` と同じ版の Lean 4 が必要。`lake` が PATH にないときは `PW_LAKE` でパスを渡す。
+Lean がない、または版が違うときは、証明はすべて不受理になる（`tests/test_lean_real.py` はスキップされる）。

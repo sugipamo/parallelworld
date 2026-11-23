@@ -1,8 +1,14 @@
 """Lean gate: the only way a deterministic relation enters the kernel.
 
 The gate writes the theorem statement itself from registered proposition
-texts; the caller supplies only tactic text. A proof is accepted iff Lean
-elaborates the file without error and `#print axioms` lists only allowed axioms.
+texts; the caller supplies only tactic text. Checking takes two Lean runs:
+
+  1. compile the module holding the statement and the caller's tactics;
+  2. in a second file containing no caller text, import it and `#print axioms`.
+
+The proof is accepted iff run 1 succeeds and run 2 prints exactly one axiom
+report listing only allowed axioms. Splitting the runs matters: tactics can
+emit arbitrary messages, so a report read from run 1 could be forged.
 
 Gamma (the fixed formal premises) = toolchain + lean/Gamma.lean + axiom allowlist.
 """
@@ -19,9 +25,9 @@ ALLOWED_AXIOMS = frozenset({"propext", "Classical.choice", "Quot.sound"})
 # new command or alter the environment is refused. This is a denylist, i.e. a
 # known weak point: see docs/spec.md "未解決".
 _FORBIDDEN = re.compile(
-    r"#|\b(sorry|admit|axiom|macro|macro_rules|syntax|notation|infix[lr]?|prefix|postfix|elab|"
+    r"#|@\[|declare_|register_|builtin_|\b(sorry|admit|axiom|macro|macro_rules|syntax|notation|infix[lr]?|prefix|postfix|elab|"
     r"elab_rules|import|open|export|set_option|attribute|instance|unsafe|implemented_by|extern|"
-    r"native_decide|initialize|run_cmd|run_tac|namespace|section|end|theorem|lemma|def|abbrev|"
+    r"native_decide|initialize|local|scoped|private|protected|run_cmd|run_tac|namespace|section|end|theorem|lemma|def|abbrev|"
     r"example|structure|inductive|class|universe|variable|deriving|opaque|mutual)\b"
 )
 
@@ -64,14 +70,19 @@ class LeanGate:
         body = "\n".join("  " + line for line in proof.strip().splitlines())
         return (
             "import Gamma\n\nnamespace PWStmt\n" + defs + "\nend PWStmt\n\n"
-            f"theorem pw_goal : {_GOALS[relation]} := by\n  unfold {names}\n{body}\n\n"
-            "#print axioms pw_goal\n"
+            f"theorem pw_goal : {_GOALS[relation]} := by\n  unfold {names}\n{body}\n"
         )
 
     def _lake(self):
-        lake = shutil.which("lake") or os.path.expanduser("~/.elan/bin/lake")
+        """Locate lake and insist its Lean version is the one Gamma pins."""
+        lake = os.environ.get("PW_LAKE") or shutil.which("lake") or os.path.expanduser("~/.elan/bin/lake")
         if not os.path.exists(lake):
             raise GateError("Lean (lake) is not installed; no proof can be accepted")
+        with open(os.path.join(self.lean_dir, "lean-toolchain")) as fh:
+            want = fh.read().strip().rsplit(":v", 1)[-1]
+        r = subprocess.run([lake, "--version"], cwd=self.lean_dir, capture_output=True, text=True)
+        if f"Lean version {want})" not in r.stdout:
+            raise GateError(f"Gamma pins Lean {want} but lake reports: {r.stdout.strip()}")
         return lake
 
     def check(self, relation, props, proof):
@@ -82,29 +93,43 @@ class LeanGate:
             return {"ok": False, "reason": str(e)}
         work = os.path.join(self.lean_dir, "PWCheck")
         os.makedirs(work, exist_ok=True)
-        path = os.path.join(work, hashlib.sha256(src.encode()).hexdigest()[:16] + ".lean")
-        with open(path, "w") as fh:
+        mod = "PWProof_" + hashlib.sha256(src.encode()).hexdigest()[:16]
+        proof_file = os.path.join(work, mod + ".lean")
+        audit_file = os.path.join(work, mod + "_audit.lean")
+        with open(proof_file, "w") as fh:
             fh.write(src)
+        with open(audit_file, "w") as fh:
+            fh.write(f"import {mod}\n#print axioms pw_goal\n")
+
+        def run(*cmd, **kw):
+            return subprocess.run(cmd, cwd=self.lean_dir, capture_output=True, text=True, timeout=self.timeout, **kw)
         try:
-            b = subprocess.run([lake, "build"], cwd=self.lean_dir, capture_output=True, text=True, timeout=self.timeout)
+            b = run(lake, "build")
             if b.returncode != 0:
                 return {"ok": False, "reason": "Gamma failed to build: " + (b.stdout + b.stderr)[-500:]}
-            r = subprocess.run([lake, "env", "lean", path], cwd=self.lean_dir, capture_output=True,
-                               text=True, timeout=self.timeout)
+            lean = os.path.join(os.path.dirname(lake), "lean")
+            path = run(lake, "env", "printenv", "LEAN_PATH").stdout.strip()
+            env = dict(os.environ, LEAN_PATH=f"{path}:{work}")
+            r = run(lean, "-o", os.path.join(work, mod + ".olean"), proof_file, env=env)
+            if r.returncode != 0:
+                return {"ok": False, "reason": (r.stdout + r.stderr)[-1500:]}
+            r = run(lean, audit_file, env=env)
         except subprocess.TimeoutExpired:
             return {"ok": False, "reason": "timeout"}
         return self.judge(r.returncode, r.stdout + r.stderr, self.gamma())
 
     @staticmethod
     def judge(returncode, output, gamma):
-        if returncode != 0 or "error" in output:
+        """Read the audit run. Its whole output must be one axiom report, nothing else."""
+        out = " ".join(output.split())
+        if returncode != 0:
             return {"ok": False, "reason": output[-1500:]}
-        if "'pw_goal' does not depend on any axioms" in output:
+        if out == "'pw_goal' does not depend on any axioms":
             axioms = []
         else:
-            m = re.search(r"'pw_goal' depends on axioms: \[([^\]]*)\]", output)
+            m = re.fullmatch(r"'pw_goal' depends on axioms: \[([^\]]*)\]", out)
             if not m:
-                return {"ok": False, "reason": "could not read axiom report: " + output[-500:]}
+                return {"ok": False, "reason": "unexpected audit output: " + output[-500:]}
             axioms = [a.strip() for a in m.group(1).split(",") if a.strip()]
         bad = sorted(set(axioms) - ALLOWED_AXIOMS)
         if bad:
