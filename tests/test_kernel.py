@@ -414,3 +414,30 @@ def test_a_place_is_read_by_a_description_not_by_code():
                 dict(find=r"(?<=x)(a)"), dict(find=r"(a)\1"), dict(find=r"(?P<n>a)"), dict(find="(a")):
         with pytest.raises(KernelError):
             pattern(**bad)
+
+
+def test_planted_changes_have_known_answers():
+    import random
+    from pw.calibrate import interval, mutants, same
+    rng = random.Random(0)
+    text = "## Model\n\nThe default class is `pqd`; `pqd` is positive dependence. Not `pqdx`.\nAt most 14 atoms, range 0-15, 114 in total.\n"
+    made = mutants(text, "pqd", rng, 3)
+    assert len(made) == 3 and all(k == "value replaced" for k, _, _ in made)
+    for _, changed, planted in made:
+        assert planted != "pqd" and changed.count(f"`{planted}`") == 2 and "`pqdx`" in changed and "`pqd`" not in changed
+    (_, changed, planted), = mutants(text, 14, rng, 1)
+    assert planted != 14 and f"At most {planted} atoms" in changed and "114 in total" in changed and "0-15" in changed
+    assert mutants(text, "frechet", rng, 3) == []                                   # not in the words: cannot be planted
+
+    table = "| `claim(text)` | registers |\n| `prove(r)` | proves |\n| `claim_formal` | other |\n| `status()` | shows |\n"
+    made = mutants(table, ["claim", "prove", "status"], random.Random(1), 3)
+    assert {k for k, _, _ in made} == {"entry renamed", "row removed"}
+    for kind, changed, planted in made:
+        assert len(planted) == (2 if kind == "row removed" else 3) and "claim_formal" in changed
+        for e in planted:
+            assert f"`{e}" in changed                                               # every planted entry is in the changed text
+    assert same(["b", "a"], ["a", "b"]) and not same(["a"], ["a", "b"]) and same(14, 14) and not same("14", 14)
+    lo, hi = interval(30, 30)
+    assert 0.88 < lo < 0.89 and hi == 1.0                                           # thirty out of thirty: at least 0.88
+    lo, hi = interval(0, 30)
+    assert lo == 0.0 and 0.11 < hi < 0.12
