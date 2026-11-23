@@ -22,6 +22,7 @@ from contextlib import contextmanager
 from fractions import Fraction
 
 import numpy as np
+from scipy.stats import beta
 
 from . import formula as fm
 from .credal import COPULAS, CredalSet, exchangeable_agreement, joint_likelihood, stone_space
@@ -275,13 +276,46 @@ def load_rules(cwd):
     return rules
 
 
-def measured_readers(cwd, rules):
-    """The reader models whose latest measurement in this repository meets the rules' bar."""
+# What a blind reader is told. A reader is a model together with these instructions: what was
+# measured about a model under other instructions says nothing about this reader.
+with open(os.path.join(os.path.dirname(__file__), "reader.txt"), encoding="utf-8") as _fh:
+    READER = _fh.read()
+INSTRUCTIONS = _sha(READER)
+
+
+def interval(k, n, level=0.95):
+    """Clopper-Pearson interval for a proportion: what the counts allow, with no prior."""
+    a = (1 - level) / 2
+    return (0.0 if k == 0 else float(beta.ppf(a, k, n - k + 1)), 1.0 if k == n else float(beta.ppf(1 - a, k + 1, n - k)))
+
+
+def reader_measurements(cwd):
+    """Per reader model: every measurement made in this repository under the instructions
+    readers are given now, added up. Not the latest run alone: measuring again until a run
+    comes out well must not help. The rates are computed here from the counts."""
     path = os.path.join(cwd, CALIBRATION)
     if not os.path.exists(path):
-        return set()
+        return {}
     with open(path, encoding="utf-8") as fh:
-        latest = {run["model"]: run for run in json.load(fh)}
+        runs = [r for r in json.load(fh) if r.get("instructions") == INSTRUCTIONS]
+    out = {}
+    for r in runs:
+        m = out.setdefault(r["model"], {"runs": 0, "planted": 0, "read": 0, "stuck": 0, "decoys": 0, "accepted": 0})
+        m["runs"] += 1
+        for key, src, name in (("planted", "planted", "n"), ("read", "planted", "read"), ("stuck", "planted", "stuck"),
+                               ("decoys", "decoys", "n"), ("accepted", "decoys", "accepted")):
+            m[key] += r.get(src, {}).get(name, 0)
+    for m in out.values():
+        if m["planted"]:
+            m["read rate"], m["stuck rate"] = interval(m["read"], m["planted"]), interval(m["stuck"], m["planted"])
+        if m["decoys"]:
+            m["accept rate"] = interval(m["accepted"], m["decoys"])
+    return out
+
+
+def measured_readers(cwd, rules):
+    """The reader models whose measurements in this repository, taken together, meet the rules' bar."""
+    latest = reader_measurements(cwd)
     bar = rules["a blind reader counts if measured"]
     limits = {"read at least": ("read rate", 0, 1), "stuck at most": ("stuck rate", 1, -1),
               "takes another thing for it at most": ("accept rate", 1, -1)}
@@ -367,6 +401,34 @@ def locate(subject, cwd):
     return raw if found is None else found.encode("utf-8")
 
 
+def context(subject, cwd, small=300, lines=8):
+    """What surrounds a place that is too small to tell what it belongs to; None otherwise.
+
+    A JSON key's value alone ("0.85") could be an answer to many questions. Its enclosing object,
+    or the lines around a short definition, show what it is. This is for a reader's orientation
+    only: what the place says still has to be in the place.
+    """
+    path, _, part = subject.partition("::")
+    content = locate(subject, cwd)
+    if not part or content is None or len(content) > small:
+        return None
+    with open(os.path.join(cwd, path), encoding="utf-8") as fh:
+        text = fh.read()
+    try:
+        if path.endswith(".json"):
+            around = json.loads(text)
+            for key in part.split(".")[:-1]:
+                around = around[int(key)] if isinstance(around, list) else around[key]
+            return json.dumps(around, indent=1, ensure_ascii=False)[:2500]
+    except (ValueError, KeyError, IndexError, TypeError):
+        return None
+    at = text.find(content.decode("utf-8"))
+    if at < 0:
+        return None
+    before, after = text[:at].splitlines(keepends=True), text[at + len(content):].splitlines(keepends=True)
+    return ("".join(before[-lines:]) + content.decode("utf-8") + "".join(after[:lines + 1]))[:2500]
+
+
 def _anchored(quote, subject, cwd):
     """Is the quote in the content the subject names, word for word (spacing aside)?"""
     content = locate(subject, cwd)
@@ -409,7 +471,11 @@ class State:
             self.prior[p["h"]] = p["prior"]
             if p.get("fact"):                    # declared, or declared again with other places or readers
                 was = self.facts.get(p["h"], {})
-                self.facts[p["h"]] = dict(p["fact"], readings=was.get("readings", []), declined=was.get("declined", []))
+                fact = dict(p["fact"], readings=was.get("readings", []), declined=was.get("declined", []))
+                if "asked" not in fact:         # recorded before descriptions were tracked: the text is the description, if one was given
+                    given = p["text"] != f'the same {fact["name"]} is stated in {len(fact["places"])} place(s)'
+                    fact["asked"] = _sha("asked", p["text"] if given else "")
+                self.facts[p["h"]] = fact
             if p.get("pred"):
                 self.formal[p["h"]] = {"subject": p["subject"], "pred": p["pred"]["id"]}
                 self.algebra.add_pred(p["pred"]["id"], p["pred"]["type"], p["pred"]["text"])
@@ -422,18 +488,23 @@ class State:
                 self.prior[p["m"]] = p["model_prior"]
                 self.models[p["m"]] = {"subject": p["subject"], "obj": p["obj"]["id"], "binding": p.get("binding"),
                                        "quote": p.get("quote"), "anchor": p.get("anchor", False),
-                                       "by": set(), "blind": set(), "models": set(), "literal": False}
+                                       "by": set(), "blind": set(), "models": set(), "literal": False, "asked": {}}
+            # A reading answers a question: the fact's description as it was when the place was read.
+            # Who read it is kept per question, so that an answer to another question is not counted.
+            asked = p.get("asked") or self.facts[p["h"]]["asked"]
+            for info in (self.models[p["m"]], self.models[p["m"]]["asked"].setdefault(asked, {"by": set(), "blind": set(), "models": set()})):
+                info["by"].add(p.get("actor", "anon"))                 # who read it this way
+                if p.get("blind"):
+                    info["blind"].add(p.get("actor", "anon"))          # ...shown nothing but the place
+                    if p.get("model"):
+                        info["models"].add(p["model"])                 # ...and which model that reader was
             info = self.models[p["m"]]
-            info["by"].add(p.get("actor", "anon"))                 # who read it this way
-            if p.get("blind"):
-                info["blind"].add(p.get("actor", "anon"))          # ...shown nothing but the place
-                if p.get("model"):
-                    info["models"].add(p["model"])                 # ...and which model that reader was
             info["literal"] = info["literal"] or bool(p.get("literal"))
             if (p["place"], p["m"]) not in self.facts[p["h"]]["readings"]:
                 self.facts[p["h"]]["readings"].append((p["place"], p["m"]))
         elif typ == "decline":
-            self.facts[p["h"]]["declined"].append({k: p.get(k) for k in ("place", "subject", "actor", "model", "blind", "why")})
+            self.facts[p["h"]]["declined"].append({**{k: p.get(k) for k in ("place", "subject", "actor", "model", "blind", "why")},
+                                                   "asked": p.get("asked") or self.facts[p["h"]]["asked"]})
         elif typ == "agree":
             if p["f"] not in self.atoms:
                 self.atoms[p["f"]] = {"kind": "F", "text": p["lean"]}
@@ -652,10 +723,12 @@ class Kernel:
             value = _norm(value)
             self._screen(value)
             self._well_typed((typ, value))
-        fact = {"name": name, "type": typ, "places": places, "value": value}
+        # `asked` identifies the question put to whoever reads a place: the description. When it
+        # changes, what was read before answered another question and has to be read again.
+        fact = {"name": name, "type": typ, "places": places, "value": value, "asked": _sha("asked", _norm(gloss))}
         h = "H:" + _sha("fact", name, typ)       # the same fact, however its places come to be listed or read
         with self._tx() as (con, st):
-            declared = {k: v for k, v in st.facts.get(h, {}).items() if k != "readings"}
+            declared = {k: v for k, v in st.facts.get(h, {}).items() if k not in ("readings", "declined")}
             if declared != fact:
                 self._append(con, st, "claim", {
                     "h": h, "text": _norm(gloss) or f"the same {name} is stated in {len(places)} place(s)",
@@ -709,13 +782,14 @@ class Kernel:
             except ValueError:
                 pass
         with self._tx() as (con, st):
-            known = st.models.get(m, {})
+            known = st.models.get(m, {}).get("asked", {}).get(fact["asked"], {})     # as an answer to the question as it is now
             # who read it matters only for a reading someone stated; a computed one is the same whoever runs it
             if ((place, m) not in st.facts[h]["readings"]
                     or (how is None and (self.actor not in known.get("by", ()) or (blind and self.actor not in known.get("blind", ()))
                                          or (blind and model and model not in known.get("models", ()))))):
                 self._append(con, st, "reading", {
                     "h": h, "place": place, "subject": version, "m": m, "obj": ob, "binding": how, "quote": quote,
+                    "asked": fact["asked"],
                     "blind": bool(blind) and how is None, "model": model if blind and how is None else None, "literal": literal,
                     "anchor": quote is not None and "List" not in fact["type"],
                     "model_prior": self.catalog["priors"]["derived" if how else "model"]})
@@ -738,6 +812,7 @@ class Kernel:
             raise KernelError("say what the place is about instead")
         with self._tx() as (con, st):
             self._append(con, st, "decline", {"h": h, "place": place, "subject": subject_id(place, cwd), "why": _norm(why)[:400],
+                                              "asked": st.facts[h]["asked"],
                                               "blind": bool(blind), "model": model if blind else None})
         return {"declined": place}
 
@@ -768,10 +843,21 @@ class Kernel:
         fact = st.facts[h]
         entry = {"h": h, "fact": fact["name"], "text": st.atoms[h]["text"], "places": []}
         guards, unread, reread = [], [], False
+        asked = fact["asked"]
+
+        def view(m):
+            """A reading as an answer to the question as it is now: None if it answered another one."""
+            info = st.models[m]
+            if info["binding"]:
+                return info
+            mine = info["asked"].get(asked)
+            return None if mine is None else {**info, **mine}
+
         for decl in fact["places"]:
             at, now = decl["at"], subject_id(decl["at"], cwd)
             rejected = {e["target"] for e in st.evidence.values() if e["kind"] == "sign_off" and e["outcome"] == "rejected"}
-            seen = [m for p, m in fact["readings"] if p == at and m not in rejected]
+            ever = [m for p, m in fact["readings"] if p == at and m not in rejected]
+            seen = [m for m in ever if view(m)]
             have = [m for m in seen if st.models[m]["subject"] == now
                     or (st.models[m].get("anchor") and _anchored(st.models[m]["quote"], at, cwd))]
             said = {st.models[m]["obj"]: m for m in have if not st.models[m]["binding"]}
@@ -788,8 +874,10 @@ class Kernel:
                     unread.append({"at": at, "why": str(e)})
                     continue
             elif not have:
-                no = [d for d in fact["declined"] if d["place"] == at and d["subject"] == now]
-                unread.append({"at": at, "why": "it changed since it was read" if seen else "nobody has read it yet",
+                no = [d for d in fact["declined"] if d["place"] == at and d["subject"] == now and d["asked"] == asked]
+                unread.append({"at": at, "why": "it changed since it was read" if seen else
+                               "the fact's description changed since it was read: what was read answered another question" if ever else
+                               "nobody has read it yet",
                                **({"declined": no} if no else {})})
                 continue
             guards.append(have[-1])
@@ -806,7 +894,8 @@ class Kernel:
         st = self.state()
         rules = load_rules(cwd)
         measured = measured_readers(cwd, rules)
-        confirmed = {e["target"] for e in st.evidence.values() if e["kind"] == "sign_off" and e["outcome"] == "confirmed"}
+        confirmed = {e["target"] for e in st.evidence.values() if e["kind"] == "sign_off" and e["outcome"] == "confirmed"
+                     and e.get("asked") in (None, asked)}
         def value(obj):
             text = st.algebra.objs[obj]["text"]
             try:
@@ -815,11 +904,11 @@ class Kernel:
                 return text
 
         for p in entry["places"]:
-            info = st.models[p["m"]]
-            others = [st.models[q["m"]] for q in entry["places"] if q is not p and st.models[q["m"]]["obj"] == info["obj"]]
+            info = view(p["m"])
+            others = [view(q["m"]) for q in entry["places"] if q is not p and st.models[q["m"]]["obj"] == info["obj"]]
             readers = info["models"] & measured
             # a computed place: was the pattern ever checked against a reader who saw only the place?
-            mine = [st.models[m] for at, m in fact["readings"] if at == p["at"]]
+            mine = [v for at, m in fact["readings"] if at == p["at"] for v in [view(m)] if v]
             stated = [s for s in mine if not s["binding"] and s["models"] & measured]
             same_blind = bool(info["binding"]) and any(
                 s["subject"] == c["subject"] and value(s["obj"]) == value(c["obj"])
@@ -846,7 +935,7 @@ class Kernel:
                 p["has"] = {"read the same blind": same_blind}
                 p["unmeasured readers"] = sorted({r for s in mine if not s["binding"] for r in s["models"]} - measured)
                 p["read blind as"] = sorted({st.algebra.objs[s["obj"]]["text"] for s in stated if s["subject"] == now} - {p["reads as"]})
-                p["declined"] = [d for d in fact["declined"] if d["place"] == p["at"] and d["subject"] == now]
+                p["declined"] = [d for d in fact["declined"] if d["place"] == p["at"] and d["subject"] == now and d["asked"] == asked]
         return entry
 
     def sync_facts(self, path):
@@ -882,8 +971,16 @@ class Kernel:
         return keep
 
     def sign_off(self, m, who, confirmed=True):
-        """A person has compared a stated reading (a model or a connection) with the thing itself."""
-        return self.observe(m, "sign_off", "confirmed" if confirmed else "rejected", f"person:{who}")
+        """A person has compared a stated reading (a model or a connection) with the thing itself.
+
+        For a reading of a fact's place the person answered the fact's question as it was then;
+        the confirmation does not carry over to another description."""
+        asked = next((f["asked"] for f in self.state().facts.values() if any(x == m for _, x in f["readings"])), None)
+        if asked is None:
+            return self.observe(m, "sign_off", "confirmed" if confirmed else "rejected", f"person:{who}")
+        spec = self.catalog["evidence"]["sign_off"]["outcomes"]
+        outcome = "confirmed" if confirmed else "rejected"
+        return self._record(m, "sign_off", outcome, f"person:{who}/{asked}", {"likelihood": spec[outcome], "asked": asked})
 
     def reject_object(self, p, obj, proof):
         """Show a specification is not vacuous: Lean verifies that `obj` does NOT satisfy predicate `p`."""

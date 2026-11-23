@@ -561,13 +561,16 @@ def test_a_fact_keeps_its_readings_when_its_declaration_changes(tmp_path):
     assert [p for p in r[0]["places"] if p["at"] == "doc.md::Limits"][0]["m"] == m and all(p["stands"] for p in r[0]["places"])
 
 
-def _measure(cwd, **readers):
-    """Write what pw.calibrate would: for each model, how many of 27 planted changes it read."""
+def _measure(cwd, keep=False, instructions=None, **readers):
+    """Write what pw.calibrate would: for each model, how many of 27 planted changes it read
+    (and, of 27 decoys, how many it declined). With keep, the runs are added to those there."""
     import json
-    from pw.calibrate import interval
-    runs = [{"model": m, "read rate": list(interval(k, 27)), "stuck rate": list(interval(27 - k, 27)),
-             "accept rate": list(interval(27 - k, 27))} for m, k in readers.items()]
-    with open(os.path.join(cwd, "pw-calibration.json"), "w") as fh:
+    from pw.kernel import INSTRUCTIONS
+    path = os.path.join(cwd, "pw-calibration.json")
+    runs = json.load(open(path)) if keep and os.path.exists(path) else []
+    runs += [{"model": m, "instructions": instructions or INSTRUCTIONS, "planted": {"n": 27, "read": k, "stuck": 27 - k},
+              "decoys": {"n": 27, "accepted": 27 - k}} for m, k in readers.items()]
+    with open(path, "w") as fh:
         json.dump(runs, fh)
 
 
@@ -619,8 +622,20 @@ def test_a_reading_stands_by_the_rules_not_by_a_number(tmp_path):
     with open(os.path.join(cwd, "pw-calibration.json")) as fh:
         runs = json.load(fh)
     with open(os.path.join(cwd, "pw-calibration.json"), "w") as fh:
-        json.dump([{k: v for k, v in r.items() if k != "accept rate"} for r in runs], fh)
+        json.dump([{k: v for k, v in r.items() if k != "decoys"} for r in runs], fh)
     assert not place(h, "k.py::LIMIT")["stands"]                                      # never tried on places about something else
+    _measure(cwd, opus=27)
+    assert place(h, "k.py::LIMIT")["stands"]
+
+    # measuring again until a run comes out well does not help: the runs are added up
+    _measure(cwd, opus=20)
+    _measure(cwd, keep=True, opus=27)
+    assert not place(h, "k.py::LIMIT")["stands"]                                      # 47 of 54 is still not enough
+    _measure(cwd, keep=True, opus=27); _measure(cwd, keep=True, opus=27); _measure(cwd, keep=True, opus=27)
+    assert place(h, "k.py::LIMIT")["stands"]                                          # 128 of 135: only more trials outweigh it
+    # and what was measured under other instructions says nothing about the readers as they are instructed now
+    _measure(cwd, instructions="another text", opus=27)
+    assert not place(h, "k.py::LIMIT")["stands"]
     _measure(cwd, opus=27)
 
     # no computed place: one model is not enough, two are
@@ -661,3 +676,75 @@ def test_readers_who_disagree_stop_the_fact(tmp_path):
     assert d["state"] == "disputed" and "reader-a" in d["unread"][0]["why"] and "reader-b" in d["unread"][0]["why"], d
     a.sign_off(wrong, "reviewer", confirmed=False)                                    # a person settles it
     assert a.recheck(cwd)["decisions"][0]["state"] == "current"
+
+
+def test_a_reading_answers_the_question_as_it_was_asked(tmp_path):
+    """When a fact's description changes, what was read before answered another question."""
+    import json
+    from pw.kernel import pattern
+    log = str(tmp_path / "pw-log.jsonl")
+    (tmp_path / "doc.md").write_text("## Versions\n\nWe use Lean v4.9.0.\n")
+    (tmp_path / "pin.txt").write_text("lean4:v4.9.0\n")
+    cwd = str(tmp_path)
+    _measure(cwd, opus=27)
+    a = Kernel(log, gate=LeanGate(), actor="reader-a")
+    places = ["doc.md::Versions", {"at": "pin.txt", "reader": pattern(find=r":v([0-9.]+)")}]
+    declare = lambda gloss: a.claim_fact("Lean version", "String", places, gloss=gloss)["h"]
+    fact = lambda: a.recheck(cwd)["decisions"][0]
+    h = declare("the Lean version")
+    lines = len(a.events())
+    assert declare("the Lean version") == h and len(a.events()) == lines              # declaring it again records nothing
+    assert a.recheck(cwd) and len(a.events()) == lines + 1                            # (the computed reading, once)
+    a.recheck(cwd)
+    assert len(a.events()) == lines + 1                                               # checking again records nothing either
+
+    quote = dict(cwd=cwd, quote="We use Lean v4.9.0.")
+    a.read_place(h, "doc.md::Versions", '"v4.9.0"', blind=True, model="opus", **quote)   # with the v: the description did not say
+    a.decline(h, "pin.txt", "a toolchain line, not a version", cwd, blind=True, model="opus")
+    r = fact()
+    assert r["state"] == "violated" and r["places"][1]["declined"][0]["why"].startswith("a toolchain line")
+
+    assert declare("the Lean version, as a bare number without a leading v") == h        # the same fact, asked more precisely
+    r = fact()
+    assert r["state"] == "stale" and "description changed" in r["unread"][0]["why"], r   # the old answer is to another question
+    assert r["places"][0]["declined"] == []                                              # and so is the old refusal
+    m = a.read_place(h, "doc.md::Versions", '"4.9.0"', blind=True, model="opus", **quote)["m"]
+    a.read_place(h, "pin.txt", '"4.9.0"', blind=True, model="opus", cwd=cwd, quote="lean4:v4.9.0")
+    r = fact()
+    assert r["state"] in ("current", "re-established") and all(p["stands"] for p in r["places"]), r
+
+    # a person's confirmation is an answer to the question as it was then, too
+    (tmp_path / "pw-rules.json").write_text(json.dumps({"a blind reader counts if measured": {},
+                                                        "a reading stands if any of": [["computed"], ["confirmed by a person"]]}))
+    assert not fact()["places"][0]["stands"]
+    a.sign_off(m, "reviewer")
+    assert fact()["places"][0]["why"] == "confirmed by a person"
+    declare("the version of Lean, as a bare number without a leading v")
+    a.read_place(h, "doc.md::Versions", '"4.9.0"', **quote)                              # the same value, read again: the same reading
+    assert not fact()["places"][0]["stands"]                                             # but nobody confirmed it for this question
+    a.sign_off(m, "reviewer")
+    assert fact()["places"][0]["stands"]
+
+    # a record written before descriptions were tracked: the description in force then is the one that counts
+    old = str(tmp_path / "old.jsonl")
+    with open(log) as src, open(old, "w") as dst:
+        for line in src:
+            e = json.loads(line)
+            e.pop("asked", None)
+            e.get("fact", {}).pop("asked", None)
+            dst.write(json.dumps(e, ensure_ascii=False) + "\n")
+    b = Kernel(old, gate=LeanGate(), actor="reader-b")
+    assert [p["stands"] for p in b.recheck(cwd)["decisions"][0]["places"]] == [True, True]
+
+
+def test_a_small_place_is_shown_with_what_surrounds_it(tmp_path):
+    from pw.kernel import context
+    (tmp_path / "rules.json").write_text('{"note": "readers", "bar": {"read at least": 0.85, "stuck at most": 0.15}, "rows": [["a"]]}')
+    (tmp_path / "app.py").write_text("# how many atoms a component may have\nLIMIT = 14\n\ndef f():\n    return LIMIT\n")
+    (tmp_path / "doc.md").write_text("# Doc\n\n## Limits\n\n" + "A long section. " * 30 + "\n")
+    cwd = str(tmp_path)
+    around = context("rules.json::bar.read at least", cwd)
+    assert '"read at least": 0.85' in around and '"stuck at most": 0.15' in around and "note" not in around   # the enclosing object
+    assert "how many atoms" in context("app.py::LIMIT", cwd) and "def f" in context("app.py::LIMIT", cwd)    # the lines around it
+    assert context("doc.md::Limits", cwd) is None and context("app.py", cwd) is None                         # big enough, or whole
+    assert context("missing.json::a", cwd) is None

@@ -30,25 +30,11 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 
 from .check import FACTS, show
-from .kernel import LOG, Kernel, _sha, locate
+from .kernel import LOG, READER, Kernel, _sha, context, locate
 from .lean_gate import LEAN_DIR, LeanGate
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-BLIND = """Below are passages from a project's files. For each one, state what it says about the thing asked,
-as a Lean term of the given type, by calling `read_place(h, place, object, quote)`:
-
-  object  the value the passage states, e.g. "\\"pqd\\"", "14", "[\\"a\\", \\"b\\"]"
-  quote   the sentence, table row or line of code of the passage that says it, copied word for word
-          (for a list spread over several rows, any one of them)
-
-You can see nothing but these passages, on purpose. Report what each passage itself says. A
-passage may be about something else, or mention the thing without saying what its value is:
-then do not guess, and call `not_stated(h, place, why)` instead, saying what the passage is
-about. A value that only looks like an answer is not one: a version of one thing is not the
-version of another. Call exactly one of the two tools for every passage, then reply with one
-line per passage.
-"""
 
 DECISIONS = """Some files changed, and the decisions below were tied to them only by an agent's reading of the
 earlier version. Read each file as it is now and state it again. Do not change any file.
@@ -76,15 +62,18 @@ def blind_read(repo, lean_dir, model, actor, items, budget, db=None):
         json.dump({"mcpServers": {"pw": {"command": sys.executable, "args": ["-m", "pw.mcp_server"], "env": {
             "PW_DB": db or os.path.join(repo, LOG), "PW_AGENT": actor, "PW_WORKDIR": repo, "PW_LEAN_DIR": lean_dir,
             "PW_BLIND": "1", "PW_MODEL": model, "PYTHONPATH": ROOT}}}}, fh)
-    prompt = BLIND
-    for h, place, typ, what in items:
+    prompt = READER
+    for h, place, typ, what, around in items:
         text = locate(place, repo).decode("utf-8", "replace")
-        prompt += f"\n=== h: {h}   place: {place}\nAsked: {what} (type {typ})\nPassage:\n<<<\n{text}\n>>>\n"
+        prompt += f"\n=== h: {h}   place: {place}\nAsked: {what} (type {typ})\n"
+        if around:
+            prompt += f"What surrounds the passage in its file (not the passage; do not read the value from here):\n<<<\n{around}\n>>>\n"
+        prompt += f"Passage:\n<<<\n{text}\n>>>\n"
     r = subprocess.run(["claude", "-p", prompt, "--model", model, "--tools", "", "--mcp-config", cfg, "--strict-mcp-config",
                         "--allowedTools", "mcp__pw__read_place,mcp__pw__not_stated", "--output-format", "json",
                         "--max-budget-usd", str(budget)],
                        cwd=work, capture_output=True, text=True)
-    run = {"actor": actor, "model": model, "places": [p for _, p, _, _ in items]}
+    run = {"actor": actor, "model": model, "places": [item[1] for item in items]}
     try:
         out = json.loads(r.stdout)
     except ValueError:
@@ -105,8 +94,12 @@ def read_blind(kernel, repo, args, wanted, model, label):
     st = kernel.state()
     batches = {}
     for d, at in wanted:
-        n = sum(1 for b in batches.values() if any(h == d["h"] for h, _, _, _ in b))
-        batches.setdefault(n, []).append((d["h"], at, st.facts[d["h"]]["type"], f'{d["fact"]}: {d["text"]}'))
+        n = sum(1 for b in batches.values() if any(item[0] == d["h"] for item in b))
+        # a place too small to tell what it belongs to is shown with what surrounds it, unless
+        # another place of the same fact is in that file: the reader must not see two places of one fact
+        alone = all(p["at"] == at or p["at"].partition("::")[0] != at.partition("::")[0] for p in st.facts[d["h"]]["places"])
+        batches.setdefault(n, []).append((d["h"], at, st.facts[d["h"]]["type"], f'{d["fact"]}: {d["text"]}',
+                                          context(at, repo) if alone else None))
     tag = _sha(model, label, *[at for _, at in wanted])[:6]
     print(f"{len(wanted)} place(s) to read {label}, blind, by {model} in {len(batches)} session(s)", flush=True)
     with ThreadPoolExecutor(4) as pool:
@@ -115,7 +108,7 @@ def read_blind(kernel, repo, args, wanted, model, label):
     for r, (_, batch) in zip(runs, sorted(batches.items())):
         print(f"   {r['actor']}: " + (r.get("error") or f"{r['turns']} turns, ${r['cost_usd']}"), flush=True)
         done = answered(kernel, r["actor"])
-        r["no answer"] = [at for h, at, _, _ in batch if (h, at) not in done]
+        r["no answer"] = [item[1] for item in batch if (item[0], item[1]) not in done]
         for at in r["no answer"]:                         # silence is not a finding about the place
             print(f"   {r['actor']}: NO ANSWER for {at}: neither read nor declined; the session failed for this place", flush=True)
     return runs
@@ -130,9 +123,6 @@ def main():
     ap.add_argument("--second-model", default="claude-sonnet-5-5",
                     help='a different model for a second, blind reading where the first stands alone; "" for none')
     ap.add_argument("--budget", type=float, default=3.0)
-    ap.add_argument("--again", action="store_true",
-                    help="ask about places that do not stand even where a reader already answered "
-                         "(after making a fact's description more precise: the earlier answers were to another question)")
     args = ap.parse_args()
     repo = os.path.abspath(args.repo)
     kernel = Kernel(os.path.join(repo, LOG), gate=LeanGate(args.lean_dir), actor="maintain")
@@ -147,11 +137,11 @@ def main():
         """Computed places no blind reader has looked at: is the pattern reading the thing asked?"""
         return [(d, p["at"]) for d in report["decisions"] if "fact" in d for p in d["places"]
                 if p["by"] == "reader" and not p["stands"]
-                and (args.again or not (p["read blind as"] or any(x["model"] == args.model for x in p["declined"])))]
+                and not (p["read blind as"] or any(x["model"] == args.model for x in p["declined"]))]
 
     decisions = [d for d in report["decisions"] if d["state"] in ("stale", "unsupported") and "subject" in d]
     unread = [(d, u["at"]) for d in report["decisions"] if "fact" in d for u in d.get("unread", [])
-              if needs_agent(d, u) and (args.again or not any(x["model"] == args.model for x in u.get("declined", [])))]
+              if needs_agent(d, u) and not any(x["model"] == args.model for x in u.get("declined", []))]
     if decisions or unread or unchecked(report):
         dirty = subprocess.run(["git", "status", "--porcelain", "--", ".", f":(exclude){LOG}"], cwd=repo, capture_output=True, text=True).stdout.strip()
         if dirty:

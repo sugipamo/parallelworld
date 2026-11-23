@@ -26,7 +26,10 @@ A trial the reader neither read nor declined is "no answer". It says the session
 what the reader would have done, and is left out of every rate.
 
 Nothing is written to the project's record: every trial runs against a scratch copy. The
-counts are appended to pw-calibration.json.
+counts are appended to pw-calibration.json, with the identity of the instructions the reader was
+given. Whether a reader counts is decided from all runs under the current instructions added up
+(kernel.reader_measurements), so measuring again until one run comes out well does not help;
+when the instructions change, the earlier runs no longer speak for the reader.
 
 What this does not show: that planted changes resemble the ways real documents drift, or that
 these decoys resemble the places a search wrongly proposes.
@@ -42,10 +45,8 @@ import sys
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 
-from scipy.stats import beta
-
 from .check import FACTS
-from .kernel import LOG, Kernel, locate
+from .kernel import INSTRUCTIONS, LOG, Kernel, context, interval, locate, reader_measurements
 from .lean_gate import LEAN_DIR, LeanGate
 from .maintain import blind_read
 
@@ -112,12 +113,6 @@ def same(a, b):
     return sorted(a) == sorted(b) if isinstance(a, list) and isinstance(b, list) else a == b
 
 
-def interval(k, n, level=0.95):
-    """Clopper-Pearson interval for a proportion: what the counts allow, with no prior."""
-    a = (1 - level) / 2
-    return (0.0 if k == 0 else float(beta.ppf(a, k, n - k + 1)), 1.0 if k == n else float(beta.ppf(1 - a, k + 1, n - k)))
-
-
 def decoys(facts, st, repo, rng, n):
     """Up to n (place of one fact, question of another) pairs whose right answer is to decline."""
     def overlap(a, b):
@@ -137,7 +132,8 @@ def decoys(facts, st, repo, rng, n):
                     continue                                   # the place may well state it: not a decoy
                 found.setdefault(b["fact"], []).append({
                     "fact": b["fact"], "asked": f'{b["fact"]}: {b["text"]}', "type": st.facts[b["h"]]["type"], "place": p["at"],
-                    "kind": "decoy", "text": text, "planted": None, "before": None, "about": a["fact"]})
+                    "kind": "decoy", "text": text, "planted": None, "before": None, "about": a["fact"],
+                    "around": context(p["at"], repo)})         # shown as a real reader would be shown it
     for pairs in found.values():
         rng.shuffle(pairs)
     out, used = [], {}
@@ -182,7 +178,7 @@ def run_session(args, number, batch):
         with open(os.path.join(work, name), "w", encoding="utf-8") as fh:
             fh.write(t["text"])
         t["h"] = kernel.claim_fact(f"trial {i}", t["type"], [name], gloss=t["asked"])["h"]
-        items.append((t["h"], name, t["type"], t["asked"]))
+        items.append((t["h"], name, t["type"], t["asked"], t.pop("around", None)))
     run = blind_read(work, args.lean_dir, args.model, f"calibrate-{number}", items, args.budget)
     st = kernel.state()
     for t in batch:
@@ -248,7 +244,7 @@ def main():
     baits = [t for t in answered if t["kind"] == "decoy"]
     count = lambda ts, o: sum(t["outcome"] == o for t in ts)
     outcomes = ("read", "stuck", "other", "declined", "accepted")
-    summary = {"model": args.model, "date": datetime.date.today().isoformat(), "seed": args.seed,
+    summary = {"model": args.model, "instructions": INSTRUCTIONS, "date": datetime.date.today().isoformat(), "seed": args.seed,
                "cost_usd": round(sum(c for c, _ in ran), 2), "no answer": len(silent),
                "planted": {"n": len(planted), **{o: count(planted, o) for o in ("read", "stuck", "other", "declined")}},
                "unchanged": {"n": len(controls), "read": count(controls, "read")},
@@ -284,6 +280,12 @@ def main():
     runs.append({**summary, "trials": todo})
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(runs, fh, ensure_ascii=False, indent=1)
+
+    # what counts is every run under these instructions together, not this one
+    m = reader_measurements(repo)[args.model]
+    print(f"\nall {m['runs']} run(s) of {args.model} under the instructions readers are given now, added up:")
+    print(f"   planted changes read {m['read']}/{m['planted']}, stuck {m['stuck']}/{m['planted']}, decoys read {m['accepted']}/{m['decoys']}")
+    print("   95% bounds: " + ", ".join(f"{k} {[round(x, 3) for x in m[k]]}" for k in ("read rate", "stuck rate", "accept rate") if k in m))
 
 
 if __name__ == "__main__":

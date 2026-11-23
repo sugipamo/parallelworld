@@ -28,7 +28,7 @@
   "at": "experiments/selfcheck/lean/lakefile.toml",
   "kept": false,
   "answered": true,
-  "why": "a blind reader says the place does not state this: The lakefile pins the mathlib dependency to rev v4.14.0, which is a mathlib revision, not a statement of the Lean toolchain version.",
+  "why": "a blind reader says the place does not state this: The lakefile pins the mathlib dependency to rev v4.14.0, which is a Mathlib revision, not a statement of the Lean toolchain version.",
   "by hand": false
  },
  {
@@ -36,7 +36,7 @@
   "at": "experiments/selfcheck/lean/lake-manifest.json::packages.0.inputRev",
   "kept": false,
   "answered": true,
-  "why": "a blind reader reads \"v4.14.0\" off it, but the pattern computes \"4.14.0\": the pattern is not reading what the place says",
+  "why": "a blind reader says the place does not state this: The passage is the mathlib package's requested revision (v4.14.0), which is a mathlib version, not the Lean version Gamma is pinned to.",
   "by hand": false
  },
  {
@@ -44,7 +44,7 @@
   "at": "docs/symbols.md::2. 形式層 ― リンデンバウム代数（一致）",
   "kept": false,
   "answered": true,
-  "why": "a blind reader says the place does not state this: The passage only mentions that Classical.choice is allowed (making the algebra Boolean). It does not list the full set of axioms an accepted proof may depend on.",
+  "why": "a blind reader says the place does not state this: The passage describes the Lindenbaum algebra and says Classical.choice is allowed, but it does not list the full set of axioms an accepted proof may depend on.",
   "by hand": false
  },
  {

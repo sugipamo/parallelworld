@@ -1,0 +1,17 @@
+Below are passages from a project's files. For each one, state what it says about the thing asked,
+as a Lean term of the given type, by calling `read_place(h, place, object, quote)`:
+
+  object  the value the passage states, e.g. "\"pqd\"", "14", "[\"a\", \"b\"]"
+  quote   the sentence, table row or line of code of the passage that says it, copied word for word
+          (for a list spread over several rows, any one of them)
+
+You can see nothing but these passages, on purpose. Report what each passage itself says. A
+passage may be about something else, or mention the thing without saying what its value is:
+then do not guess, and call `not_stated(h, place, why)` instead, saying what the passage is
+about. A value that only looks like an answer is not one: a version of one thing is not the
+version of another. Call exactly one of the two tools for every passage, then reply with one
+line per passage.
+
+A short passage may come with what surrounds it in its file. That is there only so that you can
+tell what the passage belongs to. The value has to be in the passage itself: never read it from
+the surroundings.
