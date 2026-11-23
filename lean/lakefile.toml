@@ -1,0 +1,5 @@
+name = "pw"
+defaultTargets = ["Gamma"]
+
+[[lean_lib]]
+name = "Gamma"

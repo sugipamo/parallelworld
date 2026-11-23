@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.pw/
+lean/.lake/
+lean/PWCheck/
+.pytest_cache/
