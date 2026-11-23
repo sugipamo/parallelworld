@@ -11,7 +11,7 @@ changes, the new reading has to be confirmed again.
 import argparse
 import os
 
-from .kernel import Kernel, locate
+from .kernel import LOG, Kernel, locate
 from .lean_gate import LEAN_DIR, LeanGate
 
 
@@ -34,7 +34,7 @@ def main():
     ap.add_argument("readings", nargs="*")
     args = ap.parse_args()
     repo = os.path.abspath(args.repo)
-    kernel = Kernel(os.path.join(repo, ".pw", "events.db"), gate=LeanGate(args.lean_dir), actor=args.who or "person")
+    kernel = Kernel(os.path.join(repo, LOG), gate=LeanGate(args.lean_dir), actor=args.who or "person")
     if args.readings:
         if not args.who:
             ap.error("say who is confirming: --who NAME")

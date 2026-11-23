@@ -1,0 +1,2 @@
+# the record is only ever appended to: when two branches both added lines, keep both
+pw-log.jsonl merge=union

@@ -19,7 +19,7 @@ import subprocess
 import sys
 
 from .check import FACTS, show
-from .kernel import Kernel, _sha
+from .kernel import LOG, Kernel, _sha
 from .lean_gate import LEAN_DIR, LeanGate
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -52,7 +52,7 @@ def main():
     ap.add_argument("--budget", type=float, default=3.0)
     args = ap.parse_args()
     repo = os.path.abspath(args.repo)
-    kernel = Kernel(os.path.join(repo, ".pw", "events.db"), gate=LeanGate(args.lean_dir), actor="maintain")
+    kernel = Kernel(os.path.join(repo, LOG), gate=LeanGate(args.lean_dir), actor="maintain")
 
     if os.path.exists(os.path.join(repo, FACTS)):
         kernel.sync_facts(os.path.join(repo, FACTS))
@@ -63,7 +63,7 @@ def main():
     st = kernel.state()
     places = [(d, at) for d, at in places if not next(p for p in st.facts[d["h"]]["places"] if p["at"] == at)["reader"]]
     if decisions or places:
-        dirty = subprocess.run(["git", "status", "--porcelain"], cwd=repo, capture_output=True, text=True).stdout.strip()
+        dirty = subprocess.run(["git", "status", "--porcelain", "--", ".", f":(exclude){LOG}"], cwd=repo, capture_output=True, text=True).stdout.strip()
         if dirty:
             show(report, args.threshold)
             sys.exit("\nCommit the changes first: an agent reads the files as they are committed.")

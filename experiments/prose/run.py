@@ -17,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, ROOT)
-from pw.kernel import Kernel, KernelError, reader  # noqa: E402
+from pw.kernel import LOG, Kernel, KernelError, reader  # noqa: E402
 from pw.lean_gate import LEAN_DIR, LeanGate  # noqa: E402
 
 AUTHORS = ["r1", "r2", "r3"]
@@ -84,7 +84,7 @@ def doc_claims():
 
 def readings(repo):
     """What each document decision was read as, and what was then proved."""
-    k = Kernel(os.path.join(repo, ".pw", "events.db"))
+    k = Kernel(os.path.join(repo, LOG))
     st = k.state()
     out = {}
     for name, (typ, pred, doc, *_rest) in FACTS.items():
@@ -132,7 +132,7 @@ def check(repo, module="pw.check"):
 
 def maintain(out):
     repo = os.path.join(out, AUTHORS[0])
-    k = Kernel(os.path.join(repo, ".pw", "events.db"), gate=LeanGate(LEAN_DIR), actor="person")
+    k = Kernel(os.path.join(repo, LOG), gate=LeanGate(LEAN_DIR), actor="person")
     result = {}
 
     def step(name, value):

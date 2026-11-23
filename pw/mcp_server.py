@@ -1,6 +1,6 @@
 """MCP server exposing the kernel to Claude Code workers (stdio).
 
-Env: PW_DB (event log path), PW_AGENT (actor name), PW_WORKDIR (where checks run),
+Env: PW_DB (path of the record, pw-log.jsonl), PW_AGENT (actor name), PW_WORKDIR (where checks run),
 PW_LEAN_DIR (the Lean project holding Gamma; defaults to this repository's lean/).
 Workers never supply probabilities: priors and likelihoods come from the catalog.
 """
@@ -15,7 +15,7 @@ from .kernel import Kernel, KernelError, binding, subject_id
 from .lean_gate import LEAN_DIR, GateError, LeanGate
 
 mcp = FastMCP("pw")
-_kernel = Kernel(os.environ.get("PW_DB", ".pw/events.db"), gate=LeanGate(os.environ.get("PW_LEAN_DIR", LEAN_DIR)))
+_kernel = Kernel(os.environ.get("PW_DB", "pw-log.jsonl"), gate=LeanGate(os.environ.get("PW_LEAN_DIR", LEAN_DIR)))
 
 
 def _safe(fn, *a, **kw):

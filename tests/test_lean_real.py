@@ -490,3 +490,47 @@ def test_a_list_is_read_off_the_whole_place(tmp_path):
     (tmp_path / "doc.md").write_text("## Tools\n\n| `a` | first |\n| `b` | second |\n| `c` | third |\n")
     r = k.recheck(cwd)["decisions"][0]
     assert r["state"] == "stale" and r["unread"][0]["why"] == "it changed since it was read", r
+
+
+def test_the_record_is_text_in_the_repository_and_is_not_believed_where_it_can_be_checked(tmp_path):
+    import json
+    from pw.kernel import reader
+    log = tmp_path / "pw-log.jsonl"
+    (tmp_path / "k.py").write_text('LIMIT = 14\n')
+    (tmp_path / "doc.md").write_text("## Limits\n\nAt most 14 atoms.\n")
+    cwd = str(tmp_path)
+    places = ["doc.md::Limits", {"at": "k.py::LIMIT", "reader": reader('re.search(r"= (\\d+)", part).group(1)', "text")}]
+    k = Kernel(str(log), gate=LeanGate(), actor="agent")
+    h = k.claim_fact("limit", "Nat", places)["h"]
+    k.read_place(h, "doc.md::Limits", "14", cwd=cwd, quote="At most 14 atoms.")
+    assert k.recheck(cwd)["decisions"][0]["state"] == "current" and k.verify() == []
+    lines = log.read_text().splitlines()
+    assert all(json.loads(l)["actor"] == "agent" and "ts" in json.loads(l) for l in lines)
+
+    # someone else, somewhere else, with only the files and the record: the same answer
+    other = Kernel(str(log), gate=LeanGate(), actor="ci")
+    assert other.recheck(cwd)["decisions"][0]["state"] == "current"
+
+    # two branches appended; merged by keeping both, some lines twice
+    log.write_text("\n".join(lines + lines[-2:]) + "\n")
+    assert Kernel(str(log), gate=LeanGate()).recheck(cwd)["decisions"][0]["state"] == "current"
+
+    # a line claiming the reader read something else is ignored: the reader is run again
+    forged = dict(json.loads(next(l for l in lines if '"binding": {' in l and '"type": "reading"' in l)))
+    forged["obj"] = {"id": "O:forged", "type": "Nat", "text": "15"}
+    forged["m"] = "M:forged"
+    log.write_text("\n".join(lines + [json.dumps(forged)]) + "\n")
+    r = Kernel(str(log), gate=LeanGate()).recheck(cwd)["decisions"][0]
+    assert r["state"] == "current" and [p["reads as"] for p in r["places"]] == ["14", "14"], r
+
+    # a line claiming a proof Lean never accepted is found out
+    st = k.state()
+    f = next(f for gs, hh, f in st.links if hh == h)
+    fake = {"ts": 0, "actor": "x", "type": "proof", "relation": "not", "args": [f], "proof": "decide", "proof_sha": "x", "axioms": [], "gamma": "x"}
+    log.write_text("\n".join(lines + [json.dumps(fake)]) + "\n")
+    refused = Kernel(str(log), gate=LeanGate()).verify()
+    assert [r["relation"] for r in refused] == ["not"], refused
+
+    log.write_text("\n".join(lines) + "\nnot json\n")
+    with pytest.raises(KernelError):
+        Kernel(str(log), gate=LeanGate()).state()

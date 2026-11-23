@@ -15,6 +15,7 @@
 - `pw/maintain.py` — 当て直しで残った失効を、エージェントに読み直させる
 - `pw/confirm.py` — エージェントの読みを、根拠の一文と並べて人が確認する
 - `pw-facts.json` — このプロジェクトの事実と、それを述べている箇所の一覧
+- `pw-log.jsonl` — 記録（読み、証明、人の確認）。追記式のテキストで、リポジトリに含める
 
 実験の記録: [依存のある並列タスク](experiments/dependency/RESULTS.md)、[自己適用](experiments/selfcheck/RESULTS.md)、[過去の決定との矛盾](experiments/decisions/RESULTS.md)、[自然言語の決定の形式化](experiments/nl/RESULTS.md)、[コードでないファイル](experiments/artifacts/RESULTS.md)、[散文](experiments/prose/RESULTS.md)、[事実と箇所](experiments/facts/RESULTS.md)
 
@@ -26,6 +27,7 @@ python -m pytest tests
 python -m pw.orchestrator tasks.json --dry-run     # 起動コマンドの確認のみ
 python -m pw.orchestrator tasks.json               # claude-opus-5-5 のワーカーを起動（課金あり）
 python -m pw.check --repo .                        # 決定をいまのファイルで確かめ直す。機械的に通らないものがあれば終了コード 1
+python -m pw.check --repo . --verify               # 加えて、記録にある証明を Lean に通し直す（CI ではこちら）
 python -m pw.maintain --repo .                     # 上に加えて、変わったファイルをエージェントに読み直させる（課金あり）
 python -m pw.confirm --repo .                      # エージェントの読みのうち、誰も確認していないものを一覧する
 ```

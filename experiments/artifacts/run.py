@@ -20,7 +20,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, ROOT)
-from pw.kernel import Kernel, reader  # noqa: E402
+from pw.kernel import LOG, Kernel, reader  # noqa: E402
 from pw.lean_gate import LeanGate  # noqa: E402
 
 TABLE = "List (String × List (String × Nat × Nat))"
@@ -110,7 +110,7 @@ def main():
 
     # ---- path B: a reader, no agent
     repo = setup(out, "reader")
-    k = Kernel(os.path.join(repo, ".pw", "events.db"), gate=LeanGate(lean), actor="setup")
+    k = Kernel(os.path.join(repo, LOG), gate=LeanGate(lean), actor="setup")
     d = k.claim_formal(DECISION["subject"], TABLE, DECISION["predicate"], DECISION["gloss"])
     a = k.attach_derived(d["h"], reader(READ), repo)
     step("B", "proof", {"output": json.dumps(k.prove("holds", [a["f"]], "unfold Spec.Likelihoods\ndecide"))})
@@ -132,7 +132,7 @@ def main():
                        cwd=ROOT, capture_output=True, text=True)
     step("A", "agent reads the file", {"output": r.stdout[r.stdout.find("MERGEABLE") if "MERGEABLE" in r.stdout else r.stdout.find("HOLD"):].strip()})
     step("A", "check", run("pw.check", repo, lean))
-    k = Kernel(os.path.join(repo, ".pw", "events.db"), gate=LeanGate(lean), actor="person")
+    k = Kernel(os.path.join(repo, LOG), gate=LeanGate(lean), actor="person")
     st = k.state()
     said = [st.algebra.objs[info["obj"]]["text"] for info in st.models.values()]
     rows = lambda t: sorted(re.findall(r'\("[a-z_]+", \d+, \d+\)', t))

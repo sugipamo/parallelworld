@@ -157,8 +157,8 @@ def judge(out):
     orchestrate(repo, "judge", JUDGE + "\n\n".join(lines), 10)
     res = {"comparisons": load(repo, "judge", "comparisons.json"), "worker": worker(repo, "judge")}
     sys.path.insert(0, ROOT)
-    from pw.kernel import Kernel
-    res["proofs"] = [{"relation": e["relation"], "args": e["args"]} for e in Kernel(os.path.join(repo, ".pw", "events.db")).events() if e["type"] == "proof"]
+    from pw.kernel import LOG, Kernel
+    res["proofs"] = [{"relation": e["relation"], "args": e["args"]} for e in Kernel(os.path.join(repo, LOG)).events() if e["type"] == "proof"]
     with open(os.path.join(out, "comparisons.json"), "w") as fh:
         json.dump(res, fh, ensure_ascii=False, indent=1)
     print(res["worker"].get("turns"), res["worker"].get("cost_usd"), len(res["proofs"]), "proofs accepted")

@@ -2,7 +2,8 @@
 
     python -m pw.check [--repo DIR] [--db PATH] [--lean-dir DIR] [--threshold 0.9]
 
-If the repository has a pw-facts.json, the facts declared there are the ones that stand.
+The record is pw-log.jsonl in the repository. If the repository has a pw-facts.json, the facts
+declared there are the ones that stand.
 No model is consulted: readers and stored checks are run again, stored proofs are tried again, and
 Lean-verified relations are read off. Exit status is 1 unless every decision is current or was
 carried over mechanically, and no two decisions contradict each other.
@@ -11,7 +12,7 @@ import argparse
 import os
 import sys
 
-from .kernel import Kernel
+from .kernel import LOG, Kernel
 from .lean_gate import LEAN_DIR, LeanGate
 
 
@@ -81,12 +82,21 @@ def main():
     ap.add_argument("--db")
     ap.add_argument("--lean-dir", default=LEAN_DIR)
     ap.add_argument("--threshold", type=float, default=0.9)
+    ap.add_argument("--verify", action="store_true",
+                    help="run every recorded proof through Lean again instead of believing the record (use this in CI)")
     args = ap.parse_args()
     repo = os.path.abspath(args.repo)
-    kernel = Kernel(args.db or os.path.join(repo, ".pw", "events.db"), gate=LeanGate(args.lean_dir), actor="check")
+    kernel = Kernel(args.db or os.path.join(repo, LOG), gate=LeanGate(args.lean_dir), actor="check")
     if os.path.exists(os.path.join(repo, FACTS)):
         kernel.sync_facts(os.path.join(repo, FACTS))
-    sys.exit(1 if show(kernel.recheck(repo), args.threshold) else 0)
+    bad = show(kernel.recheck(repo), args.threshold)
+    if args.verify:
+        refused = kernel.verify()
+        for r in refused:
+            print(f"FAIL the record contains a proof Lean does not accept: {r['relation']} {r['args']}\n       {r['reason'][:200]}")
+        print(f"{len(kernel.state().proofs) - len(refused)} recorded proof(s) verified again, {len(refused)} refused")
+        bad |= bool(refused)
+    sys.exit(1 if bad else 0)
 
 
 if __name__ == "__main__":

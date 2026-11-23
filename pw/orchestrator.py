@@ -20,7 +20,7 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
-from .kernel import Kernel, KernelError
+from .kernel import LOG, Kernel, KernelError
 from .lean_gate import LEAN_DIR, LeanGate
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -125,7 +125,7 @@ def main():
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     args.lean_dir = os.path.abspath(args.lean_dir)
-    args.db = os.path.join(os.path.abspath(args.repo), ".pw", "events.db")
+    args.db = os.path.join(os.path.abspath(args.repo), LOG)
     with open(args.tasks) as fh:
         tasks = json.load(fh)
 

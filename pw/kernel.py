@@ -15,7 +15,7 @@ import json
 import os
 import random
 import re
-import sqlite3
+import fcntl
 import subprocess
 import time
 from contextlib import contextmanager
@@ -180,12 +180,17 @@ def _sha(*parts):
     return hashlib.sha256("\x00".join(parts).encode()).hexdigest()[:10]
 
 
+LOG = "pw-log.jsonl"     # the record, kept in the repository it is about
+
+
 def _tree(cwd):
-    """Identifies the state of the working tree a check ran against."""
+    """Identifies the content of the working tree a check ran against: every tracked file's
+    content plus whatever is modified or new. The record itself is left out, so that writing to
+    it, or committing it, does not make earlier check runs look like runs on another tree."""
     def git(*args):
-        r = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+        r = subprocess.run(["git", *args, "--", ".", f":(exclude){LOG}"], cwd=cwd, capture_output=True, text=True)
         return r.stdout if r.returncode == 0 else f"nogit:{time.time()}"
-    return "tree:" + _sha(git("rev-parse", "HEAD"), git("status", "--porcelain"), git("diff", "HEAD"))
+    return "tree:" + _sha(git("ls-files", "-s"), git("status", "--porcelain"), git("diff", "HEAD"))
 
 
 def _md_section(text, title):
@@ -367,38 +372,34 @@ class Kernel:
                 catalog = json.load(fh)
         self.catalog = catalog
         os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
-        with self._tx() as (con, _):
-            con.execute(
-                "CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                " ts REAL, actor TEXT, type TEXT, payload TEXT)"
-            )
 
     # ---- event log -------------------------------------------------------
+    # One JSON object per line, appended and never rewritten, so that it can live in the
+    # repository next to what it is about: readings and confirmations travel with the commits,
+    # and two branches that both appended can be merged by keeping both sets of lines.
     @contextmanager
     def _tx(self):
-        """Exclusive transaction: replay + check + append is atomic across processes."""
-        con = sqlite3.connect(self.db_path, timeout=60, isolation_level=None)
-        try:
-            con.execute("BEGIN IMMEDIATE")
-            state = State()
+        """Exclusive section: replay + check + append is atomic across processes."""
+        with open(self.db_path, "a+", encoding="utf-8") as fh:
+            fcntl.flock(fh, fcntl.LOCK_EX)
             try:
-                for typ, payload in con.execute("SELECT type, payload FROM events ORDER BY id"):
-                    state.apply(typ, json.loads(payload))
-            except sqlite3.OperationalError:
-                pass  # table not created yet
-            yield con, state
-            con.execute("COMMIT")
-        except BaseException:
-            con.execute("ROLLBACK")
-            raise
-        finally:
-            con.close()
+                fh.seek(0)
+                state = State()
+                for n, line in enumerate(fh, 1):
+                    if line.strip():
+                        try:
+                            event = json.loads(line)
+                            state.apply(event["type"], event)
+                        except (ValueError, KeyError) as e:
+                            raise KernelError(f"{self.db_path}, line {n}: not a readable event ({e})")
+                yield fh, state
+            finally:
+                fh.flush()
+                fcntl.flock(fh, fcntl.LOCK_UN)
 
-    def _append(self, con, state, typ, payload):
-        con.execute(
-            "INSERT INTO events (ts, actor, type, payload) VALUES (?,?,?,?)",
-            (time.time(), self.actor, typ, json.dumps(payload, ensure_ascii=False)),
-        )
+    def _append(self, fh, state, typ, payload):
+        event = {"ts": round(time.time(), 3), "actor": self.actor, "type": typ, **payload}
+        fh.write(json.dumps(event, ensure_ascii=False) + "\n")
         state.apply(typ, payload)
 
     def state(self):
@@ -406,14 +407,26 @@ class Kernel:
             return state
 
     def events(self):
-        con = sqlite3.connect(self.db_path)
-        try:
-            return [
-                {"id": i, "ts": ts, "actor": a, "type": t, **json.loads(p)}
-                for i, ts, a, t, p in con.execute("SELECT id, ts, actor, type, payload FROM events ORDER BY id")
-            ]
-        finally:
-            con.close()
+        with open(self.db_path, encoding="utf-8") as fh:
+            return [{"id": n, **json.loads(line)} for n, line in enumerate(fh, 1) if line.strip()]
+
+    def verify(self):
+        """Run every recorded proof through the gate again; return those it does not accept.
+
+        The log is a text file anyone can edit. Whatever in it can be checked again is not
+        taken on trust: readers are re-run on every check, and proofs are re-run here.
+        What cannot be re-run, a person's confirmation above all, is only as good as the
+        review of the commit that added the line.
+        """
+        if self.gate is None:
+            raise KernelError("no Lean gate configured; proofs cannot be verified")
+        st = self.state()
+        refused = []
+        for p in st.proofs:
+            verdict = self.gate.check(p["relation"], self._items(p["relation"], p["args"], st.algebra), p.get("proof", ""))
+            if not verdict["ok"]:
+                refused.append({"relation": p["relation"], "args": p["args"], "reason": verdict["reason"][-300:]})
+        return refused
 
     # ---- operations ------------------------------------------------------
     def claim(self, text, prior=None):
@@ -597,10 +610,11 @@ class Kernel:
             seen = [m for p, m in fact["readings"] if p == at]
             have = [m for m in seen if st.models[m]["subject"] == now
                     or (st.models[m].get("anchor") and _anchored(st.models[m]["quote"], at, cwd))]
-            if not have and decl["reader"]:
+            if decl["reader"]:                       # computed afresh every time, never taken from the record
                 try:
+                    was = have
                     have = [self.read_place(h, at, cwd=cwd)["m"]]
-                    reread = reread or bool(seen)
+                    reread = reread or (bool(seen) and have != was[-1:])
                 except KernelError as e:
                     unread.append({"at": at, "why": str(e)})
                     continue
@@ -892,18 +906,7 @@ class Kernel:
             raise KernelError(f"relation must be one of {sorted(RELATIONS)} with matching arity")
         if self.gate is None:
             raise KernelError("no Lean gate configured; proofs cannot be accepted")
-        alg = self.state().algebra
-        items = []
-        for want, x in zip(kinds, args):
-            if alg.kind(x) != want:
-                raise KernelError(f"{relation} needs a {want} id, got {x}")
-            if want == "F":
-                items.append(("Prop", alg.props[x]["text"]))
-            elif want == "P":
-                items.append((f"({alg.preds[x]['type']}) → Prop", alg.preds[x]["text"]))
-            else:
-                items.append((alg.objs[x]["type"], alg.objs[x]["text"]))
-        verdict = self.gate.check(relation, items, proof)
+        verdict = self.gate.check(relation, self._items(relation, args, self.state().algebra), proof)
         if not verdict["ok"]:
             return {"accepted": False, "reason": verdict["reason"]}
         with self._tx() as (con, st):
@@ -912,6 +915,21 @@ class Kernel:
                 "axioms": verdict["axioms"], "gamma": verdict["gamma"],
             })
         return {"accepted": True, "axioms": verdict["axioms"], "gamma": verdict["gamma"]}
+
+    @staticmethod
+    def _items(relation, args, alg):
+        """The (Lean type, Lean term) pairs a relation is stated about."""
+        items = []
+        for want, x in zip(RELATIONS[relation], args):
+            if alg.kind(x) != want:
+                raise KernelError(f"{relation} needs a {want} id, got {x}")
+            if want == "F":
+                items.append(("Prop", alg.props[x]["text"]))
+            elif want == "P":
+                items.append((f"({alg.preds[x]['type']}) → Prop", alg.preds[x]["text"]))
+            else:
+                items.append((alg.objs[x]["type"], alg.objs[x]["text"]))
+        return items
 
     # ---- inference -------------------------------------------------------
     def infer(self, query, current=None, tree=None):
@@ -1097,7 +1115,8 @@ class Kernel:
             entry = {"h": h, "text": st.atoms[h]["text"], "subject": now,
                      "spec": st.algebra.preds[st.formal[h]["pred"]]["text"]}
             mine = [(x, f) for gs, hh, f in st.links if hh == h for x in gs if x[0] == "M"]
-            if any(st.models[m]["subject"] == now for m, _ in mine):
+            by_reader = mine and (st.models[mine[-1][0]]["binding"] or {}).get("language") == "reader"
+            if not by_reader and any(st.models[m]["subject"] == now for m, _ in mine):
                 entry["state"] = "current"
             elif not mine:
                 entry["state"] = "unsupported"
@@ -1106,9 +1125,12 @@ class Kernel:
                 how = (st.models[old]["binding"] or {}).get("language")
                 obj = st.algebra.objs[st.models[old]["obj"]]
                 try:
-                    if how == "reader":
+                    if how == "reader":              # computed afresh every time, never taken from the record
                         new = self.attach_derived(h, st.models[old]["binding"], cwd)
-                        entry.update(self._carry_proofs(old_f, new["f"]))
+                        if new["m"] in [m for m, _ in mine]:
+                            entry["state"] = "current"
+                        else:
+                            entry.update(self._carry_proofs(old_f, new["f"]))
                     elif how == "python":
                         new = self.attach_model(h, obj["text"], subject_version=now, binding=st.models[old]["binding"], cwd=cwd)
                         r = self.sample_model(new["m"], cwd, n=n)
