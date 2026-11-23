@@ -222,7 +222,7 @@ def test_past_decisions_are_held_against_the_code_as_it_is_now(tmp_path):
     (repo / "test_indexing.py").write_text("from indexing import clamp_index\n\ndef test_in_range():\n    assert clamp_index(2, 4) == 2\n")
     git("commit", "-qam", "return n when out of range")
     r = k.recheck(cwd)["decisions"][0]
-    assert r["state"] == "broken" and r["lo"] <= 0.75 and r["counterexample"]["lean"] != r["counterexample"]["code"], r
+    assert r["state"] == "uncovered" and r["lo"] <= 0.75 and r["counterexample"]["lean"] != r["counterexample"]["code"], r
 
     # a new decision that cannot hold together with the old one
     e = k.claim_formal("indexing.py::clamp_index", "Nat → Nat → Nat", SENTINEL, gloss="returns n when out of range")

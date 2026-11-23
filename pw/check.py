@@ -3,7 +3,8 @@
     python -m pw.check [--repo DIR] [--db PATH] [--lean-dir DIR] [--threshold 0.9]
 
 No model is consulted: stored checks are run again and Lean-verified relations are read off.
-Exit status is 1 if a decision is broken or unsupported, or two decisions contradict each other.
+Exit status is 1 if a decision is no longer covered by its proof or is unsupported, or two decisions
+contradict each other.
 """
 import argparse
 import os

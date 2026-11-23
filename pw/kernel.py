@@ -703,7 +703,9 @@ class Kernel:
 
           current         the code is the version the claim was established for
           re-established  the code changed, but the old model still agrees with it, so the old proof applies
-          broken          the code changed and no longer agrees with the model the proof was about
+          uncovered       the code changed and no longer agrees with the model the proof was about.
+                          This does not say the decision is violated: the new code may still meet
+                          it, but nothing shows that until someone models and proves it again.
           unsupported     nothing was ever attached, or there is no stored check to run again
         """
         st = self.state()
@@ -730,7 +732,7 @@ class Kernel:
                     if "error" in r:
                         entry.update(state="unsupported", error=r["error"])
                     elif r["disagreements"]:
-                        entry.update(state="broken", counterexample=r["disagreements"][0], model=obj["text"])
+                        entry.update(state="uncovered", counterexample=r["disagreements"][0], model=obj["text"])
                     else:
                         entry["state"] = "re-established"
             for kind, command in sorted({(e["kind"], e["command"]) for e in st.evidence.values()
