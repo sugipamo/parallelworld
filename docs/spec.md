@@ -122,7 +122,7 @@ Leanが真偽を決めたFは定数なので、それを共有しているだけ
 | `observe_command(target, kind, command)` | Kernelがコマンドを実行し、成否を証拠として記録。出自は「コマンド＋作業ツリーの状態」 |
 | `observe(target, kind, outcome, source)` | コマンドで作れない証拠（レビュー、逆翻訳） |
 | `declare_independent(eid, justification)` | 証拠を独立として扱う宣言 |
-| `prove(relation, args, proof)` | Lean Gateに証明を提出。失敗は証拠にしない。関係は `holds` `not` `iff` `implies` `contradiction` `pred_iff` `pred_implies` `obj_eq` |
+| `prove(relation, args, proof)` | Lean Gateに証明を提出。失敗は証拠にしない。関係は `holds` `not` `iff` `implies` `contradiction` `pred_iff` `pred_implies` `obj_eq` `pred_disjoint` `pred_rejects` |
 | `infer(query)` | 原子の論理式に対する `[lo, hi]` |
 | `distance(a, b)` | 二つの主張・命題が食い違う確率の区間 |
 | `status()` | 全主張の区間と接続先、命題・仕様・対象の類、受理済み証明 |
