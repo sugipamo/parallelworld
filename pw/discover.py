@@ -8,27 +8,44 @@ can drift without a word. This asks an agent to look for what the list is missin
   further places   for each declared fact, other places in the repository that state it
   new facts        things stated in two or more places that are not declared at all
 
-The agent can read files and nothing else. It reports through two tools, and each report is
+The agent can read files and nothing else. It reports through tools, and each report is
 checked against the files before it is kept: the place has to exist, the quote has to be in it
 word for word, the value has to be in the quote, and a pattern has to compute the value. What
 passes is a proposal, not a reading: the agent saw every place at once, so nothing it says about
-what a place reads as is recorded. With --apply the proposals are written into pw-facts.json;
-`python -m pw.maintain` then has the new places read blind, and `pw.check` compares them.
+what a place reads as is recorded.
 
-Without --apply the proposals are only printed. How many missing places this finds was measured
-by hiding declared ones: experiments/discovery/RESULTS.md.
+Is a proposed place about the same thing? The searcher is the wrong one to ask: it has seen the
+other places, and a number that happens to be the same looks like the same thing. So every
+proposed place is shown, alone, to a blind reader with the fact's one-sentence description. A
+place is kept if that reader reads a value off it (for a place with a pattern: the value the
+pattern computes). A place the reader says does not state the thing is dropped, with the
+reader's reason. A place whose reading differs from the other places is kept: that is a finding.
+
+A search that failed must not look like a search that found nothing:
+  - the agent has to say, per fact, that it finished searching; a session that does not is
+    reported as incomplete, as is one whose tools never started or that ended in an error;
+  - one known place of each declared fact is left out of what the agent is told. If the search
+    does not come back with it, the search for that fact is reported as doubtful;
+  - a proposed place the blind reader neither read nor declined is reported as unanswered and
+    is not written.
+
+With --apply the kept places are written into pw-facts.json and their blind readings are in the
+record. Without it everything runs against a copy of the record and is only printed. How many
+missing places this finds was measured by hiding declared ones: experiments/discovery/RESULTS.md.
 """
 import argparse
 import json
 import os
+import random
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 
 from .check import FACTS
-from .kernel import CALIBRATION, LOG, KernelError, _anchored, _json_part, _md_section, _py_part, _read_pattern, locate, pattern
+from .kernel import CALIBRATION, LOG, Kernel, KernelError, _anchored, _json_part, _md_section, _py_part, _read_pattern, locate, pattern
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TYPES = {"String": str, "Nat": int, "Int": int, "List String": str, "List Nat": int}
@@ -76,8 +93,10 @@ states it and report each one with `add_place(fact, at, value, quote, ...)`. Rep
 if it states a different value from the known ones: that is exactly what the project wants to
 hear about. Search for the value itself, for other ways of writing it, and for the words that
 describe it; look in documentation, code, configuration and build files alike. Do not report a
-place that is already listed. When you are done, reply with one line per thing: how you searched
-and what you found.
+place that is already listed. When you have finished searching for a thing, call
+`finished(fact, searched)` for it, whether or not you found anything: a thing you do not call
+it for counts as not searched. Then reply with one line per thing: how you searched and what
+you found.
 
 Declared:
 """
@@ -98,7 +117,8 @@ apart and would mislead someone if they did; leave out anything stated only once
          are, and that they are sorted)
   places at least two, each {"at", "value", "quote"} and, for code and configuration, a pattern
 
-When you are done, reply with one line per thing you reported.
+When you have finished, call `finished("", searched)` saying where you looked, whether or not
+you found anything, and reply with one line per thing you reported.
 """
 
 
@@ -213,6 +233,20 @@ def serve():
         with open(out, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
+    keep({"started": True})                    # without this line, nothing the session says about finding nothing counts
+
+    @mcp.tool()
+    def finished(fact: str = "", searched: str = "") -> dict:
+        """Say that you have finished searching: for one declared fact (its name exactly as
+        listed), or, with `fact` empty, for things not declared yet. `searched` says what you
+        searched for and where. Call it even when you found nothing."""
+        if fact and fact not in facts:
+            return {"error": f"no declared fact is named {fact!r}; the names are {sorted(facts)}"}
+        if not searched.strip():
+            return {"error": "say what you searched for and where"}
+        keep({"finished": fact, "searched": " ".join(searched.split())[:600]})
+        return {"noted": fact or "new facts"}
+
     @mcp.tool()
     def add_place(fact: str, at: str, value: str | int | list, quote: str, find: str = "", find_all: str = "", kind: str = "") -> dict:
         """Report a further place that states a declared fact. `fact` is the fact's name exactly
@@ -265,8 +299,21 @@ def serve():
 
 # ---- running the agent -------------------------------------------------------------------------
 
-def session(repo, model, prompt, facts, budget):
-    """One agent with read access to `repo`. Returns what it proposed and how the session went."""
+def same_place(a, b, repo):
+    """Same file, and one part contains the other."""
+    if a.partition("::")[0] != b.partition("::")[0]:
+        return False
+    x, y = locate(a, repo), locate(b, repo)
+    return x is not None and y is not None and (x in y or y in x)
+
+
+def session(repo, model, prompt, facts, budget, expect):
+    """One agent with read access to `repo`. Returns what it proposed and how the session went.
+
+    `expect` lists what the agent has to say it finished ("" stands for the search for new
+    facts). run["problems"] is empty only if the tools started, the session ended normally and
+    everything expected was finished: only then does "nothing proposed" mean nothing was found.
+    """
     work = tempfile.mkdtemp(prefix="pw-discover-")
     out, known, cfg = (os.path.join(work, n) for n in ("proposals.jsonl", "facts.json", "mcp.json"))
     with open(known, "w", encoding="utf-8") as fh:
@@ -275,18 +322,29 @@ def session(repo, model, prompt, facts, budget):
         json.dump({"mcpServers": {"find": {"command": sys.executable, "args": ["-P", "-m", "pw.discover", "--serve"], "env": {     # -P: not the pw of the repository being searched
             "PW_WORKDIR": repo, "PW_DISCOVER_OUT": out, "PW_DISCOVER_FACTS": known, "PYTHONPATH": ROOT}}}}, fh)
     r = subprocess.run(["claude", "-p", prompt, "--model", model, "--tools", "Read,Grep,Glob", "--mcp-config", cfg, "--strict-mcp-config",
-                        "--allowedTools", "Read,Grep,Glob,mcp__find__add_place,mcp__find__new_fact",
+                        "--allowedTools", "Read,Grep,Glob,mcp__find__add_place,mcp__find__new_fact,mcp__find__finished",
                         "--output-format", "json", "--max-budget-usd", str(budget)],
                        cwd=repo, capture_output=True, text=True)
-    proposals = []
+    lines = []
     if os.path.exists(out):
         with open(out, encoding="utf-8") as fh:
-            proposals = [json.loads(line) for line in fh]
+            lines = [json.loads(line) for line in fh]
+    proposals = [x for x in lines if "fact" in x or "new" in x]
+    done = {x["finished"] for x in lines if "finished" in x}
+    run = {"model": model, "problems": []}
+    if not any("started" in x for x in lines):
+        run["problems"].append("the reporting tools never started, so the agent could not report anything")
     try:
         info = json.loads(r.stdout)
-        run = {"model": model, "turns": info.get("num_turns"), "cost_usd": round(info.get("total_cost_usd", 0), 2), "said": info.get("result", "")}
+        run.update(turns=info.get("num_turns"), cost_usd=round(info.get("total_cost_usd", 0), 2), said=info.get("result", ""))
+        if info.get("is_error") or info.get("subtype", "success") != "success":
+            run["problems"].append(f"the session ended with {info.get('subtype') or 'an error'}")
     except ValueError:
-        run = {"model": model, "error": (r.stdout + r.stderr)[-500:]}
+        run["problems"].append("the session gave no result: " + (r.stdout + r.stderr)[-300:])
+    missing = [e for e in expect if e not in done]
+    if missing:
+        run["problems"].append("the agent did not say it finished searching for: " + ", ".join(e or "new facts" for e in missing))
+    run["unfinished"] = missing
     return proposals, run
 
 
@@ -300,13 +358,89 @@ def listing(facts, places=True):
     return out
 
 
-def further(repo, model, facts, budget):
-    return session(repo, model, HOW + FURTHER + listing(facts), facts, budget)
+def _at(p):
+    return p if isinstance(p, str) else p["at"]
+
+
+def further(repo, model, facts, budget, hide=None):
+    """Search for further places of the declared facts.
+
+    `hide` maps a fact's name to one of its places: that place is left out of what the agent is
+    told, as a control with a known answer. A proposal that names it shows the search works
+    and is not returned; run["controls"] says which controls came back.
+    """
+    hide = hide or {}
+    shown = [{**f, "places": [p for p in f["places"] if _at(p) != hide.get(f["name"])]} for f in facts]
+    proposals, run = session(repo, model, HOW + FURTHER + listing(shown), shown, budget, [f["name"] for f in facts])
+    back = lambda p: "fact" in p and p["fact"] in hide and same_place(hide[p["fact"]], p["place"]["at"], repo)
+    run["controls"] = {name: {"at": at, "found": any(back(p) and p["fact"] == name for p in proposals)} for name, at in hide.items()}
+    return [p for p in proposals if not back(p)], run
 
 
 def new(repo, model, facts, budget):
     declared = "\nAlready declared (do not report these again):\n" + listing(facts, places=False) if facts else ""
-    return session(repo, model, HOW + NEW + declared, facts, budget)
+    return session(repo, model, HOW + NEW + declared, facts, budget, [""])
+
+
+def confirm(repo, lean_dir, facts, proposals, model, budget, record):
+    """Show every proposed place, alone, to a blind reader, and keep what it reads.
+
+    Returns (facts with the kept places, one verdict per proposed place, reader sessions).
+    A verdict is {"fact", "at", "kept", "why"}; "answered" is False where the reader did
+    neither read nor decline, which says nothing about the place.
+    """
+    from .maintain import read_blind                      # (maintain imports nothing from here)
+    from .lean_gate import LeanGate
+    merged, added = merge(facts, proposals)
+    if not added:
+        return facts, [], []
+    work = tempfile.mkdtemp(prefix="pw-confirm-")
+    with open(os.path.join(work, FACTS), "w", encoding="utf-8") as fh:
+        json.dump(merged, fh, ensure_ascii=False)
+    kernel = Kernel(record, gate=LeanGate(lean_dir), actor="discover")
+    kernel.sync_facts(os.path.join(work, FACTS))
+    decisions = {d["fact"]: d for d in kernel.recheck(repo)["decisions"] if "fact" in d}
+    args = argparse.Namespace(lean_dir=lean_dir, budget=budget)
+    runs = read_blind(kernel, repo, args, [(decisions[name], place["at"]) for name, place in added], model, "proposed")
+    actors = {r["actor"] for r in runs}
+    said = {}
+    for e in kernel.events():
+        if e.get("actor") in actors and e["type"] in ("reading", "decline"):
+            said[(e["h"], e["place"])] = e
+    decisions = {d["fact"]: d for d in kernel.recheck(repo)["decisions"] if "fact" in d}
+    verdicts = []
+    for name, place in added:
+        d = decisions[name]
+        e = said.get((d["h"], place["at"]))
+        v = {"fact": name, "at": place["at"], "kept": False, "answered": e is not None}
+        if e is None:
+            v["why"] = "the blind reader neither read it nor declined: not checked"
+        elif e["type"] == "decline":
+            v["why"] = "a blind reader says the place does not state this: " + e["why"]
+        else:
+            read = e["obj"]["text"]
+            computed = next((p["reads as"] for p in d["places"] if p["at"] == place["at"] and p["by"] == "reader"), None)
+            agree = computed is None or _same_term(read, computed)
+            v.update(kept=agree, why=f"a blind reader reads {read[:80]} off it" + (
+                "" if agree else f", but the pattern computes {computed[:80]}: the pattern is not reading what the place says"))
+        verdicts.append(v)
+    kept = {(v["fact"], v["at"]) for v in verdicts if v["kept"]}
+    final, _ = merge(facts, [{**p, "places": [q for q in p["places"] if (p["new"]["name"], q["at"]) in kept]} if "new" in p else p
+                             for p in proposals if "new" in p or (p["fact"], p["place"]["at"]) in kept])
+    declared = {f["name"] for f in facts}
+    for f in [f for f in final if f["name"] not in declared and len(f["places"]) < 2]:
+        final.remove(f)                                    # one place left: nothing to compare it with
+        for v in verdicts:
+            if v["fact"] == f["name"] and v["kept"]:
+                v.update(kept=False, why=v["why"] + "; but it is the only place of this thing that was kept")
+    return final, verdicts, runs
+
+
+def _same_term(a, b):
+    try:
+        return json.loads(a) == json.loads(b)
+    except ValueError:
+        return " ".join(a.split()) == " ".join(b.split())
 
 
 def merge(facts, proposals):
@@ -335,45 +469,84 @@ def merge(facts, proposals):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", default=os.getcwd())
-    ap.add_argument("--model", default="claude-opus-5-5")
+    ap.add_argument("--lean-dir")
+    ap.add_argument("--model", default="claude-opus-5-5", help="the model that searches")
+    ap.add_argument("--confirm-model", default="claude-sonnet-5-5",
+                    help="the model that is shown each proposed place alone; it should be a measured reader")
     ap.add_argument("--budget", type=float, default=5.0)
     ap.add_argument("--only", choices=("further", "new"), help="look only for further places of declared facts, or only for new facts")
-    ap.add_argument("--apply", action="store_true", help="write the proposals into pw-facts.json")
+    ap.add_argument("--no-controls", action="store_true", help="tell the agent every known place, hiding none as a control")
+    ap.add_argument("--seed", type=int, help="which known places are hidden as controls")
+    ap.add_argument("--apply", action="store_true", help="write the places a blind reader confirmed into pw-facts.json")
     ap.add_argument("--serve", action="store_true", help=argparse.SUPPRESS)
     args = ap.parse_args()
     if args.serve:
         return serve()
+    from .lean_gate import LEAN_DIR
     repo = os.path.abspath(args.repo)
     path = os.path.join(repo, FACTS)
     facts = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else []
-    jobs = [j for j in ((further, "further") if facts else None, (new, "new")) if j and args.only in (None, j[1])]
-    print(f"looking for {' and '.join('further places' if n == 'further' else 'new facts' for _, n in jobs)} with {args.model}", flush=True)
+    rng = random.Random(args.seed)
+    hide = {} if args.no_controls else {f["name"]: _at(rng.choice(f["places"])) for f in facts if len(f["places"]) > 1}
+    jobs = [j for j in (("further", lambda: further(repo, args.model, facts, args.budget, hide)) if facts else None,
+                        ("new", lambda: new(repo, args.model, facts, args.budget))) if j and args.only in (None, j[0])]
+    print(f"looking for {' and '.join('further places' if n == 'further' else 'new facts' for n, _ in jobs)} with {args.model}", flush=True)
     with ThreadPoolExecutor(2) as pool:
-        ran = list(pool.map(lambda j: j[0](repo, args.model, facts, args.budget), jobs))
+        ran = list(pool.map(lambda j: j[1](), jobs))
     proposals = [p for ps, _ in ran for p in ps]
-    for (_, name), (_, run) in zip(jobs, ran):
-        print(f"   {name}: " + (run.get("error") or f"{run['turns']} turns, ${run['cost_usd']}"))
-    merged, added = merge(facts, proposals)
-    values = {}
-    for name, place in added:
-        values.setdefault(name, []).append(place)
-    for name, places in values.items():
-        is_new = name not in [f["name"] for f in facts]
-        print(f"\n{'new fact' if is_new else 'further place(s) of'}: {name}")
-        for p in places:
-            print(f"   {p['at']}  says {json.dumps(p['value'], ensure_ascii=False)[:100]}" + ("  (pattern)" if p["read"] else ""))
-            print(f"      {p['quote'][:160]}")
-        if is_new and not _agree(places):
-            print("   these places do not state the same value")
+    failed = False
+    for (name, _), (_, run) in zip(jobs, ran):
+        print(f"   {name}: {run.get('turns')} turns, ${run.get('cost_usd')}")
+        for problem in run["problems"]:
+            failed = True
+            print(f"   {name}: INCOMPLETE: {problem}")
+        controls = run.get("controls", {})
+        if controls:
+            missed = [f"{n} at {c['at']}" for n, c in controls.items() if not c["found"]]
+            print(f"   {name}: {len(controls) - len(missed)} of {len(controls)} hidden known places came back")
+            for m in missed:
+                print(f"   {name}: the search did not come back with {m}: it may have missed other places of that fact too")
+
+    _, added = merge(facts, proposals)
     if not added:
-        print("\nnothing proposed")
-    elif args.apply:
+        print("\nnothing proposed" + (" (but the search was incomplete: this does not mean there is nothing)" if failed else ""))
+        sys.exit(1 if failed else 0)
+    record = os.path.join(repo, LOG)
+    if not args.apply:                                      # look, but leave the project's record alone
+        record = os.path.join(tempfile.mkdtemp(prefix="pw-discover-"), LOG)
+        if os.path.exists(os.path.join(repo, LOG)):
+            shutil.copy(os.path.join(repo, LOG), record)
+    final, verdicts, runs = confirm(repo, args.lean_dir or LEAN_DIR, facts, proposals, args.confirm_model, args.budget, record)
+    by = {(v["fact"], v["at"]): v for v in verdicts}
+    declared = {f["name"] for f in facts}
+    for name in dict.fromkeys(n for n, _ in added):
+        places = [p for n, p in added if n == name]
+        print(f"\n{'further place(s) of' if name in declared else 'new fact'}: {name}")
+        for p in places:
+            v = by[(name, p["at"])]
+            mark = "keep" if v["kept"] else "drop" if v["answered"] else "????"
+            print(f"   {mark} {p['at']}  says {json.dumps(p['value'], ensure_ascii=False)[:100]}" + ("  (pattern)" if p["read"] else ""))
+            print(f"        {p['quote'][:160]}")
+            print(f"        {v['why'][:300]}")
+        if name not in declared and not _agree([p for p in places if by[(name, p['at'])]['kept']]):
+            print("   the kept places do not state the same value")
+    unanswered = [v for v in verdicts if not v["answered"]]
+    kept = [v for v in verdicts if v["kept"]]
+    failed = failed or bool(unanswered) or any(r.get("error") for r in runs)
+    print(f"\n{len(kept)} of {len(verdicts)} proposed place(s) kept, {len(verdicts) - len(kept) - len(unanswered)} dropped, "
+          f"{len(unanswered)} not checked")
+    if args.apply and kept:
         with open(path, "w", encoding="utf-8") as fh:
-            json.dump(merged, fh, ensure_ascii=False, indent=1)
+            json.dump(final, fh, ensure_ascii=False, indent=1)
             fh.write("\n")
-        print(f"\n{len(added)} place(s) written to {FACTS}. Commit, then: python -m pw.maintain")
-    else:
-        print(f"\n{len(added)} place(s) proposed; nothing was written (--apply writes them to {FACTS})")
+        from .lean_gate import LeanGate
+        Kernel(record, gate=LeanGate(args.lean_dir or LEAN_DIR), actor="discover").sync_facts(path)
+        print(f"written to {FACTS}; their blind readings are in the record. Then: python -m pw.maintain")
+    elif not args.apply:
+        print(f"nothing was written (--apply writes the kept places to {FACTS})")
+    if failed:
+        print("part of this run failed (marked INCOMPLETE or ???? above): that is not a finding, run it again")
+    sys.exit(1 if failed else 0)
 
 
 if __name__ == "__main__":

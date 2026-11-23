@@ -426,8 +426,8 @@ def test_a_fact_stated_in_several_places(tmp_path):
 
     r = k.recheck(cwd)["decisions"][0]
     assert r["state"] == "stale" and [u["at"] for u in r["unread"]] == ["doc.md::Model", "doc.md::Changes"], r
-    assert r["places"] == [{"at": "k.py::K.__init__", "reads as": '"pqd"', "m": r["places"][0]["m"], "by": "reader",
-                            "stands": True, "why": "computed"}]
+    assert len(r["places"]) == 1 and {k: r["places"][0][k] for k in ("at", "reads as", "by", "stands", "has")} == {
+        "at": "k.py::K.__init__", "reads as": '"pqd"', "by": "reader", "stands": False, "has": {"read the same blind": False}}
     with pytest.raises(KernelError):
         k.read_place(h, "doc.md::Model", "14", cwd=cwd)                     # not a value of the fact's type
     with pytest.raises(KernelError):
@@ -437,9 +437,9 @@ def test_a_fact_stated_in_several_places(tmp_path):
     a = k.read_place(h, "doc.md::Model", '"pqd"', cwd=cwd, quote="The default class is `pqd`.")
     b = k.read_place(h, "doc.md::Changes", '"pqd"', cwd=cwd)
     r = k.recheck(cwd)["decisions"][0]
-    assert r["state"] == "current" and [p["stands"] for p in r["places"]] == [False, False, True], r   # they agree, on two agents' word
+    assert r["state"] == "current" and [p["stands"] for p in r["places"]] == [False, False, False], r  # they agree; nothing stands yet
     k.sign_off(a["m"], "reviewer"); k.sign_off(b["m"], "reviewer")
-    assert all(p["stands"] for p in k.recheck(cwd)["decisions"][0]["places"])                      # now on a person's word
+    assert all(p["stands"] for p in k.recheck(cwd)["decisions"][0]["places"] if p["by"] == "stated")   # now on a person's word
 
     # an edit elsewhere in the quoted place leaves its reading alone; the unquoted one must be read again
     (repo / "doc.md").write_text(doc.format(a="pqd", b="pqd").replace("## Changes\n", "## Changes\n\nA note.\n")
@@ -553,6 +553,9 @@ def test_a_fact_keeps_its_readings_when_its_declaration_changes(tmp_path):
     again = k.claim_fact("limit", "Nat", ["doc.md::Limits", {"at": "k.py::LIMIT", "reader": pattern(find=r"= (\d+)", kind="nat")},
                                           {"at": "c.txt", "reader": pattern(find=r"limit: (\d+)", kind="nat")}])["h"]
     assert again == h
+    import json
+    (tmp_path / "pw-rules.json").write_text(json.dumps({"a blind reader counts if measured": {},
+                                                        "a reading stands if any of": [["computed"], ["confirmed by a person"]]}))
     r = k.recheck(cwd)["decisions"]
     assert len(r) == 1 and r[0]["state"] in ("current", "re-established") and len(r[0]["places"]) == 3, r
     assert [p for p in r[0]["places"] if p["at"] == "doc.md::Limits"][0]["m"] == m and all(p["stands"] for p in r[0]["places"])
@@ -562,12 +565,14 @@ def _measure(cwd, **readers):
     """Write what pw.calibrate would: for each model, how many of 27 planted changes it read."""
     import json
     from pw.calibrate import interval
-    runs = [{"model": m, "read rate": list(interval(k, 27)), "stuck rate": list(interval(27 - k, 27))} for m, k in readers.items()]
+    runs = [{"model": m, "read rate": list(interval(k, 27)), "stuck rate": list(interval(27 - k, 27)),
+             "accept rate": list(interval(27 - k, 27))} for m, k in readers.items()]
     with open(os.path.join(cwd, "pw-calibration.json"), "w") as fh:
         json.dump(runs, fh)
 
 
 def test_a_reading_stands_by_the_rules_not_by_a_number(tmp_path):
+    import json
     from pw.kernel import pattern
     log = str(tmp_path / "pw-log.jsonl")
     (tmp_path / "doc.md").write_text("## Limits\n\nAt most 14 atoms.\n")
@@ -581,7 +586,9 @@ def test_a_reading_stands_by_the_rules_not_by_a_number(tmp_path):
 
     # a place the kernel computes says the same
     h = a.claim_fact("limit", "Nat", ["doc.md::Limits", {"at": "k.py::LIMIT", "reader": pattern(find=r"= (\d+)", kind="nat")}])["h"]
-    assert place(h, "k.py::LIMIT")["why"] == "computed" if a.read_place(h, "doc.md::Limits", "14", **quote) else False
+    a.read_place(h, "doc.md::Limits", "14", **quote)
+    p = place(h, "k.py::LIMIT")
+    assert not p["stands"] and p["has"] == {"read the same blind": False}             # computed, but is it about this at all?
     p = place(h, "doc.md::Limits")
     assert not p["stands"] and p["has"]["words occur in the place"] and p["has"]["agrees with a computed place"] and not p["has"]["blind"]
     a.read_place(h, "doc.md::Limits", "14", blind=True, model="opus", **quote)
@@ -592,6 +599,29 @@ def test_a_reading_stands_by_the_rules_not_by_a_number(tmp_path):
     _measure(cwd, opus=27)
     p = place(h, "doc.md::Limits")
     assert p["stands"] and p["why"] == "blind + words occur in the place + agrees with a computed place"
+
+    # a computed place stands once a reader shown only that place reads off it what the pattern computes
+    code = dict(cwd=cwd, quote="LIMIT = 14")
+    a.decline(h, "k.py::LIMIT", "this is a line count, not a number of atoms", cwd, blind=True, model="opus")
+    p = place(h, "k.py::LIMIT")
+    assert not p["stands"] and p["declined"][0]["why"].startswith("this is a line count") and p["declined"][0]["model"] == "opus"
+    a.read_place(h, "k.py::LIMIT", "15", blind=True, model="opus", cwd=cwd, quote="LIMIT = 14")
+    p = place(h, "k.py::LIMIT")
+    assert not p["stands"] and p["read blind as"] == ["15"] and p["reads as"] == "14"  # the reader and the pattern differ
+    b.read_place(h, "k.py::LIMIT", "14", blind=True, model="haiku", **code)
+    assert not place(h, "k.py::LIMIT")["stands"] and place(h, "k.py::LIMIT")["unmeasured readers"] == ["haiku"]
+    b.read_place(h, "k.py::LIMIT", "14", blind=True, model="opus", **code)
+    assert place(h, "k.py::LIMIT")["why"] == "computed + read the same blind"
+    (tmp_path / "k.py").write_text("LIMIT = 14 + 0\n")
+    p = place(h, "k.py::LIMIT")                                                       # the pattern was checked once; edits around it
+    assert p["stands"] and p["declined"] == [] and p["read blind as"] == []           # do not call for a reader again
+    (tmp_path / "k.py").write_text("LIMIT = 14\n")
+    with open(os.path.join(cwd, "pw-calibration.json")) as fh:
+        runs = json.load(fh)
+    with open(os.path.join(cwd, "pw-calibration.json"), "w") as fh:
+        json.dump([{k: v for k, v in r.items() if k != "accept rate"} for r in runs], fh)
+    assert not place(h, "k.py::LIMIT")["stands"]                                      # never tried on places about something else
+    _measure(cwd, opus=27)
 
     # no computed place: one model is not enough, two are
     g = a.claim_fact("size", "Nat", ["notes.md::Size"])["h"]
@@ -611,7 +641,6 @@ def test_a_reading_stands_by_the_rules_not_by_a_number(tmp_path):
     assert not place(t, "doc.md::Limits")["stands"]
     a.sign_off(m, "reviewer")
     assert place(t, "doc.md::Limits")["why"] == "confirmed by a person"
-    import json
     (tmp_path / "pw-rules.json").write_text(json.dumps({"a blind reader counts if measured": {"read at least": 0.85, "stuck at most": 0.15},
                                                         "a reading stands if any of": [["computed"]]}))
     assert not place(t, "doc.md::Limits")["stands"] and not place(h, "doc.md::Limits")["stands"]

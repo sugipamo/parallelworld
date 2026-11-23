@@ -284,5 +284,26 @@
     }
    }
   ]
+ },
+ {
+  "name": "calibration bar: accept rate, in thousandths",
+  "type": "Nat",
+  "gloss": "the highest 95% bound, in thousandths, on the rate at which a blind reader reads a value off a place that is about another thing, for that reader to count as measured",
+  "places": [
+   {
+    "at": "pw-rules.json::a blind reader counts if measured.takes another thing for it at most",
+    "read": {
+     "as": "permille",
+     "find": "([\\d.]+)"
+    }
+   },
+   {
+    "at": "docs/spec.md::読みが成り立つ条件",
+    "read": {
+     "as": "permille",
+     "find": "おとりを読んでしまう率が (0\\.\\d+) 以下"
+    }
+   }
+  ]
  }
 ]

@@ -2,8 +2,9 @@
 
     python experiments/discovery/run.py [--model claude-opus-5-5] [--levels A B C] [--budget 5]
 
-The places declared in pw-facts.json are the known answers. A scratch copy of the repository is
-made with every file that names those places taken out, and `pw.discover` is run on it:
+The known answers are the places of the hand-written declaration: pw-facts.json as it was
+before any search was run (commit 2ce25a5; 6 facts, 16 places). A scratch copy of the repository
+is made with every file that names those places taken out, and `pw.discover` is run on it:
 
   A  one place of each fact is hidden; the fact and its other places are given
   B  only the fact (name, type, one-sentence description) is given; all its places are hidden
@@ -12,6 +13,15 @@ made with every file that names those places taken out, and `pw.discover` is run
 A hidden place counts as found if a proposal names the same file and one of the two parts
 contains the other. Everything else that passes the tool's checks is listed as an extra, to be
 judged by hand: it may be a place the declaration was missing.
+
+A session that did not finish (its tools never started, it ended in an error, or the agent did
+not say it had finished searching) is reported as such: its trials are not misses.
+In C, a declared place that was proposed, but for a thing with another value than the declared
+one, is counted apart from a place that was not proposed at all. That can be the same thing
+written another way ("v4.14.0" for "4.14.0") or another thing stated at the same place; which
+one it is has to be looked at.
+
+    python experiments/discovery/run.py --rescore     # score the saved results again, running nothing
 """
 import argparse
 import json
@@ -30,6 +40,8 @@ from pw import discover                                    # noqa: E402
 from pw.check import FACTS                                 # noqa: E402
 from pw.kernel import LOG, Kernel, locate                  # noqa: E402
 from pw.lean_gate import LEAN_DIR, LeanGate                # noqa: E402
+
+BEFORE = "2ce25a5"       # the commit whose pw-facts.json is the hand-written declaration
 
 LEAKS = ["pw-facts.json", "pw-log.jsonl", "pw-calibration.json", "docs/natural-language.md",
          "experiments/facts", "experiments/prose", "experiments/calibration", "experiments/discovery"]
@@ -59,12 +71,7 @@ def at(p):
     return p if isinstance(p, str) else p["at"]
 
 
-def same_place(a, b, repo):
-    """Same file, and one part contains the other."""
-    if a.partition("::")[0] != b.partition("::")[0]:
-        return False
-    x, y = locate(a, repo), locate(b, repo)
-    return x is not None and y is not None and (x in y or y in x)
+same_place = discover.same_place
 
 
 def norm(v):
@@ -106,19 +113,26 @@ def level_b(repo, facts, args):
         return list(pool.map(one, facts))
 
 
+def cover(repo, facts, values, proposed):
+    """Which declared places an open search proposed: with the declared value, or with another."""
+    covered = []
+    for f in facts:
+        for d in f["places"]:
+            there = [(p["name"], norm(q["value"])) for p in proposed if p["type"] == f["type"]
+                     for q in p["places"] if same_place(at(d), q["at"], repo)]
+            hit = sorted({n for n, v in there if v == values[f["name"]]})
+            covered.append({"fact": f["name"], "hidden": at(d), "found": bool(hit), "in": hit,
+                            "stated differently": sorted({f"{n}: {v}" for n, v in there if v != values[f["name"]]})})
+    return covered
+
+
 def level_c(repo, facts, values, args):
     """Open search, twice. A declared place counts as found if a proposed fact has a place there
     stating the declared value."""
     def one(i):
         proposals, run = discover.new(repo, args.model, [], args.budget)
-        covered = []
-        for f in facts:
-            for d in f["places"]:
-                hit = [p["new"]["name"] for p in proposals for q in p["places"]
-                       if same_place(at(d), q["at"], repo) and norm(q["value"]) == values[f["name"]]]
-                covered.append({"fact": f["name"], "hidden": at(d), "found": bool(hit), "in": sorted(set(hit))})
-        return {"run": run, "declared places": covered,
-                "proposed": [{**p["new"], "agree": discover._agree(p["places"]), "places": p["places"]} for p in proposals]}
+        proposed = [{**p["new"], "agree": discover._agree(p["places"]), "places": p["places"]} for p in proposals]
+        return {"run": run, "declared places": cover(repo, facts, values, proposed), "proposed": proposed}
 
     with ThreadPoolExecutor(args.parallel) as pool:
         return list(pool.map(one, range(args.open_runs)))
@@ -131,12 +145,17 @@ def main():
     ap.add_argument("--budget", type=float, default=5.0)
     ap.add_argument("--parallel", type=int, default=4)
     ap.add_argument("--open-runs", type=int, default=2)
+    ap.add_argument("--rescore", action="store_true", help="score the saved results again instead of running anything")
     args = ap.parse_args()
-    facts = json.load(open(os.path.join(ROOT, FACTS), encoding="utf-8"))
-    record = os.path.join(tempfile.mkdtemp(prefix="pw-discovery-"), LOG)       # the project's record is only read
+    declared = subprocess.run(["git", "show", f"{BEFORE}:{FACTS}"], cwd=ROOT, capture_output=True, text=True, check=True).stdout
+    facts = json.loads(declared)
+    work = tempfile.mkdtemp(prefix="pw-discovery-")
+    record = os.path.join(work, LOG)                                           # the project's record is only read
     shutil.copy(os.path.join(ROOT, LOG), record)
+    with open(os.path.join(work, FACTS), "w", encoding="utf-8") as fh:
+        fh.write(declared)
     kernel = Kernel(record, gate=LeanGate(LEAN_DIR), actor="discovery")
-    kernel.sync_facts(os.path.join(ROOT, FACTS))
+    kernel.sync_facts(os.path.join(work, FACTS))
     values = {d["fact"]: norm(json.loads(d["places"][0]["reads as"])) for d in kernel.recheck(ROOT)["decisions"] if "fact" in d}
     repo = scratch()
     print(f"scratch copy: {repo}", flush=True)
@@ -147,10 +166,20 @@ def main():
         with open(os.path.join(out, f"{level}-{args.model}.json"), "w", encoding="utf-8") as fh:
             json.dump(result, fh, ensure_ascii=False, indent=1)
 
+    def load(level):
+        with open(os.path.join(out, f"{level}-{args.model}.json"), encoding="utf-8") as fh:
+            return json.load(fh)
+
+    def incomplete(runs):
+        for r in runs:
+            for problem in r.get("problems", []):
+                print(f"   INCOMPLETE session (its trials are not misses): {problem}")
+
     cost = lambda runs: round(sum(r.get("cost_usd", 0) for r in runs), 2)
     if "A" in args.levels:
-        res = level_a(repo, facts, args)
+        res = load("A") if args.rescore else level_a(repo, facts, args)
         save("A", res)
+        incomplete([r["run"] for r in res])
         trials = [t for r in res for t in r["trials"] if t["hidden"]]
         controls = [t for r in res for t in r["trials"] if not t["hidden"]]
         print(f"\nA  one place hidden, the rest given: {sum(t['found'] for t in trials)}/{len(trials)} found   "
@@ -164,8 +193,9 @@ def main():
         for name, e in sorted({(n, e["at"]): (n, e) for n, e in extras}.values(), key=lambda x: (x[0], x[1]["at"])):
             print(f"   extra: {name} at {e['at']} says {norm(e['value'])[:60]}" + ("  (overlaps a known place)" if e["overlaps a known place"] else ""))
     if "B" in args.levels:
-        res = level_b(repo, facts, args)
+        res = load("B") if args.rescore else level_b(repo, facts, args)
         save("B", res)
+        incomplete([r["run"] for r in res])
         places = [(r["fact"], p) for r in res for p in r["places"]]
         print(f"\nB  only the fact given: {sum(p['found'] for _, p in places)}/{len(places)} found   (${cost([r['run'] for r in res])}, {len(res)} sessions)")
         for name, p in places:
@@ -175,13 +205,21 @@ def main():
             for e in r["extras"]:
                 print(f"   extra: {r['fact']} at {e['at']} says {norm(e['value'])[:60]}")
     if "C" in args.levels:
-        res = level_c(repo, facts, values, args)
+        res = load("C") if args.rescore else level_c(repo, facts, values, args)
+        if args.rescore:
+            for r in res:
+                r["declared places"] = cover(repo, facts, values, r["proposed"])
         save("C", res)
+        incomplete([r["run"] for r in res])
         for i, r in enumerate(res):
             got = r["declared places"]
             names = {c["fact"] for c in got if c["found"]}
-            print(f"\nC  nothing given, run {i + 1}: {sum(c['found'] for c in got)}/{len(got)} declared places, "
+            other = [c for c in got if not c["found"] and c["stated differently"]]
+            print(f"\nC  nothing given, run {i + 1}: {sum(c['found'] for c in got)}/{len(got)} declared places with the declared value, "
+                  f"{len(other)} with another value, {len(got) - len(other) - sum(c['found'] for c in got)} not proposed; "
                   f"{len(names)}/{len(facts)} declared facts   (${r['run'].get('cost_usd')})")
+            for c in other:
+                print(f"   proposed with another value: {c['fact']} at {c['hidden']}: {'; '.join(c['stated differently'])[:120]}")
             for p in r["proposed"]:
                 print(f"   proposed: {p['name']} ({p['type']}), {len(p['places'])} places" + ("" if p["agree"] else "  -- the places differ"))
 

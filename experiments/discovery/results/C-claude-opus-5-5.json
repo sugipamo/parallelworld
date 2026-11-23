@@ -13,7 +13,8 @@
     "found": true,
     "in": [
      "default-dependence"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "default dependence class",
@@ -21,13 +22,15 @@
     "found": true,
     "in": [
      "default-dependence"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "default dependence class",
     "hidden": "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "default dependence class",
@@ -35,7 +38,8 @@
     "found": true,
     "in": [
      "default-dependence"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "axioms a proof may depend on",
@@ -43,7 +47,8 @@
     "found": true,
     "in": [
      "allowed-axioms"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "axioms a proof may depend on",
@@ -51,7 +56,8 @@
     "found": true,
     "in": [
      "allowed-axioms"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "largest component inference solves",
@@ -59,6 +65,11 @@
     "found": true,
     "in": [
      "max-component-atoms"
+    ],
+    "stated differently": [
+     "min-concentration: 2",
+     "sample-input-bound: 15",
+     "wrong-model-agree-rate: 500"
     ]
    },
    {
@@ -67,19 +78,24 @@
     "found": true,
     "in": [
      "max-component-atoms"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "names of the MCP tools",
     "hidden": "docs/spec.md::4. 操作（MCPツール）",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": [
+     "relations: [\"contradiction\", \"holds\", \"iff\", \"implies\", \"not\", \"obj_eq\", \"pred_iff\", \"pred_implies\"]"
+    ]
    },
    {
     "fact": "names of the MCP tools",
     "hidden": "pw/mcp_server.py",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "default threshold, in thousandths",
@@ -87,7 +103,8 @@
     "found": true,
     "in": [
      "merge-threshold"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "default threshold, in thousandths",
@@ -95,7 +112,8 @@
     "found": true,
     "in": [
      "merge-threshold"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "default threshold, in thousandths",
@@ -103,7 +121,8 @@
     "found": true,
     "in": [
      "merge-threshold"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "Lean version",
@@ -111,7 +130,8 @@
     "found": true,
     "in": [
      "lean-version"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "Lean version",
@@ -119,7 +139,8 @@
     "found": true,
     "in": [
      "lean-version"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "Lean version",
@@ -127,6 +148,9 @@
     "found": true,
     "in": [
      "lean-version"
+    ],
+    "stated differently": [
+     "ci-python-version: \"3.13\""
     ]
    }
   ],
@@ -502,7 +526,8 @@
     "found": true,
     "in": [
      "default_dependence"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "default dependence class",
@@ -510,13 +535,15 @@
     "found": true,
     "in": [
      "default_dependence"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "default dependence class",
     "hidden": "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "default dependence class",
@@ -524,7 +551,8 @@
     "found": true,
     "in": [
      "default_dependence"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "axioms a proof may depend on",
@@ -532,7 +560,8 @@
     "found": true,
     "in": [
      "allowed_axioms"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "axioms a proof may depend on",
@@ -540,7 +569,8 @@
     "found": true,
     "in": [
      "allowed_axioms"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "largest component inference solves",
@@ -548,6 +578,9 @@
     "found": true,
     "in": [
      "max_atoms"
+    ],
+    "stated differently": [
+     "random_input_bound: 15"
     ]
    },
    {
@@ -556,19 +589,24 @@
     "found": true,
     "in": [
      "max_atoms"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "names of the MCP tools",
     "hidden": "docs/spec.md::4. 操作（MCPツール）",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": [
+     "proof_relations: [\"contradiction\", \"holds\", \"iff\", \"implies\", \"not\", \"obj_eq\", \"pred_iff\", \"pred_implies\"]"
+    ]
    },
    {
     "fact": "names of the MCP tools",
     "hidden": "pw/mcp_server.py",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "default threshold, in thousandths",
@@ -576,7 +614,8 @@
     "found": true,
     "in": [
      "decision_threshold"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "default threshold, in thousandths",
@@ -584,7 +623,8 @@
     "found": true,
     "in": [
      "decision_threshold"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "default threshold, in thousandths",
@@ -592,7 +632,8 @@
     "found": true,
     "in": [
      "decision_threshold"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "Lean version",
@@ -600,7 +641,8 @@
     "found": true,
     "in": [
      "lean_version"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "Lean version",
@@ -608,7 +650,8 @@
     "found": true,
     "in": [
      "lean_version"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "Lean version",
@@ -616,6 +659,9 @@
     "found": true,
     "in": [
      "lean_version"
+    ],
+    "stated differently": [
+     "ci_python_version: \"3.13\""
     ]
    }
   ],

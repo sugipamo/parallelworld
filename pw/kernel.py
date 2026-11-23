@@ -259,6 +259,7 @@ CONDITIONS = {
     "agrees with a computed place": "another place of the fact, read by a pattern, has the same value",
     "agrees with another place read blind": "another place of the fact, read blind in another session, has the same value",
     "read the same by a second model": "two measured readers of different models, each blind, read this place the same",
+    "read the same blind": "a computed place: a measured reader, shown the place and nothing else, read off it what the pattern computes",
 }
 
 
@@ -282,8 +283,14 @@ def measured_readers(cwd, rules):
     with open(path, encoding="utf-8") as fh:
         latest = {run["model"]: run for run in json.load(fh)}
     bar = rules["a blind reader counts if measured"]
+    limits = {"read at least": ("read rate", 0, 1), "stuck at most": ("stuck rate", 1, -1),
+              "takes another thing for it at most": ("accept rate", 1, -1)}
+    unknown = set(bar) - set(limits)
+    if unknown:
+        raise KernelError(f"a reader can be asked for {sorted(limits)}; not {sorted(unknown)}")
+    # a rate that was not measured does not meet a bar on it
     return {m for m, run in latest.items()
-            if run["read rate"][0] >= bar["read at least"] and run["stuck rate"][1] <= bar["stuck at most"]}
+            if all(key in run and sign * run[key][end] >= sign * bar[name] for name, (key, end, sign) in limits.items() if name in bar)}
 
 
 def _tree(cwd):
@@ -401,7 +408,8 @@ class State:
             self.atoms[p["h"]] = {"kind": "H", "text": p["text"]}
             self.prior[p["h"]] = p["prior"]
             if p.get("fact"):                    # declared, or declared again with other places or readers
-                self.facts[p["h"]] = dict(p["fact"], readings=self.facts.get(p["h"], {}).get("readings", []))
+                was = self.facts.get(p["h"], {})
+                self.facts[p["h"]] = dict(p["fact"], readings=was.get("readings", []), declined=was.get("declined", []))
             if p.get("pred"):
                 self.formal[p["h"]] = {"subject": p["subject"], "pred": p["pred"]["id"]}
                 self.algebra.add_pred(p["pred"]["id"], p["pred"]["type"], p["pred"]["text"])
@@ -424,6 +432,8 @@ class State:
             info["literal"] = info["literal"] or bool(p.get("literal"))
             if (p["place"], p["m"]) not in self.facts[p["h"]]["readings"]:
                 self.facts[p["h"]]["readings"].append((p["place"], p["m"]))
+        elif typ == "decline":
+            self.facts[p["h"]]["declined"].append({k: p.get(k) for k in ("place", "subject", "actor", "model", "blind", "why")})
         elif typ == "agree":
             if p["f"] not in self.atoms:
                 self.atoms[p["f"]] = {"kind": "F", "text": p["lean"]}
@@ -711,6 +721,26 @@ class Kernel:
                     "model_prior": self.catalog["priors"]["derived" if how else "model"]})
         return {"m": m, "o": ob["id"], "read as": obj}
 
+    def decline(self, h, place, why, cwd, blind=False, model=None):
+        """Record that a reader, shown a place, found that it does not state the fact.
+
+        This is what tells a place that is about something else from a reader that never
+        answered: silence is not a decline. It holds for the place's content as it is now.
+        """
+        st = self.state()
+        if h not in st.facts:
+            raise KernelError(f"{h} is not a fact")
+        if place not in [p["at"] for p in st.facts[h]["places"]]:
+            raise KernelError(f"{place} is not a place of this fact")
+        if locate(place, cwd) is None:
+            raise KernelError(f"{place} is not there")
+        if not _norm(why):
+            raise KernelError("say what the place is about instead")
+        with self._tx() as (con, st):
+            self._append(con, st, "decline", {"h": h, "place": place, "subject": subject_id(place, cwd), "why": _norm(why)[:400],
+                                              "blind": bool(blind), "model": model if blind else None})
+        return {"declined": place}
+
     def _agreement(self, h, guards, terms):
         """The proposition that the present readings agree; stated once, then settled by Lean."""
         st = self.state()
@@ -758,7 +788,9 @@ class Kernel:
                     unread.append({"at": at, "why": str(e)})
                     continue
             elif not have:
-                unread.append({"at": at, "why": "it changed since it was read" if seen else "nobody has read it yet"})
+                no = [d for d in fact["declined"] if d["place"] == at and d["subject"] == now]
+                unread.append({"at": at, "why": "it changed since it was read" if seen else "nobody has read it yet",
+                               **({"declined": no} if no else {})})
                 continue
             guards.append(have[-1])
             st = self.state()
@@ -775,10 +807,23 @@ class Kernel:
         rules = load_rules(cwd)
         measured = measured_readers(cwd, rules)
         confirmed = {e["target"] for e in st.evidence.values() if e["kind"] == "sign_off" and e["outcome"] == "confirmed"}
+        def value(obj):
+            text = st.algebra.objs[obj]["text"]
+            try:
+                return json.loads(text)
+            except ValueError:
+                return text
+
         for p in entry["places"]:
             info = st.models[p["m"]]
             others = [st.models[q["m"]] for q in entry["places"] if q is not p and st.models[q["m"]]["obj"] == info["obj"]]
             readers = info["models"] & measured
+            # a computed place: was the pattern ever checked against a reader who saw only the place?
+            mine = [st.models[m] for at, m in fact["readings"] if at == p["at"]]
+            stated = [s for s in mine if not s["binding"] and s["models"] & measured]
+            same_blind = bool(info["binding"]) and any(
+                s["subject"] == c["subject"] and value(s["obj"]) == value(c["obj"])
+                for s in stated for c in mine if c["binding"] == info["binding"])
             has = {
                 "computed": bool(info["binding"]),
                 "confirmed by a person": p["m"] in confirmed,
@@ -787,14 +832,21 @@ class Kernel:
                 "agrees with a computed place": any(o["binding"] for o in others),
                 "agrees with another place read blind": any(not o["binding"] and o["models"] & measured and o["blind"] - info["blind"] for o in others),
                 "read the same by a second model": len(readers) > 1,
+                "read the same blind": same_blind,
             }
             met = next((rule for rule in rules["a reading stands if any of"] if all(has[c] for c in rule)), None)
             p["stands"] = met is not None
             p["why"] = " + ".join(met) if met else "no rule is met"
             if not info["binding"]:
-                p["has"] = {c: v for c, v in has.items() if c != "computed"}
+                p["has"] = {c: v for c, v in has.items() if c not in ("computed", "read the same blind")}
                 p["unmeasured readers"] = sorted(info["models"] - measured) + (
                     ["a reader whose model was not recorded"] if info["blind"] and not info["models"] else [])
+            else:
+                now = subject_id(p["at"], cwd)
+                p["has"] = {"read the same blind": same_blind}
+                p["unmeasured readers"] = sorted({r for s in mine if not s["binding"] for r in s["models"]} - measured)
+                p["read blind as"] = sorted({st.algebra.objs[s["obj"]]["text"] for s in stated if s["subject"] == now} - {p["reads as"]})
+                p["declined"] = [d for d in fact["declined"] if d["place"] == p["at"] and d["subject"] == now]
         return entry
 
     def sync_facts(self, path):

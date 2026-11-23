@@ -78,6 +78,16 @@ def read_place(h: str, place: str, object: str, quote: str) -> dict:
 
 
 @mcp.tool()
+def not_stated(h: str, place: str, why: str) -> dict:
+    """For a FACT: say that a place you were shown does not state it. Use this instead of
+    `read_place` when the place is about something else, or mentions the thing without saying
+    what its value is. `why` says in a sentence what the place is about instead. Declining is
+    an answer: a place that is read as something it does not say hides a disagreement."""
+    return _safe(lambda: _kernel.decline(h, place, why, _workdir(), blind=os.environ.get("PW_BLIND") == "1",
+                                         model=os.environ.get("PW_MODEL")))
+
+
+@mcp.tool()
 def reject_object(p: str, object: str, proof: str) -> dict:
     """Show that specification `p` is not vacuous: give a Lean term `object` (of p's type) that
     should NOT satisfy it, and tactics proving `¬ p object`. Use this for specifications you

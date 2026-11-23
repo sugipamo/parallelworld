@@ -1,10 +1,27 @@
 {
-  "_note": "When a reading of a place stands. This is a decision, not an estimate: nothing here is computed from probabilities. Put a pw-rules.json in a repository to decide otherwise.",
-  "a blind reader counts if measured": {"read at least": 0.85, "stuck at most": 0.15},
-  "a reading stands if any of": [
-    ["computed"],
-    ["confirmed by a person"],
-    ["blind", "words occur in the place", "agrees with a computed place"],
-    ["blind", "words occur in the place", "read the same by a second model"]
+ "_note": "When a reading of a place stands. This is a decision, not an estimate: nothing here is computed from probabilities. Put a pw-rules.json in a repository to decide otherwise.",
+ "a blind reader counts if measured": {
+  "read at least": 0.85,
+  "stuck at most": 0.15,
+  "takes another thing for it at most": 0.15
+ },
+ "a reading stands if any of": [
+  [
+   "computed",
+   "read the same blind"
+  ],
+  [
+   "confirmed by a person"
+  ],
+  [
+   "blind",
+   "words occur in the place",
+   "agrees with a computed place"
+  ],
+  [
+   "blind",
+   "words occur in the place",
+   "read the same by a second model"
   ]
+ ]
 }

@@ -1,0 +1,58 @@
+[
+ {
+  "fact": "default dependence class",
+  "at": "docs/symbols.md::9. 置いている仮定",
+  "kept": true,
+  "answered": true,
+  "why": "a blind reader reads \"pqd\" off it",
+  "by hand": true
+ },
+ {
+  "fact": "default threshold, in thousandths",
+  "at": "pw/check.py",
+  "kept": true,
+  "answered": true,
+  "why": "a blind reader reads 900 off it",
+  "by hand": true
+ },
+ {
+  "fact": "default threshold, in thousandths",
+  "at": "pw/maintain.py",
+  "kept": true,
+  "answered": true,
+  "why": "a blind reader reads 900 off it",
+  "by hand": true
+ },
+ {
+  "fact": "Lean version",
+  "at": "experiments/selfcheck/lean/lakefile.toml",
+  "kept": false,
+  "answered": true,
+  "why": "a blind reader says the place does not state this: The lakefile pins the mathlib dependency to rev v4.14.0, which is a mathlib revision, not a statement of the Lean toolchain version.",
+  "by hand": false
+ },
+ {
+  "fact": "Lean version",
+  "at": "experiments/selfcheck/lean/lake-manifest.json::packages.0.inputRev",
+  "kept": false,
+  "answered": true,
+  "why": "a blind reader reads \"v4.14.0\" off it, but the pattern computes \"4.14.0\": the pattern is not reading what the place says",
+  "by hand": false
+ },
+ {
+  "fact": "axioms a proof may depend on",
+  "at": "docs/symbols.md::2. 形式層 ― リンデンバウム代数（一致）",
+  "kept": false,
+  "answered": true,
+  "why": "a blind reader says the place does not state this: The passage only mentions that Classical.choice is allowed (making the algebra Boolean). It does not list the full set of axioms an accepted proof may depend on.",
+  "by hand": false
+ },
+ {
+  "fact": "axioms a proof may depend on",
+  "at": "experiments/selfcheck/RESULTS.md",
+  "kept": true,
+  "answered": true,
+  "why": "a blind reader reads [\"Classical.choice\", \"Quot.sound\", \"propext\"] off it",
+  "by hand": false
+ }
+]

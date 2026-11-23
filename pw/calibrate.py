@@ -1,6 +1,6 @@
 """Measure how well a blind reader reads, by planting changes whose answer is known.
 
-    python -m pw.calibrate [--repo DIR] [--model claude-opus-5-5] [--per-place 5] [--seed 0]
+    python -m pw.calibrate [--repo DIR] [--model claude-opus-5-5] [--per-place 5] [--decoys 30] [--seed 0]
 
 For every place an agent has read, the value it states is replaced in the text of the place by
 another value of the same kind (another word, another number, a renamed or removed list entry).
@@ -12,10 +12,24 @@ known without anyone judging it:
             would let a real disagreement between places go unnoticed
   other     anything else, including declining to answer
 
-Unchanged texts are mixed in as controls. Nothing is written to the project's record: every
-trial runs against a scratch copy. The counts are appended to pw-calibration.json.
+Unchanged texts are mixed in as controls.
 
-What this does not show: that planted changes resemble the ways real documents drift.
+A reader also has to refuse. A decoy is a place of one fact shown with the question of another
+fact of the same type, where the place does not contain that other fact's value: whatever the
+reader reads off it is wrong, and the right answer is to say the place does not state the thing.
+
+  declined  the reader said so
+  accepted  the reader read a value off a place that is about something else: the failure that
+            would let a place be attached to a fact it has nothing to do with
+
+A trial the reader neither read nor declined is "no answer". It says the session failed, not
+what the reader would have done, and is left out of every rate.
+
+Nothing is written to the project's record: every trial runs against a scratch copy. The
+counts are appended to pw-calibration.json.
+
+What this does not show: that planted changes resemble the ways real documents drift, or that
+these decoys resemble the places a search wrongly proposes.
 """
 import argparse
 import datetime
@@ -79,7 +93,8 @@ def mutants(text, value, rng, n):
                 out.append(("row removed", text.replace(lines[0], "", 1), sorted(x for x in value if x != e)))
             else:
                 new = _fresh(e, text, rng)
-                out.append(("entry renamed", _whole(e).sub(new, text), sorted(new if x == e else x for x in value)))
+                # the word may also be part of another entry ("blind" in "read blind"): that entry changes with it
+                out.append(("entry renamed", _whole(e).sub(new, text), sorted(_whole(e).sub(new, x) for x in value)))
         return out
     if not _whole(value).search(text):
         return out
@@ -103,13 +118,45 @@ def interval(k, n, level=0.95):
     return (0.0 if k == 0 else float(beta.ppf(a, k, n - k + 1)), 1.0 if k == n else float(beta.ppf(1 - a, k + 1, n - k)))
 
 
-def trials(kernel, repo, per_place, rng):
-    """One list of trials per place an agent has read: the planted changes, then a control."""
+def decoys(facts, st, repo, rng, n):
+    """Up to n (place of one fact, question of another) pairs whose right answer is to decline."""
+    def overlap(a, b):
+        x, y = locate(a, repo), locate(b, repo)
+        return a.partition("::")[0] == b.partition("::")[0] and x is not None and y is not None and (x in y or y in x)
+
+    found = {}
+    for a in facts:
+        for p in a["places"]:
+            text = locate(p["at"], repo).decode("utf-8", "replace")
+            for b in facts:
+                if b is a or st.facts[b["h"]]["type"] != st.facts[a["h"]]["type"]:
+                    continue
+                value = json.loads(b["places"][0]["reads as"])
+                stated = all(_whole(e).search(text) for e in value) if isinstance(value, list) else bool(_whole(value).search(text))
+                if stated or any(overlap(p["at"], q["at"]) for q in st.facts[b["h"]]["places"]):
+                    continue                                   # the place may well state it: not a decoy
+                found.setdefault(b["fact"], []).append({
+                    "fact": b["fact"], "asked": f'{b["fact"]}: {b["text"]}', "type": st.facts[b["h"]]["type"], "place": p["at"],
+                    "kind": "decoy", "text": text, "planted": None, "before": None, "about": a["fact"]})
+    for pairs in found.values():
+        rng.shuffle(pairs)
+    out, used = [], {}
+    while len(out) < n and any(found.values()):                # in turn over the facts asked about, each place at most twice
+        for name in sorted(found):
+            if found[name] and len(out) < n:
+                t = found[name].pop()
+                if used.get(t["place"], 0) < 2:
+                    used[t["place"]] = used.get(t["place"], 0) + 1
+                    out.append(t)
+    return out
+
+
+def trials(kernel, repo, per_place, rng, n_decoys=0):
+    """Per place an agent has read: the planted changes, then a control. Then the decoys."""
     st = kernel.state()
     out = []
-    for d in kernel.recheck(repo)["decisions"]:
-        if "fact" not in d:
-            continue
+    facts = [d for d in kernel.recheck(repo)["decisions"] if "fact" in d and d.get("places") and "unread" not in d]
+    for d in facts:
         for p in d.get("places", []):
             if p["by"] != "stated":
                 continue
@@ -120,9 +167,9 @@ def trials(kernel, repo, per_place, rng):
             text = locate(p["at"], repo).decode("utf-8", "replace")
             made = mutants(text, value, rng, per_place)
             for kind, changed, planted in made + [("unchanged", text, value)]:
-                out.append({"fact": d["fact"], "asked": d["text"], "type": st.facts[d["h"]]["type"], "place": p["at"],
-                            "kind": kind, "text": changed, "planted": planted, "before": value})
-    return out
+                out.append({"fact": d["fact"], "asked": f'{d["fact"]}: {d["text"]}', "type": st.facts[d["h"]]["type"], "place": p["at"],
+                            "kind": kind, "text": changed, "planted": planted, "before": value, "about": d["fact"]})
+    return out + decoys(facts, st, repo, rng, n_decoys)
 
 
 def run_session(args, number, batch):
@@ -144,9 +191,15 @@ def run_session(args, number, batch):
             t["read"] = json.loads(said[-1]) if said else None
         except ValueError:
             t["read"] = said[-1]
-        t["outcome"] = ("read" if t["read"] is not None and same(t["read"], t["planted"])
-                        else "stuck" if t["read"] is not None and t["kind"] != "unchanged" and same(t["read"], t["before"])
-                        else "other")
+        declined = [x["why"] for x in st.facts[t["h"]]["declined"]]
+        if t["read"] is None:                       # silence is a failed session, not something the reader did
+            t["outcome"] = "declined" if declined else "no answer"
+            t["why"] = declined[-1] if declined else None
+        elif t["kind"] == "decoy":
+            t["outcome"] = "accepted"
+        else:
+            t["outcome"] = ("read" if same(t["read"], t["planted"])
+                            else "stuck" if t["kind"] != "unchanged" and same(t["read"], t["before"]) else "other")
         del t["h"], t["text"]
     return run.get("cost_usd", 0), run.get("error")
 
@@ -157,6 +210,7 @@ def main():
     ap.add_argument("--lean-dir", default=LEAN_DIR)
     ap.add_argument("--model", default="claude-opus-5-5")
     ap.add_argument("--per-place", type=int, default=5, help="planted changes per place (one control is added to each)")
+    ap.add_argument("--decoys", type=int, default=30, help="places shown with the question of another fact")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--budget", type=float, default=2.0)
     ap.add_argument("--parallel", type=int, default=4)
@@ -168,14 +222,15 @@ def main():
     kernel = Kernel(scratch, gate=LeanGate(args.lean_dir), actor="calibrate")
     if os.path.exists(os.path.join(repo, FACTS)):
         kernel.sync_facts(os.path.join(repo, FACTS))
-    todo = trials(kernel, repo, args.per_place, random.Random(args.seed))
+    todo = trials(kernel, repo, args.per_place, random.Random(args.seed), args.decoys)
     if not todo:
         sys.exit("no place read by an agent whose value occurs literally in it: nothing to plant")
 
-    # a reader never sees two versions of one fact: at most one trial per fact in a session
+    # a reader never sees two versions of one fact, nor one place twice: at most one trial per
+    # fact in a session, counting both the fact asked about and the fact the place belongs to
     sessions = []
     for t in todo:
-        s = next((s for s in sessions if all(x["fact"] != t["fact"] for x in s)), None)
+        s = next((s for s in sessions if all({x["fact"], x["about"]}.isdisjoint({t["fact"], t["about"]}) for x in s)), None)
         if s is None:
             sessions.append(s := [])
         s.append(t)
@@ -186,28 +241,42 @@ def main():
         if error:
             print("   a session failed:", error[:200])
 
-    planted = [t for t in todo if t["kind"] != "unchanged"]
-    controls = [t for t in todo if t["kind"] == "unchanged"]
+    silent = [t for t in todo if t["outcome"] == "no answer"]
+    answered = [t for t in todo if t["outcome"] != "no answer"]            # a rate is over the trials the reader answered
+    planted = [t for t in answered if t["kind"] not in ("unchanged", "decoy")]
+    controls = [t for t in answered if t["kind"] == "unchanged"]
+    baits = [t for t in answered if t["kind"] == "decoy"]
     count = lambda ts, o: sum(t["outcome"] == o for t in ts)
+    outcomes = ("read", "stuck", "other", "declined", "accepted")
     summary = {"model": args.model, "date": datetime.date.today().isoformat(), "seed": args.seed,
-               "cost_usd": round(sum(c for c, _ in ran), 2),
-               "planted": {"n": len(planted), "read": count(planted, "read"), "stuck": count(planted, "stuck"), "other": count(planted, "other")},
-               "unchanged": {"n": len(controls), "read": count(controls, "read")}}
+               "cost_usd": round(sum(c for c, _ in ran), 2), "no answer": len(silent),
+               "planted": {"n": len(planted), **{o: count(planted, o) for o in ("read", "stuck", "other", "declined")}},
+               "unchanged": {"n": len(controls), "read": count(controls, "read")},
+               "decoys": {"n": len(baits), "declined": count(baits, "declined"), "accepted": count(baits, "accepted")}}
     n = len(planted)
-    summary["read rate"] = [round(x, 3) for x in interval(summary["planted"]["read"], n)]
-    summary["stuck rate"] = [round(x, 3) for x in interval(summary["planted"]["stuck"], n)]
+    if n:
+        summary["read rate"] = [round(x, 3) for x in interval(summary["planted"]["read"], n)]
+        summary["stuck rate"] = [round(x, 3) for x in interval(summary["planted"]["stuck"], n)]
+    if baits:
+        summary["accept rate"] = [round(x, 3) for x in interval(summary["decoys"]["accepted"], len(baits))]
 
     kinds = sorted({t["kind"] for t in todo})
-    print(f"\n{'kind of change':<16} {'n':>3} {'read':>5} {'stuck':>6} {'other':>6}")
+    print(f"\n{'kind of trial':<16} {'n':>3} " + " ".join(f"{o:>8}" for o in outcomes) + f" {'no answer':>10}")
     for k in kinds:
         ts = [t for t in todo if t["kind"] == k]
-        print(f"{k:<16} {len(ts):>3} {count(ts, 'read'):>5} {count(ts, 'stuck'):>6} {count(ts, 'other'):>6}")
-    print(f"\nplanted changes read: {summary['planted']['read']}/{n}   95% interval for the rate: {summary['read rate']}")
-    print(f"stuck on the old value: {summary['planted']['stuck']}/{n}   95% interval for the rate: {summary['stuck rate']}")
+        print(f"{k:<16} {len(ts):>3} " + " ".join(f"{count(ts, o):>8}" for o in outcomes) + f" {count(ts, 'no answer'):>10}")
+    if n:
+        print(f"\nplanted changes read: {summary['planted']['read']}/{n}   95% interval for the rate: {summary['read rate']}")
+        print(f"stuck on the old value: {summary['planted']['stuck']}/{n}   95% interval for the rate: {summary['stuck rate']}")
+    if baits:
+        print(f"decoys read as if they stated the thing: {summary['decoys']['accepted']}/{len(baits)}   "
+              f"95% interval for the rate: {summary['accept rate']}")
     print(f"unchanged texts read as before: {summary['unchanged']['read']}/{len(controls)}   cost ${summary['cost_usd']}")
+    if silent:
+        print(f"{len(silent)} trial(s) got no answer and are in no rate: the session failed for them")
     for t in todo:
-        if t["outcome"] != "read":
-            print(f"   {t['outcome']}: {t['place']} ({t['kind']}) planted {json.dumps(t['planted'], ensure_ascii=False)[:80]} "
+        if t["outcome"] not in ("read", "declined") or (t["outcome"] == "declined" and t["kind"] != "decoy"):
+            print(f"   {t['outcome']}: {t['place']} ({t['kind']}, asked: {t['fact']}) planted {json.dumps(t['planted'], ensure_ascii=False)[:60]} "
                   f"read {json.dumps(t['read'], ensure_ascii=False)[:80]}")
 
     path = os.path.join(repo, RESULTS)

@@ -26,6 +26,12 @@ def show(report, threshold, unconfirmed="fail"):
     not stand by the rules is reported and does not count as needing attention.
     """
     bad = bool(report["conflicts"])
+
+    def declined(by):
+        for x in by:
+            print(f"          a blind reader ({x['model'] or x['actor']}) says the place does not state this: {x['why'][:200]}")
+            print("          if it is about something else, take the place out of pw-facts.json")
+
     mark = lambda ok, soft=False: "ok  " if ok else ("WARN" if soft and unconfirmed == "warn" else "FAIL")
     for d in report["decisions"]:
         if d.get("natural_language"):
@@ -50,8 +56,12 @@ def show(report, threshold, unconfirmed="fail"):
                         print("          " + ", ".join(f"{c}: {'yes' if v else 'no'}" for c, v in p["has"].items()))
                         if p["unmeasured readers"]:
                             print(f"          read blind by {', '.join(p['unmeasured readers'])}: not a measured reader here (python -m pw.calibrate --model ...)")
+                        for other in p.get("read blind as", []):
+                            print(f"          a blind reader reads {other[:100]} off it, not what the pattern computes")
+                        declined(p.get("declined", []))
             for u in d.get("unread", []):
                 print(f"       {u['at']}: {u['why'][:160]}")
+                declined(u.get("declined", []))
             if d["state"] == "violated":
                 print("       the places do not say the same thing (verified by Lean); which one is right is for a person to say")
             elif d["state"] == "stale":
@@ -60,7 +70,7 @@ def show(report, threshold, unconfirmed="fail"):
                 print("       a person has to say which reading is right: python -m pw.confirm --who NAME M:... and --reject M:...")
             elif not ok:
                 print("       the places agree, but a reading does not stand by the rules (pw-rules.json):")
-                print("       python -m pw.maintain (a second, blind reading) or python -m pw.confirm (a person)")
+                print("       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)")
             if "error" in d:
                 print(f"       {d['error'][:300]}")
             continue

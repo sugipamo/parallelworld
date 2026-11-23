@@ -436,6 +436,8 @@ def test_planted_changes_have_known_answers():
         assert len(planted) == (2 if kind == "row removed" else 3) and "claim_formal" in changed
         for e in planted:
             assert f"`{e}" in changed                                               # every planted entry is in the changed text
+    (_, changed, planted), = mutants("`blind` and `read blind` and `computed`", ["blind", "computed", "read blind"], random.Random(3), 1)
+    assert all(f"`{e}`" in changed for e in planted) and len(planted) == 3          # an entry inside another entry changes with it
     assert same(["b", "a"], ["a", "b"]) and not same(["a"], ["a", "b"]) and same(14, 14) and not same("14", 14)
     lo, hi = interval(30, 30)
     assert 0.88 < lo < 0.89 and hi == 1.0                                           # thirty out of thirty: at least 0.88
@@ -495,3 +497,47 @@ def test_a_proposed_place_is_checked_against_the_file(tmp_path):
     k = Kernel(str(tmp_path / "e.db"), gate=FakeGate())
     (tmp_path / "facts.json").write_text(json.dumps(merged))
     assert len(k.sync_facts(str(tmp_path / "facts.json"))) == 2                      # what is merged is a valid declaration
+
+
+def test_a_search_that_failed_does_not_look_like_one_that_found_nothing(tmp_path, monkeypatch):
+    import json
+    from pw import discover
+    (tmp_path / "guide.md").write_text("## Limits\n\nAt most 14 atoms are solved.\n")
+    (tmp_path / "app.py").write_text("LIMIT = 14\n")
+    (tmp_path / "other.py").write_text("LIMIT = 14\n")
+    repo = str(tmp_path)
+    facts = [{"name": "limit", "type": "Nat", "places": ["guide.md::Limits", "app.py::LIMIT"]}]
+    place = lambda at: {"fact": "limit", "place": {"at": at, "read": None, "value": 14, "quote": "LIMIT = 14"}}
+
+    def agent(lines, result):
+        """Stand in for the agent: what its tools wrote, and how the session ended."""
+        def run(cmd, **kw):
+            with open(cmd[cmd.index("--mcp-config") + 1]) as fh:
+                env = json.load(fh)["mcpServers"]["find"]["env"]
+            with open(env["PW_DISCOVER_OUT"], "w") as fh:
+                fh.writelines(json.dumps(x) + "\n" for x in lines)
+            return type("R", (), {"stdout": json.dumps(result) if result is not None else "boom", "stderr": ""})()
+        monkeypatch.setattr(discover.subprocess, "run", run)
+
+    ok = {"num_turns": 3, "total_cost_usd": 0.1, "result": "found nothing", "subtype": "success", "is_error": False}
+    agent([], ok)                                                    # the tools never came up: the agent only talked
+    proposals, run = discover.further(repo, "m", facts, 1.0)
+    assert proposals == [] and "never started" in run["problems"][0] and "did not say it finished" in run["problems"][1]
+    agent([{"started": True}], ok)                                   # tools up, but the agent never said it was done
+    assert discover.further(repo, "m", facts, 1.0)[1]["problems"] == ["the agent did not say it finished searching for: limit"]
+    agent([{"started": True}, {"finished": "limit"}], {**ok, "subtype": "error_max_budget_usd", "is_error": True})
+    assert discover.further(repo, "m", facts, 1.0)[1]["problems"] == ["the session ended with error_max_budget_usd"]
+    agent([{"started": True}, {"finished": "limit"}], None)
+    assert "gave no result" in discover.further(repo, "m", facts, 1.0)[1]["problems"][0]
+    agent([{"started": True}, {"finished": ""}], ok)
+    assert discover.new(repo, "m", facts, 1.0)[1]["problems"] == []
+    agent([{"started": True}, {"finished": "limit"}], ok)            # only now does nothing mean nothing
+    proposals, run = discover.further(repo, "m", facts, 1.0)
+    assert proposals == [] and run["problems"] == [] and run["controls"] == {}
+
+    # a known place left out as a control: coming back with it shows the search works, and is not a proposal
+    agent([{"started": True}, place("app.py"), place("other.py::LIMIT"), {"finished": "limit"}], ok)
+    proposals, run = discover.further(repo, "m", facts, 1.0, hide={"limit": "app.py::LIMIT"})
+    assert [p["place"]["at"] for p in proposals] == ["other.py::LIMIT"] and run["controls"] == {"limit": {"at": "app.py::LIMIT", "found": True}}
+    agent([{"started": True}, place("other.py::LIMIT"), {"finished": "limit"}], ok)
+    assert discover.further(repo, "m", facts, 1.0, hide={"limit": "app.py::LIMIT"})[1]["controls"]["limit"]["found"] is False

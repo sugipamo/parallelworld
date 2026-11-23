@@ -11,79 +11,92 @@
     "fact": "default dependence class",
     "hidden": "docs/spec.md::3. モデル",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "default dependence class",
     "hidden": "docs/spec.md::2. v0.1 からの変更",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "default dependence class",
     "hidden": "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "default dependence class",
     "hidden": "pw/kernel.py::Kernel.__init__",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "axioms a proof may depend on",
     "hidden": "docs/spec.md::5. Lean Gate",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "axioms a proof may depend on",
     "hidden": "pw/lean_gate.py::ALLOWED_AXIOMS",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "largest component inference solves",
     "hidden": "docs/spec.md::7. 未解決",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "largest component inference solves",
     "hidden": "pw/kernel.py::Kernel.__init__",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "names of the MCP tools",
     "hidden": "docs/spec.md::4. 操作（MCPツール）",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "names of the MCP tools",
     "hidden": "pw/mcp_server.py",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "default threshold, in thousandths",
     "hidden": "pw/orchestrator.py::main",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "default threshold, in thousandths",
     "hidden": "pw/check.py::main",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "default threshold, in thousandths",
     "hidden": "pw/maintain.py::main",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "Lean version",
@@ -91,7 +104,8 @@
     "found": true,
     "in": [
      "lean_version"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "Lean version",
@@ -99,7 +113,8 @@
     "found": true,
     "in": [
      "lean_version"
-    ]
+    ],
+    "stated differently": []
    },
    {
     "fact": "Lean version",
@@ -107,6 +122,9 @@
     "found": true,
     "in": [
      "lean_version"
+    ],
+    "stated differently": [
+     "python_version: \"3.13\""
     ]
    }
   ],
@@ -248,97 +266,117 @@
     "fact": "default dependence class",
     "hidden": "docs/spec.md::3. モデル",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "default dependence class",
     "hidden": "docs/spec.md::2. v0.1 からの変更",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "default dependence class",
     "hidden": "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "default dependence class",
     "hidden": "pw/kernel.py::Kernel.__init__",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "axioms a proof may depend on",
     "hidden": "docs/spec.md::5. Lean Gate",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "axioms a proof may depend on",
     "hidden": "pw/lean_gate.py::ALLOWED_AXIOMS",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "largest component inference solves",
     "hidden": "docs/spec.md::7. 未解決",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "largest component inference solves",
     "hidden": "pw/kernel.py::Kernel.__init__",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "names of the MCP tools",
     "hidden": "docs/spec.md::4. 操作（MCPツール）",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "names of the MCP tools",
     "hidden": "pw/mcp_server.py",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "default threshold, in thousandths",
     "hidden": "pw/orchestrator.py::main",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "default threshold, in thousandths",
     "hidden": "pw/check.py::main",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "default threshold, in thousandths",
     "hidden": "pw/maintain.py::main",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    },
    {
     "fact": "Lean version",
     "hidden": "lean/lean-toolchain",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": [
+     "lean_version: \"v4.14.0\""
+    ]
    },
    {
     "fact": "Lean version",
     "hidden": "experiments/selfcheck/lean/lean-toolchain",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": [
+     "lean_version: \"v4.14.0\""
+    ]
    },
    {
     "fact": "Lean version",
     "hidden": ".github/workflows/decisions.yml",
     "found": false,
-    "in": []
+    "in": [],
+    "stated differently": []
    }
   ],
   "proposed": [
