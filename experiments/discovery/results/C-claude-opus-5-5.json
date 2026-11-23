@@ -1,0 +1,988 @@
+[
+ {
+  "run": {
+   "model": "claude-opus-5-5",
+   "turns": 30,
+   "cost_usd": 0.57,
+   "said": "I found and reported 11 things this project states in more than one place. Ten have places that agree right now. One, `relations`, does not.\n\n**The one that disagrees:**\n- **relations**: the Lean gate can verify 10 relations, listed in `pw/lindenbaum.py::RELATIONS` and `pw/lean_gate.py::_GOALS`. The `prove` row in section 4 of `docs/spec.md` lists only 8: it leaves out `pred_disjoint` and `pred_rejects`.\n\n**The ones that agree:**\n- **lean-version**: `4.14.0`. Stated in `lean/lean-toolchain`, in `LEAN_VERSION` in the CI workflow, and in the selfcheck experiment's `lean-toolchain` and its mathlib `rev`.\n- **allowed-axioms**: `Classical.choice`, `Quot.sound`, `propext`. Stated in `pw/lean_gate.py::ALLOWED_AXIOMS` and section 5 of the spec.\n- **worker-model**: `claude-opus-5-5`. Stated in the `--model` default in `pw/orchestrator.py`, the README and section 1 of the spec.\n- **merge-threshold**: 0.9, the `--threshold` default in `pw/orchestrator.py`, `pw/check.py` and `pw/maintain.py`.\n- **max-component-atoms**: 14. Stated in `Kernel.__init__` and section 7 of the spec.\n- **default-dependence**: `pqd`. Stated in `Kernel.__init__` and in two places in the spec (change #9 and section 3).\n- **sample-input-bound**: 15, the top of the 0–15 range random check inputs are drawn from. Stated in `kernel.binding` and section 7 of the spec.\n- **ci-python-version**: `3.13`. Stated in the CI workflow and the header comment of `requirements-ci.txt`.\n- **wrong-model-agree-rate**: 0.5. Stated in `pw/catalog.json` and section 7 of the spec.\n- **min-concentration**: 2. Stated in `pw/catalog.json` and section 7 of the spec."
+  },
+  "declared places": [
+   {
+    "fact": "default dependence class",
+    "hidden": "docs/spec.md::3. モデル",
+    "found": true,
+    "in": [
+     "default-dependence"
+    ]
+   },
+   {
+    "fact": "default dependence class",
+    "hidden": "docs/spec.md::2. v0.1 からの変更",
+    "found": true,
+    "in": [
+     "default-dependence"
+    ]
+   },
+   {
+    "fact": "default dependence class",
+    "hidden": "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "default dependence class",
+    "hidden": "pw/kernel.py::Kernel.__init__",
+    "found": true,
+    "in": [
+     "default-dependence"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "hidden": "docs/spec.md::5. Lean Gate",
+    "found": true,
+    "in": [
+     "allowed-axioms"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "hidden": "pw/lean_gate.py::ALLOWED_AXIOMS",
+    "found": true,
+    "in": [
+     "allowed-axioms"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "hidden": "docs/spec.md::7. 未解決",
+    "found": true,
+    "in": [
+     "max-component-atoms"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "hidden": "pw/kernel.py::Kernel.__init__",
+    "found": true,
+    "in": [
+     "max-component-atoms"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "hidden": "docs/spec.md::4. 操作（MCPツール）",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "hidden": "pw/mcp_server.py",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "hidden": "pw/orchestrator.py::main",
+    "found": true,
+    "in": [
+     "merge-threshold"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "hidden": "pw/check.py::main",
+    "found": true,
+    "in": [
+     "merge-threshold"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "hidden": "pw/maintain.py::main",
+    "found": true,
+    "in": [
+     "merge-threshold"
+    ]
+   },
+   {
+    "fact": "Lean version",
+    "hidden": "lean/lean-toolchain",
+    "found": true,
+    "in": [
+     "lean-version"
+    ]
+   },
+   {
+    "fact": "Lean version",
+    "hidden": "experiments/selfcheck/lean/lean-toolchain",
+    "found": true,
+    "in": [
+     "lean-version"
+    ]
+   },
+   {
+    "fact": "Lean version",
+    "hidden": ".github/workflows/decisions.yml",
+    "found": true,
+    "in": [
+     "lean-version"
+    ]
+   }
+  ],
+  "proposed": [
+   {
+    "name": "lean-version",
+    "type": "String",
+    "gloss": "The Lean 4 release version (without leading \"v\") that Gamma pins and CI installs, e.g. \"4.14.0\".",
+    "agree": true,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "read": {
+       "as": "string",
+       "find": "leanprover/lean4:v(\\S+)"
+      },
+      "value": "4.14.0",
+      "quote": "leanprover/lean4:v4.14.0"
+     },
+     {
+      "at": ".github/workflows/decisions.yml",
+      "read": {
+       "as": "string",
+       "find": "LEAN_VERSION: (\\S+)"
+      },
+      "value": "4.14.0",
+      "quote": "LEAN_VERSION: 4.14.0"
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "read": {
+       "as": "string",
+       "find": "leanprover/lean4:v(\\S+)"
+      },
+      "value": "4.14.0",
+      "quote": "leanprover/lean4:v4.14.0"
+     },
+     {
+      "at": "experiments/selfcheck/lean/lakefile.toml",
+      "read": {
+       "as": "string",
+       "find": "rev = \"v([^\"]+)\""
+      },
+      "value": "4.14.0",
+      "quote": "rev = \"v4.14.0\""
+     }
+    ]
+   },
+   {
+    "name": "allowed-axioms",
+    "type": "List String",
+    "gloss": "The axioms a proof may depend on and still be accepted by the Lean gate, sorted alphabetically.",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+      "read": {
+       "as": "string",
+       "find_all": "\"([A-Za-z.]+)\"",
+       "sort": true
+      },
+      "value": [
+       "Classical.choice",
+       "Quot.sound",
+       "propext"
+      ],
+      "quote": "ALLOWED_AXIOMS = frozenset({\"propext\", \"Classical.choice\", \"Quot.sound\"})"
+     },
+     {
+      "at": "docs/spec.md::5. Lean Gate",
+      "read": null,
+      "value": [
+       "Classical.choice",
+       "Quot.sound",
+       "propext"
+      ],
+      "quote": "- 受理条件：1回目が成功し、2回目の出力が公理レポート1行だけで、許可リスト（`propext`、`Classical.choice`、`Quot.sound`）に収まる。"
+     }
+    ]
+   },
+   {
+    "name": "worker-model",
+    "type": "String",
+    "gloss": "The Claude model ID the orchestrator launches workers with by default.",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/orchestrator.py",
+      "read": {
+       "as": "string",
+       "find": "\"--model\", default=\"([^\"]+)\""
+      },
+      "value": "claude-opus-5-5",
+      "quote": "ap.add_argument(\"--model\", default=\"claude-opus-5-5\")"
+     },
+     {
+      "at": "README.md::動かす",
+      "read": null,
+      "value": "claude-opus-5-5",
+      "quote": "python -m pw.orchestrator tasks.json # claude-opus-5-5 のワーカーを起動（課金あり）"
+     },
+     {
+      "at": "docs/spec.md::1. 構成",
+      "read": null,
+      "value": "claude-opus-5-5",
+      "quote": "└ Worker × N claude -p --model claude-opus-5-5"
+     }
+    ]
+   },
+   {
+    "name": "merge-threshold",
+    "type": "Nat",
+    "gloss": "The default lower-bound threshold, in permille, a claim's probability must reach to count as established (orchestrator merge verdict and pw.check/pw.maintain), e.g. 0.9 = 900.",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/orchestrator.py",
+      "read": {
+       "as": "permille",
+       "find": "\"--threshold\", type=float, default=([0-9.]+)"
+      },
+      "value": 900,
+      "quote": "ap.add_argument(\"--threshold\", type=float, default=0.9)"
+     },
+     {
+      "at": "pw/check.py",
+      "read": {
+       "as": "permille",
+       "find": "\"--threshold\", type=float, default=([0-9.]+)"
+      },
+      "value": 900,
+      "quote": "ap.add_argument(\"--threshold\", type=float, default=0.9)"
+     },
+     {
+      "at": "pw/maintain.py",
+      "read": {
+       "as": "permille",
+       "find": "\"--threshold\", type=float, default=([0-9.]+)"
+      },
+      "value": 900,
+      "quote": "ap.add_argument(\"--threshold\", type=float, default=0.9)"
+     }
+    ]
+   },
+   {
+    "name": "max-component-atoms",
+    "type": "Nat",
+    "gloss": "The largest number of atoms a connected component may have and still be solved by the kernel.",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/kernel.py::Kernel.__init__",
+      "read": {
+       "as": "nat",
+       "find": "max_atoms=(\\d+)"
+      },
+      "value": 14,
+      "quote": "def __init__(self, db_path, gate=None, catalog=None, actor=None, max_atoms=14, dependence=\"pqd\"):"
+     },
+     {
+      "at": "docs/spec.md::7. 未解決",
+      "read": null,
+      "value": 14,
+      "quote": "- **連結成分が14原子を超えると解けない。** 分割か近似が要る。"
+     }
+    ]
+   },
+   {
+    "name": "default-dependence",
+    "type": "String",
+    "gloss": "The name of the copula class the kernel uses by default for evidence not declared independent.",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/kernel.py::Kernel.__init__",
+      "read": {
+       "as": "string",
+       "find": "dependence=\"(\\w+)\""
+      },
+      "value": "pqd",
+      "quote": "def __init__(self, db_path, gate=None, catalog=None, actor=None, max_atoms=14, dependence=\"pqd\"):"
+     },
+     {
+      "at": "docs/spec.md::2. v0.1 からの変更",
+      "read": null,
+      "value": "pqd",
+      "quote": "| 9 | （v0.2）証拠の依存は「重複〜独立」の独自の混合 | コピュラのクラスを名前で選ぶ：`independent` / `comonotone` / `pqd`（既定）/ `frechet` | 独自の混合に根拠がなかった。`frechet` が v0.1 の文字どおりの読み |"
+     },
+     {
+      "at": "docs/spec.md::3. モデル",
+      "read": null,
+      "value": "pqd",
+      "quote": "既定の `pqd` は正の依存で、独立と完全な重複の間。"
+     }
+    ]
+   },
+   {
+    "name": "sample-input-bound",
+    "type": "Nat",
+    "gloss": "The largest value of the per-argument uniform distribution from which random model-check inputs are drawn (inputs range over 0 to this value).",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/kernel.py::binding",
+      "read": {
+       "as": "nat",
+       "find": "bound=(\\d+)"
+      },
+      "value": 15,
+      "quote": "def binding(call, setup=\"\", domains=(), bound=15):"
+     },
+     {
+      "at": "docs/spec.md::7. 未解決",
+      "read": null,
+      "value": 15,
+      "quote": "- **無作為な検査の入力分布が仮置き。** 引数ごとに 0〜15 の一様分布。支持されるのは「この分布のもとでほぼ確実に一致」までで、稀な入力でだけ食い違うモデルは見つからない。誤ったモデルの一致率の事前分布（平均 0.5、集中度 2 以上）も仮置き。"
+     }
+    ]
+   },
+   {
+    "name": "ci-python-version",
+    "type": "String",
+    "gloss": "The Python version CI runs on and for which requirements-ci.txt hashes are pinned.",
+    "agree": true,
+    "places": [
+     {
+      "at": ".github/workflows/decisions.yml",
+      "read": {
+       "as": "string",
+       "find": "python-version: \"([^\"]+)\""
+      },
+      "value": "3.13",
+      "quote": "python-version: \"3.13\""
+     },
+     {
+      "at": "requirements-ci.txt",
+      "read": {
+       "as": "string",
+       "find": "\\(Python ([0-9.]+),"
+      },
+      "value": "3.13",
+      "quote": "# What CI installs, pinned by version and by hash (Python 3.13, Linux x86_64)."
+     }
+    ]
+   },
+   {
+    "name": "relations",
+    "type": "List String",
+    "gloss": "The names of the relations the Lean gate can verify between registered ids, sorted alphabetically.",
+    "agree": false,
+    "places": [
+     {
+      "at": "pw/lindenbaum.py::RELATIONS",
+      "read": {
+       "as": "string",
+       "find_all": "\"(\\w+)\": \"[FPO]+\"",
+       "sort": true
+      },
+      "value": [
+       "contradiction",
+       "holds",
+       "iff",
+       "implies",
+       "not",
+       "obj_eq",
+       "pred_disjoint",
+       "pred_iff",
+       "pred_implies",
+       "pred_rejects"
+      ],
+      "quote": "\"holds\": \"F\", \"not\": \"F\", \"iff\": \"FF\", \"implies\": \"FF\", \"contradiction\": \"FF\","
+     },
+     {
+      "at": "pw/lean_gate.py::_GOALS",
+      "read": {
+       "as": "string",
+       "find_all": "\"(\\w+)\": \"",
+       "sort": true
+      },
+      "value": [
+       "contradiction",
+       "holds",
+       "iff",
+       "implies",
+       "not",
+       "obj_eq",
+       "pred_disjoint",
+       "pred_iff",
+       "pred_implies",
+       "pred_rejects"
+      ],
+      "quote": "\"holds\": \"S0\","
+     },
+     {
+      "at": "docs/spec.md::4. 操作（MCPツール）",
+      "read": null,
+      "value": [
+       "contradiction",
+       "holds",
+       "iff",
+       "implies",
+       "not",
+       "obj_eq",
+       "pred_iff",
+       "pred_implies"
+      ],
+      "quote": "| `prove(relation, args, proof)` | Lean Gateに証明を提出。失敗は証拠にしない。関係は `holds` `not` `iff` `implies` `contradiction` `pred_iff` `pred_implies` `obj_eq` |"
+     }
+    ]
+   },
+   {
+    "name": "wrong-model-agree-rate",
+    "type": "Nat",
+    "gloss": "The placeholder prior mean, in permille, of the rate at which a wrong model still agrees on a random input (0.5 = 500).",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/catalog.json::sampling.agree_rate_if_wrong",
+      "read": {
+       "as": "permille",
+       "find": "([0-9.]+)"
+      },
+      "value": 500,
+      "quote": "0.5"
+     },
+     {
+      "at": "docs/spec.md::7. 未解決",
+      "read": {
+       "as": "permille",
+       "find": "平均 ([0-9.]+)"
+      },
+      "value": 500,
+      "quote": "誤ったモデルの一致率の事前分布（平均 0.5、集中度 2 以上）も仮置き。"
+     }
+    ]
+   },
+   {
+    "name": "min-concentration",
+    "type": "Nat",
+    "gloss": "The placeholder lower bound on the Beta concentration of the prior over a wrong model's random-input agreement rate.",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/catalog.json::sampling.min_concentration",
+      "read": {
+       "as": "nat",
+       "find": "(\\d+)"
+      },
+      "value": 2,
+      "quote": "2"
+     },
+     {
+      "at": "docs/spec.md::7. 未解決",
+      "read": null,
+      "value": 2,
+      "quote": "誤ったモデルの一致率の事前分布（平均 0.5、集中度 2 以上）も仮置き。"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "run": {
+   "model": "claude-opus-5-5",
+   "turns": 25,
+   "cost_usd": 0.49,
+   "said": "I reported 11 facts, and all 11 were accepted. In 10 of them the places agree; `proof_relations` is the only one where they disagree right now.\n\n- **lean_version** — \"4.14.0\". Stated in `lean/lean-toolchain`, `experiments/selfcheck/lean/lean-toolchain` and `LEAN_VERSION` in `.github/workflows/decisions.yml`.\n- **default_model** — \"claude-opus-5-5\". It is the `--model` default in `pw/orchestrator.py`, `pw/maintain.py`, `pw/calibrate.py` and `pw/discover.py`, and is also named in the README (動かす) and spec §1.\n- **decision_threshold** — 0.9, reported as 900. It is the `--threshold` default in `pw/check.py`, `pw/maintain.py` and `pw/orchestrator.py`.\n- **allowed_axioms** — Classical.choice, Quot.sound, propext. Stated in `pw/lean_gate.py::ALLOWED_AXIOMS` and spec §5.\n- **max_atoms** — 14. Stated in `Kernel.__init__` and spec §7.\n- **random_input_bound** — 15. Stated in `kernel.binding` and spec §7 (\"0〜15\").\n- **default_dependence** — \"pqd\". Stated in `Kernel.__init__` and spec §2 (row 9) and §3.\n- **copula_classes** — comonotone, frechet, independent, pqd. Stated in `pw/credal.py::COPULAS` and spec §2 (row 9).\n- **proof_relations** — the places disagree. `pw/lindenbaum.py::RELATIONS` has 10 relations, but spec §4 lists only 8: it leaves out `pred_disjoint` and `pred_rejects`.\n- **ci_python_version** — \"3.13\". Stated in the workflow's `python-version` and in the comment at the top of `requirements-ci.txt`.\n- **sample_model_default_n** — 10. Stated in `Kernel.sample_model` and `mcp_server.sample_model`."
+  },
+  "declared places": [
+   {
+    "fact": "default dependence class",
+    "hidden": "docs/spec.md::3. モデル",
+    "found": true,
+    "in": [
+     "default_dependence"
+    ]
+   },
+   {
+    "fact": "default dependence class",
+    "hidden": "docs/spec.md::2. v0.1 からの変更",
+    "found": true,
+    "in": [
+     "default_dependence"
+    ]
+   },
+   {
+    "fact": "default dependence class",
+    "hidden": "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "default dependence class",
+    "hidden": "pw/kernel.py::Kernel.__init__",
+    "found": true,
+    "in": [
+     "default_dependence"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "hidden": "docs/spec.md::5. Lean Gate",
+    "found": true,
+    "in": [
+     "allowed_axioms"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "hidden": "pw/lean_gate.py::ALLOWED_AXIOMS",
+    "found": true,
+    "in": [
+     "allowed_axioms"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "hidden": "docs/spec.md::7. 未解決",
+    "found": true,
+    "in": [
+     "max_atoms"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "hidden": "pw/kernel.py::Kernel.__init__",
+    "found": true,
+    "in": [
+     "max_atoms"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "hidden": "docs/spec.md::4. 操作（MCPツール）",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "hidden": "pw/mcp_server.py",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "hidden": "pw/orchestrator.py::main",
+    "found": true,
+    "in": [
+     "decision_threshold"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "hidden": "pw/check.py::main",
+    "found": true,
+    "in": [
+     "decision_threshold"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "hidden": "pw/maintain.py::main",
+    "found": true,
+    "in": [
+     "decision_threshold"
+    ]
+   },
+   {
+    "fact": "Lean version",
+    "hidden": "lean/lean-toolchain",
+    "found": true,
+    "in": [
+     "lean_version"
+    ]
+   },
+   {
+    "fact": "Lean version",
+    "hidden": "experiments/selfcheck/lean/lean-toolchain",
+    "found": true,
+    "in": [
+     "lean_version"
+    ]
+   },
+   {
+    "fact": "Lean version",
+    "hidden": ".github/workflows/decisions.yml",
+    "found": true,
+    "in": [
+     "lean_version"
+    ]
+   }
+  ],
+  "proposed": [
+   {
+    "name": "lean_version",
+    "type": "String",
+    "gloss": "The Lean 4 release the project's proofs are checked with, written as a bare version number such as \"4.14.0\" (without the leading \"v\" or the toolchain prefix).",
+    "agree": true,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "read": {
+       "as": "string",
+       "find": "leanprover/lean4:v([0-9.]+)"
+      },
+      "value": "4.14.0",
+      "quote": "leanprover/lean4:v4.14.0"
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "read": {
+       "as": "string",
+       "find": "leanprover/lean4:v([0-9.]+)"
+      },
+      "value": "4.14.0",
+      "quote": "leanprover/lean4:v4.14.0"
+     },
+     {
+      "at": ".github/workflows/decisions.yml",
+      "read": {
+       "as": "string",
+       "find": "LEAN_VERSION: ([0-9.]+)"
+      },
+      "value": "4.14.0",
+      "quote": "LEAN_VERSION: 4.14.0"
+     }
+    ]
+   },
+   {
+    "name": "default_model",
+    "type": "String",
+    "gloss": "The Claude model ID that workers and the agent-driven commands run by default.",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/orchestrator.py",
+      "read": {
+       "as": "string",
+       "find": "\"--model\", default=\"([^\"]+)\""
+      },
+      "value": "claude-opus-5-5",
+      "quote": "ap.add_argument(\"--model\", default=\"claude-opus-5-5\")"
+     },
+     {
+      "at": "pw/maintain.py",
+      "read": {
+       "as": "string",
+       "find": "\"--model\", default=\"([^\"]+)\""
+      },
+      "value": "claude-opus-5-5",
+      "quote": "ap.add_argument(\"--model\", default=\"claude-opus-5-5\", help=\"the model that reads places and re-establishes decisions\")"
+     },
+     {
+      "at": "pw/calibrate.py",
+      "read": {
+       "as": "string",
+       "find": "\"--model\", default=\"([^\"]+)\""
+      },
+      "value": "claude-opus-5-5",
+      "quote": "ap.add_argument(\"--model\", default=\"claude-opus-5-5\")"
+     },
+     {
+      "at": "pw/discover.py",
+      "read": {
+       "as": "string",
+       "find": "\"--model\", default=\"([^\"]+)\""
+      },
+      "value": "claude-opus-5-5",
+      "quote": "ap.add_argument(\"--model\", default=\"claude-opus-5-5\")"
+     },
+     {
+      "at": "README.md::動かす",
+      "read": null,
+      "value": "claude-opus-5-5",
+      "quote": "python -m pw.orchestrator tasks.json # claude-opus-5-5 のワーカーを起動（課金あり）"
+     },
+     {
+      "at": "docs/spec.md::1. 構成",
+      "read": null,
+      "value": "claude-opus-5-5",
+      "quote": "└ Worker × N claude -p --model claude-opus-5-5"
+     }
+    ]
+   },
+   {
+    "name": "decision_threshold",
+    "type": "Nat",
+    "gloss": "The default lower bound, in thousandths, that a claim's probability must reach to count as established or mergeable (0.9 is 900).",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/check.py",
+      "read": {
+       "as": "permille",
+       "find": "\"--threshold\", type=float, default=([0-9.]+)"
+      },
+      "value": 900,
+      "quote": "ap.add_argument(\"--threshold\", type=float, default=0.9)"
+     },
+     {
+      "at": "pw/maintain.py",
+      "read": {
+       "as": "permille",
+       "find": "\"--threshold\", type=float, default=([0-9.]+)"
+      },
+      "value": 900,
+      "quote": "ap.add_argument(\"--threshold\", type=float, default=0.9)"
+     },
+     {
+      "at": "pw/orchestrator.py",
+      "read": {
+       "as": "permille",
+       "find": "\"--threshold\", type=float, default=([0-9.]+)"
+      },
+      "value": 900,
+      "quote": "ap.add_argument(\"--threshold\", type=float, default=0.9)"
+     }
+    ]
+   },
+   {
+    "name": "allowed_axioms",
+    "type": "List String",
+    "gloss": "The Lean axioms a proof may depend on and still be accepted by the Lean gate, sorted alphabetically (ASCII order).",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+      "read": {
+       "as": "string",
+       "find_all": "\"([A-Za-z.]+)\"",
+       "sort": true
+      },
+      "value": [
+       "Classical.choice",
+       "Quot.sound",
+       "propext"
+      ],
+      "quote": "ALLOWED_AXIOMS = frozenset({\"propext\", \"Classical.choice\", \"Quot.sound\"})"
+     },
+     {
+      "at": "docs/spec.md::5. Lean Gate",
+      "read": null,
+      "value": [
+       "Classical.choice",
+       "Quot.sound",
+       "propext"
+      ],
+      "quote": "- 受理条件：1回目が成功し、2回目の出力が公理レポート1行だけで、許可リスト（`propext`、`Classical.choice`、`Quot.sound`）に収まる。"
+     }
+    ]
+   },
+   {
+    "name": "max_atoms",
+    "type": "Nat",
+    "gloss": "The largest number of atoms a connected component may have and still be solved by the kernel.",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/kernel.py::Kernel.__init__",
+      "read": {
+       "as": "nat",
+       "find": "max_atoms=(\\d+)"
+      },
+      "value": 14,
+      "quote": "def __init__(self, db_path, gate=None, catalog=None, actor=None, max_atoms=14, dependence=\"pqd\"):"
+     },
+     {
+      "at": "docs/spec.md::7. 未解決",
+      "read": null,
+      "value": 14,
+      "quote": "- **連結成分が14原子を超えると解けない。** 分割か近似が要る。"
+     }
+    ]
+   },
+   {
+    "name": "random_input_bound",
+    "type": "Nat",
+    "gloss": "The upper end of the uniform range 0..N from which each argument of a random model check is drawn by default.",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/kernel.py::binding",
+      "read": {
+       "as": "nat",
+       "find": "bound=(\\d+)"
+      },
+      "value": 15,
+      "quote": "def binding(call, setup=\"\", domains=(), bound=15):"
+     },
+     {
+      "at": "docs/spec.md::7. 未解決",
+      "read": null,
+      "value": 15,
+      "quote": "- **無作為な検査の入力分布が仮置き。** 引数ごとに 0〜15 の一様分布。支持されるのは「この分布のもとでほぼ確実に一致」までで、稀な入力でだけ食い違うモデルは見つからない。誤ったモデルの一致率の事前分布（平均 0.5、集中度 2 以上）も仮置き。"
+     }
+    ]
+   },
+   {
+    "name": "default_dependence",
+    "type": "String",
+    "gloss": "The name of the copula class used by default for evidence on one target that has not been declared independent.",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/kernel.py::Kernel.__init__",
+      "read": {
+       "as": "string",
+       "find": "dependence=\"(\\w+)\""
+      },
+      "value": "pqd",
+      "quote": "def __init__(self, db_path, gate=None, catalog=None, actor=None, max_atoms=14, dependence=\"pqd\"):"
+     },
+     {
+      "at": "docs/spec.md::2. v0.1 からの変更",
+      "read": null,
+      "value": "pqd",
+      "quote": "| 9 | （v0.2）証拠の依存は「重複〜独立」の独自の混合 | コピュラのクラスを名前で選ぶ：`independent` / `comonotone` / `pqd`（既定）/ `frechet` | 独自の混合に根拠がなかった。`frechet` が v0.1 の文字どおりの読み |"
+     },
+     {
+      "at": "docs/spec.md::3. モデル",
+      "read": null,
+      "value": "pqd",
+      "quote": "証拠は対象原子の真偽だけに依存する尤度 `[P(e|真), P(e|偽)]` を持つ。同じ対象への証拠は、独立が宣言されない限り一つのブロックに入り、ブロックの同時尤度は選んだコピュラのクラスが許す範囲をとる。既定の `pqd` は正の依存で、独立と完全な重複の間。"
+     }
+    ]
+   },
+   {
+    "name": "copula_classes",
+    "type": "List String",
+    "gloss": "The names of the copula classes that can be chosen for dependence between pieces of evidence, sorted alphabetically.",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/credal.py::COPULAS",
+      "read": {
+       "as": "string",
+       "find_all": "\"(\\w+)\": lambda",
+       "sort": true
+      },
+      "value": [
+       "comonotone",
+       "frechet",
+       "independent",
+       "pqd"
+      ],
+      "quote": "COPULAS = {"
+     },
+     {
+      "at": "docs/spec.md::2. v0.1 からの変更",
+      "read": null,
+      "value": [
+       "comonotone",
+       "frechet",
+       "independent",
+       "pqd"
+      ],
+      "quote": "| 9 | （v0.2）証拠の依存は「重複〜独立」の独自の混合 | コピュラのクラスを名前で選ぶ：`independent` / `comonotone` / `pqd`（既定）/ `frechet` | 独自の混合に根拠がなかった。`frechet` が v0.1 の文字どおりの読み |"
+     }
+    ]
+   },
+   {
+    "name": "proof_relations",
+    "type": "List String",
+    "gloss": "The relation names that `prove` accepts for submission to the Lean gate, sorted alphabetically.",
+    "agree": false,
+    "places": [
+     {
+      "at": "pw/lindenbaum.py::RELATIONS",
+      "read": {
+       "as": "string",
+       "find_all": "\"(\\w+)\": \"[FPO]+\"",
+       "sort": true
+      },
+      "value": [
+       "contradiction",
+       "holds",
+       "iff",
+       "implies",
+       "not",
+       "obj_eq",
+       "pred_disjoint",
+       "pred_iff",
+       "pred_implies",
+       "pred_rejects"
+      ],
+      "quote": "RELATIONS = {"
+     },
+     {
+      "at": "docs/spec.md::4. 操作（MCPツール）",
+      "read": null,
+      "value": [
+       "contradiction",
+       "holds",
+       "iff",
+       "implies",
+       "not",
+       "obj_eq",
+       "pred_iff",
+       "pred_implies"
+      ],
+      "quote": "| `prove(relation, args, proof)` | Lean Gateに証明を提出。失敗は証拠にしない。関係は `holds` `not` `iff` `implies` `contradiction` `pred_iff` `pred_implies` `obj_eq` |"
+     }
+    ]
+   },
+   {
+    "name": "ci_python_version",
+    "type": "String",
+    "gloss": "The Python version (major.minor) that CI runs on and that the pinned CI requirements are built for.",
+    "agree": true,
+    "places": [
+     {
+      "at": ".github/workflows/decisions.yml",
+      "read": {
+       "as": "string",
+       "find": "python-version: \"([0-9.]+)\""
+      },
+      "value": "3.13",
+      "quote": "python-version: \"3.13\""
+     },
+     {
+      "at": "requirements-ci.txt",
+      "read": {
+       "as": "string",
+       "find": "\\(Python ([0-9.]+),"
+      },
+      "value": "3.13",
+      "quote": "# What CI installs, pinned by version and by hash (Python 3.13, Linux x86_64)."
+     }
+    ]
+   },
+   {
+    "name": "sample_model_default_n",
+    "type": "Nat",
+    "gloss": "The default number of random inputs that `sample_model` draws to check a model hypothesis.",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/kernel.py::Kernel.sample_model",
+      "read": {
+       "as": "nat",
+       "find": "n=(\\d+)"
+      },
+      "value": 10,
+      "quote": "def sample_model(self, m, cwd, n=10, seed=None):"
+     },
+     {
+      "at": "pw/mcp_server.py::sample_model",
+      "read": {
+       "as": "nat",
+       "find": "n: int = (\\d+)"
+      },
+      "value": 10,
+      "quote": "def sample_model(m: str, n: int = 10) -> dict:"
+     }
+    ]
+   }
+  ]
+ }
+]

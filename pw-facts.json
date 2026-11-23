@@ -13,7 +13,8 @@
      "find": "dependence=\"(\\w+)\"",
      "as": "string"
     }
-   }
+   },
+   "docs/symbols.md::9. 置いている仮定"
   ]
  },
  {
@@ -88,6 +89,20 @@
      "find": "\"--threshold\", type=float, default=([0-9.]+)",
      "as": "permille"
     }
+   },
+   {
+    "at": "pw/check.py",
+    "read": {
+     "as": "permille",
+     "find": "\\[--threshold ([0-9.]+)\\]"
+    }
+   },
+   {
+    "at": "pw/maintain.py",
+    "read": {
+     "as": "permille",
+     "find": "\\[--threshold ([0-9.]+)\\]"
+    }
    }
   ]
  },
@@ -115,6 +130,157 @@
     "read": {
      "find": "LEAN_VERSION: ([0-9.]+)",
      "as": "string"
+    }
+   }
+  ]
+ },
+ {
+  "name": "default worker model",
+  "type": "String",
+  "gloss": "the model ID of the Claude model that the orchestrator launches as a worker by default",
+  "places": [
+   {
+    "at": "pw/orchestrator.py::main",
+    "read": {
+     "as": "string",
+     "find": "\"--model\", default=\"([\\w.-]+)\""
+    }
+   },
+   "README.md::動かす",
+   "docs/spec.md::1. 構成"
+  ]
+ },
+ {
+  "name": "range of random test inputs",
+  "type": "Nat",
+  "gloss": "the default upper bound of the range from which the kernel draws random inputs for each argument when checking a model against code",
+  "places": [
+   {
+    "at": "pw/kernel.py::binding",
+    "read": {
+     "as": "nat",
+     "find": "bound=(\\d+)"
+    }
+   },
+   "docs/spec.md::7. 未解決"
+  ]
+ },
+ {
+  "name": "dependence classes",
+  "type": "List String",
+  "gloss": "the names of the copula classes that can be chosen for the dependence of evidence on one target, sorted alphabetically",
+  "places": [
+   {
+    "at": "pw/credal.py::COPULAS",
+    "read": {
+     "as": "string",
+     "find_all": "\"(\\w+)\": lambda",
+     "sort": true
+    }
+   },
+   "docs/spec.md::2. v0.1 からの変更",
+   "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則"
+  ]
+ },
+ {
+  "name": "conditions a rule may ask for",
+  "type": "List String",
+  "gloss": "the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+  "places": [
+   {
+    "at": "pw/kernel.py::CONDITIONS",
+    "read": {
+     "as": "string",
+     "find_all": "^    \"([^\"]+)\": \"",
+     "sort": true
+    }
+   },
+   "docs/spec.md::読みが成り立つ条件"
+  ]
+ },
+ {
+  "name": "proof relations",
+  "type": "List String",
+  "gloss": "the names of the relations a proof submitted with `prove` may establish, sorted alphabetically",
+  "places": [
+   {
+    "at": "pw/lindenbaum.py::RELATIONS",
+    "read": {
+     "as": "string",
+     "find_all": "\"(\\w+)\": \"",
+     "sort": true
+    }
+   },
+   {
+    "at": "pw/mcp_server.py::prove",
+    "read": {
+     "as": "string",
+     "find_all": "(\\w+) \\[",
+     "sort": true
+    }
+   },
+   "docs/spec.md::4. 操作（MCPツール）"
+  ]
+ },
+ {
+  "name": "calibration bar: read rate, in thousandths",
+  "type": "Nat",
+  "gloss": "the lowest 95% bound, in thousandths, on the rate at which a blind reader reads the altered value, for that reader to count as measured",
+  "places": [
+   {
+    "at": "pw-rules.json::a blind reader counts if measured.read at least",
+    "read": {
+     "as": "permille",
+     "find": "([\\d.]+)"
+    }
+   },
+   {
+    "at": "docs/spec.md::読みが成り立つ条件",
+    "read": {
+     "as": "permille",
+     "find": "読める率が (0\\.\\d+) 以上"
+    }
+   }
+  ]
+ },
+ {
+  "name": "calibration bar: stuck rate, in thousandths",
+  "type": "Nat",
+  "gloss": "the highest 95% bound, in thousandths, on the rate at which a blind reader is stuck on the original value, for that reader to count as measured",
+  "places": [
+   {
+    "at": "pw-rules.json::a blind reader counts if measured.stuck at most",
+    "read": {
+     "as": "permille",
+     "find": "([\\d.]+)"
+    }
+   },
+   {
+    "at": "docs/spec.md::読みが成り立つ条件",
+    "read": {
+     "as": "permille",
+     "find": "引きずられる率が (0\\.\\d+) 以下"
+    }
+   }
+  ]
+ },
+ {
+  "name": "default reader model",
+  "type": "String",
+  "gloss": "the model ID of the Claude model that reads places by default, in pw.maintain and pw.calibrate",
+  "places": [
+   {
+    "at": "pw/maintain.py::main",
+    "read": {
+     "as": "string",
+     "find": "\"--model\", default=\"([\\w.-]+)\""
+    }
+   },
+   {
+    "at": "pw/calibrate.py::main",
+    "read": {
+     "as": "string",
+     "find": "\"--model\", default=\"([\\w.-]+)\""
     }
    }
   ]

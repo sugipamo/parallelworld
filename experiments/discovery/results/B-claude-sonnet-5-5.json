@@ -1,0 +1,206 @@
+[
+ {
+  "fact": "default dependence class",
+  "run": {
+   "model": "claude-sonnet-5-5",
+   "turns": 10,
+   "cost_usd": 0.07,
+   "said": "default dependence class: I grepped the whole repo for \"copula\", \"dependence\" and \"pqd\", then read the hits. I reported five places, and all of them say `\"pqd\"`:\n- `pw/kernel.py::Kernel.__init__` (the `dependence=\"pqd\"` default)\n- `docs/symbols.md`, section 7 (table row)\n- `docs/symbols.md`, section 9 (assumption 4)\n- `docs/spec.md`, section 3 (the default `pqd` sentence)\n- `docs/spec.md`, section 2 (change table row 9)\n\nI left out `docs/spec.md` line 193, which only mentions `pqd` as the default in a run record. I also left out the test files and the experiment results, which use the value as test data or record past runs."
+  },
+  "places": [
+   {
+    "hidden": "docs/spec.md::3. モデル",
+    "found": true,
+    "as": [
+     "docs/spec.md::3. モデル"
+    ]
+   },
+   {
+    "hidden": "docs/spec.md::2. v0.1 からの変更",
+    "found": true,
+    "as": [
+     "docs/spec.md::2. v0.1 からの変更"
+    ]
+   },
+   {
+    "hidden": "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則",
+    "found": true,
+    "as": [
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則"
+    ]
+   },
+   {
+    "hidden": "pw/kernel.py::Kernel.__init__",
+    "found": true,
+    "as": [
+     "pw/kernel.py::Kernel.__init__"
+    ]
+   }
+  ],
+  "extras": [
+   {
+    "at": "docs/symbols.md::9. 置いている仮定",
+    "read": null,
+    "value": "pqd",
+    "quote": "4. **証拠の依存のクラス** 既定は正の依存（`pqd`）。`frechet` を選べばこの仮定は外れる。"
+   }
+  ]
+ },
+ {
+  "fact": "axioms a proof may depend on",
+  "run": {
+   "model": "claude-sonnet-5-5",
+   "turns": 5,
+   "cost_usd": 0.04,
+   "said": "- **axioms a proof may depend on:** I grepped the repo for the axiom names (`propext`, `Classical.choice`, `Quot.sound`) and for \"axiom\". I found and reported three places, all stating the same set:\n  - `pw/lean_gate.py::ALLOWED_AXIOMS`\n  - `docs/spec.md`, the acceptance condition\n  - `experiments/selfcheck/RESULTS.md`\n\n  I skipped `tests/test_kernel.py` because it only holds test input data. I also skipped `docs/symbols.md`, which mentions `Classical.choice` but doesn't list the allowed set."
+  },
+  "places": [
+   {
+    "hidden": "docs/spec.md::5. Lean Gate",
+    "found": true,
+    "as": [
+     "docs/spec.md"
+    ]
+   },
+   {
+    "hidden": "pw/lean_gate.py::ALLOWED_AXIOMS",
+    "found": true,
+    "as": [
+     "pw/lean_gate.py::ALLOWED_AXIOMS"
+    ]
+   }
+  ],
+  "extras": [
+   {
+    "at": "experiments/selfcheck/RESULTS.md",
+    "read": null,
+    "value": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "quote": "証明はどれも mathlib の標準的な公理（`propext`、`Classical.choice`、`Quot.sound`）だけに依存する。"
+   }
+  ]
+ },
+ {
+  "fact": "largest component inference solves",
+  "run": {
+   "model": "claude-sonnet-5-5",
+   "turns": 8,
+   "cost_usd": 0.06,
+   "said": "largest component inference solves: I searched for \"component\", \"atoms\", \"max_atoms\", \"14\" and its spelled-out forms, and the Japanese terms for connected component and atom limit. I found and reported two places, both saying 14: `pw/kernel.py::Kernel.__init__` (the `max_atoms=14` default) and `docs/spec.md::7. 未解決` (the sentence that says components over 14 atoms can't be solved). I skipped the test files, which only use 14 as sample data."
+  },
+  "places": [
+   {
+    "hidden": "docs/spec.md::7. 未解決",
+    "found": true,
+    "as": [
+     "docs/spec.md::7. 未解決"
+    ]
+   },
+   {
+    "hidden": "pw/kernel.py::Kernel.__init__",
+    "found": true,
+    "as": [
+     "pw/kernel.py::Kernel.__init__"
+    ]
+   }
+  ],
+  "extras": []
+ },
+ {
+  "fact": "names of the MCP tools",
+  "run": {
+   "model": "claude-sonnet-5-5",
+   "turns": 6,
+   "cost_usd": 0.07,
+   "said": "names of the MCP tools: I grepped the repo for \"mcp\" and \"MCP\", then read `pw/mcp_server.py` and the tool table in `docs/spec.md`. I found and reported two places, and both were accepted.\n\n- **`pw/mcp_server.py`:** it defines 15 `@mcp.tool()` functions. Sorted, they are `check_model`, `claim`, `declare_independent`, `distance`, `ground`, `ground_at`, `infer`, `model`, `observe`, `observe_command`, `prove`, `read_place`, `reject_object` and `sample_model`, then `status`.\n- **`docs/spec.md::4. 操作（MCPツール）`:** its table lists the same 15 tools, though not in alphabetical order.\n\nThe two places agree. The other hits were scripts that configure or allow-list the server, and one `mcp__pw__read_place` allow-list entry in `pw/maintain.py`. I didn't report those because they don't state the full list."
+  },
+  "places": [
+   {
+    "hidden": "docs/spec.md::4. 操作（MCPツール）",
+    "found": true,
+    "as": [
+     "docs/spec.md::4. 操作（MCPツール）"
+    ]
+   },
+   {
+    "hidden": "pw/mcp_server.py",
+    "found": true,
+    "as": [
+     "pw/mcp_server.py"
+    ]
+   }
+  ],
+  "extras": []
+ },
+ {
+  "fact": "default threshold, in thousandths",
+  "run": {
+   "model": "claude-sonnet-5-5",
+   "turns": 12,
+   "cost_usd": 0.08,
+   "said": "\"default threshold, in thousandths\": I searched the whole repo for `threshold`, `閾値`, `0.9` and `900`, then checked the code, docs and workflow. I found 5 places, all saying 900 (0.9), and all were accepted.\n- **`--threshold` defaults:** `pw/check.py::main`, `pw/maintain.py::main` and `pw/orchestrator.py::main` each set `default=0.9`.\n- **Usage docstrings:** the module docstrings of `pw/check.py` and `pw/maintain.py` each show `[--threshold 0.9]`.\n- **Skipped:** the `閾値0.9` mentions in `docs/spec.md` and the artifacts `RESULTS.md` are dated experiment narratives, not current statements. The `threshold 0.9` strings in `tests/test_kernel.py` are test input data.\n- **Not found:** the README, the CI workflow and `docs/symbols.md` don't state the default."
+  },
+  "places": [
+   {
+    "hidden": "pw/orchestrator.py::main",
+    "found": true,
+    "as": [
+     "pw/orchestrator.py::main"
+    ]
+   },
+   {
+    "hidden": "pw/check.py::main",
+    "found": true,
+    "as": [
+     "pw/check.py::main",
+     "pw/check.py"
+    ]
+   },
+   {
+    "hidden": "pw/maintain.py::main",
+    "found": true,
+    "as": [
+     "pw/maintain.py::main",
+     "pw/maintain.py"
+    ]
+   }
+  ],
+  "extras": []
+ },
+ {
+  "fact": "Lean version",
+  "run": {
+   "model": "claude-sonnet-5-5",
+   "turns": 10,
+   "cost_usd": 0.07,
+   "said": "Lean version: I searched the repo for \"lean\", \"toolchain\" and version-number patterns, then looked for toolchain and lake files. I reported 3 places, all saying 4.14.0, so nothing disagrees: `lean/lean-toolchain`, `.github/workflows/decisions.yml` (`LEAN_VERSION`) and `experiments/selfcheck/lean/lean-toolchain`.\n\nI did not report `experiments/selfcheck/lean/lakefile.toml`. Its mathlib `rev = \"v4.14.0\"` is a mathlib tag that happens to match the Lean version, not a Lean pin. `README.md` and `docs/spec.md` only say the Lean version must match `lean-toolchain`, with no number, so I left them out too."
+  },
+  "places": [
+   {
+    "hidden": "lean/lean-toolchain",
+    "found": true,
+    "as": [
+     "lean/lean-toolchain"
+    ]
+   },
+   {
+    "hidden": "experiments/selfcheck/lean/lean-toolchain",
+    "found": true,
+    "as": [
+     "experiments/selfcheck/lean/lean-toolchain"
+    ]
+   },
+   {
+    "hidden": ".github/workflows/decisions.yml",
+    "found": true,
+    "as": [
+     ".github/workflows/decisions.yml"
+    ]
+   }
+  ],
+  "extras": []
+ }
+]

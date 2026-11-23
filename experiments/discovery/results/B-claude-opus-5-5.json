@@ -1,0 +1,193 @@
+[
+ {
+  "fact": "default dependence class",
+  "run": {
+   "model": "claude-opus-5-5",
+   "turns": 13,
+   "cost_usd": 0.2,
+   "said": "I searched for the copula class names, the `dependence=` parameter and the words for \"default\" (default, 既定). Five places state the default dependence class, and all five say `\"pqd\"`.\n\n- **default dependence class:**\n  - **Code:** the `dependence=\"pqd\"` default in `pw/kernel.py::Kernel.__init__`.\n  - **Docs, `docs/spec.md`:** the §3 Model sentence \"既定の `pqd` は正の依存…\".\n  - **Docs, `docs/spec.md`:** row 9 of the §2 changes table, which marks `pqd`（既定）. That table lists changes from v0.1, but I included the row because it states the current default.\n  - **Docs, `docs/symbols.md`:** the `pqd`（既定） row of the table in §7.\n  - **Docs, `docs/symbols.md`:** assumption 4 in §9 (\"既定は正の依存（`pqd`）\").\n\n  `README.md` mentions none of the classes, and I found no default stated in the experiment records. I left out the `COPULAS` table in `pw/credal.py`, because it lists the classes without saying which is the default. I also left out the tests' fixture strings and dated logs, since they are test data or records rather than places."
+  },
+  "places": [
+   {
+    "hidden": "docs/spec.md::3. モデル",
+    "found": true,
+    "as": [
+     "docs/spec.md::3. モデル"
+    ]
+   },
+   {
+    "hidden": "docs/spec.md::2. v0.1 からの変更",
+    "found": true,
+    "as": [
+     "docs/spec.md::2. v0.1 からの変更"
+    ]
+   },
+   {
+    "hidden": "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則",
+    "found": true,
+    "as": [
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則"
+    ]
+   },
+   {
+    "hidden": "pw/kernel.py::Kernel.__init__",
+    "found": true,
+    "as": [
+     "pw/kernel.py::Kernel.__init__"
+    ]
+   }
+  ],
+  "extras": [
+   {
+    "at": "docs/symbols.md::9. 置いている仮定",
+    "read": null,
+    "value": "pqd",
+    "quote": "4. **証拠の依存のクラス** 既定は正の依存（`pqd`）。`frechet` を選べばこの仮定は外れる。"
+   }
+  ]
+ },
+ {
+  "fact": "axioms a proof may depend on",
+  "run": {
+   "model": "claude-opus-5-5",
+   "turns": 6,
+   "cost_usd": 0.08,
+   "said": "I found and reported 2 places that state the list of axioms an accepted proof may depend on. Both give the same three: `Classical.choice`, `Quot.sound` and `propext`.\n\n- **axioms a proof may depend on:** I searched the whole repository for the three axiom names and for `sorryAx`, then for words naming an axiom allowlist (`ALLOWED_AXIOMS`, \"allowed axioms\", 許可リスト). The 2 places are:\n  - `pw/lean_gate.py::ALLOWED_AXIOMS`, the constant in the code.\n  - `docs/spec.md::5. Lean Gate`, the sentence giving the conditions for accepting a proof.\n\n  I left out places that name the axioms but don't define the list:\n  - `experiments/selfcheck/RESULTS.md` and its JSON results are a dated record of one run.\n  - The tests use the axioms as input data.\n  - `docs/symbols.md` names only `Classical.choice`, to explain why the algebra is Boolean, or refers to the allowlist without listing it."
+  },
+  "places": [
+   {
+    "hidden": "docs/spec.md::5. Lean Gate",
+    "found": true,
+    "as": [
+     "docs/spec.md::5. Lean Gate"
+    ]
+   },
+   {
+    "hidden": "pw/lean_gate.py::ALLOWED_AXIOMS",
+    "found": true,
+    "as": [
+     "pw/lean_gate.py::ALLOWED_AXIOMS"
+    ]
+   }
+  ],
+  "extras": []
+ },
+ {
+  "fact": "largest component inference solves",
+  "run": {
+   "model": "claude-opus-5-5",
+   "turns": 9,
+   "cost_usd": 0.15,
+   "said": "**largest component inference solves:** I found two places that state it, both with the value 14, and reported both.\n- **Code:** the `max_atoms=14` default in `Kernel.__init__` (`pw/kernel.py:474`). It is the limit the check at `pw/kernel.py:1156` enforces.\n- **Docs:** section \"7. 未解決\" of `docs/spec.md` (line 158), which says a connected component of more than 14 atoms can't be solved.\n\nHow I searched: for \"component\", \"atoms\", `max_atoms`, \"14\", \"fourteen\" and 2^14 (16384), and for the Japanese docs' words for atom, connected and component (原子, 連結, 成分). No caller passes a different `max_atoms` to `Kernel(...)`.\n\nWhat I left out: the 14s in tests, which are test input data, and the 14s in the Lean version pins (v4.14.0). I also skipped the experiment results files, because they are dated records rather than statements of the current value."
+  },
+  "places": [
+   {
+    "hidden": "docs/spec.md::7. 未解決",
+    "found": true,
+    "as": [
+     "docs/spec.md::7. 未解決"
+    ]
+   },
+   {
+    "hidden": "pw/kernel.py::Kernel.__init__",
+    "found": true,
+    "as": [
+     "pw/kernel.py::Kernel.__init__"
+    ]
+   }
+  ],
+  "extras": []
+ },
+ {
+  "fact": "names of the MCP tools",
+  "run": {
+   "model": "claude-opus-5-5",
+   "turns": 8,
+   "cost_usd": 0.21,
+   "said": "For \"names of the MCP tools\", I found 2 new places, and both name the same 15 tools: `check_model`, `claim`, `declare_independent`, `distance`, `ground`, `ground_at`, `infer`, `model`, `observe`, `observe_command`, `prove`, `read_place`, `reject_object`, `sample_model` and `status`.\n\n- **`pw/mcp_server.py`** (code, whole file): each tool is a function marked `@mcp.tool()`. I gave the pattern `@mcp\\.tool\\(\\)\\ndef (\\w+)\\(`, which finds every tool name. It returns them in the order they appear in the file, not sorted.\n- **`docs/spec.md::4. 操作（MCPツール）`** (prose): the table in this section has one row per tool, and it lists the same 15.\n\n**How I searched:** I searched for \"mcp\" and \"tool\" across the repository, then for some of the tool names, such as `ground_at`, `sample_model` and `observe_command`. I did not report these other matches:\n- `pw/orchestrator.py` allows all the tools at once with `mcp__pw` and its prompt mentions only some by name.\n- `pw/maintain.py` allows only `read_place`.\n- `pw/discover.py` is a different server, with tools `add_place` and `new_fact`.\n- `experiments/`, `tests/`, `docs/symbols.md` and the rest of `docs/spec.md` only mention single tools in passing, as examples or past results."
+  },
+  "places": [
+   {
+    "hidden": "docs/spec.md::4. 操作（MCPツール）",
+    "found": true,
+    "as": [
+     "docs/spec.md::4. 操作（MCPツール）"
+    ]
+   },
+   {
+    "hidden": "pw/mcp_server.py",
+    "found": true,
+    "as": [
+     "pw/mcp_server.py"
+    ]
+   }
+  ],
+  "extras": []
+ },
+ {
+  "fact": "default threshold, in thousandths",
+  "run": {
+   "model": "claude-opus-5-5",
+   "turns": 9,
+   "cost_usd": 0.16,
+   "said": "**default threshold, in thousandths:** I searched the whole repository for \"threshold\", \"閾値\" (Japanese for \"threshold\"), `--threshold`, `lo >=` and the value written as 0.9 or 900. I found five new places, and all of them say 900 (0.9), so they agree:\n- `default=0.9` in `main()` of `pw/check.py`, `pw/maintain.py` and `pw/orchestrator.py`.\n- The usage lines `[--threshold 0.9]` at the top of `pw/check.py` and `pw/maintain.py`.\n\nI left out `docs/spec.md` lines 170, 180 and 191 because they record what past runs produced. I left out `experiments/` and the 0.9 values in the tests because they are results or test inputs, not the current default. `pw/orchestrator.py:13` names `--threshold` but gives no number, so it isn't reported either."
+  },
+  "places": [
+   {
+    "hidden": "pw/orchestrator.py::main",
+    "found": true,
+    "as": [
+     "pw/orchestrator.py::main"
+    ]
+   },
+   {
+    "hidden": "pw/check.py::main",
+    "found": true,
+    "as": [
+     "pw/check.py::main",
+     "pw/check.py"
+    ]
+   },
+   {
+    "hidden": "pw/maintain.py::main",
+    "found": true,
+    "as": [
+     "pw/maintain.py::main",
+     "pw/maintain.py"
+    ]
+   }
+  ],
+  "extras": []
+ },
+ {
+  "fact": "Lean version",
+  "run": {
+   "model": "claude-opus-5-5",
+   "turns": 6,
+   "cost_usd": 0.07,
+   "said": "- **Lean version:** I found two places that state it, and both say 4.14.0, so they agree. I searched for \"lean-toolchain\", \"LEAN_VERSION\", \"leanprover\", \"Lean version\" and the version number written as `v4.1x` and `4.1x`.\n  - Reported `lean/lean-toolchain`, which holds `leanprover/lean4:v4.14.0` and is the actual pin.\n  - Reported `.github/workflows/decisions.yml`, which sets `LEAN_VERSION: 4.14.0` for the CI install.\n  - Left out the separate project under `experiments/selfcheck/lean`. It also says v4.14.0 in its own `lean-toolchain`, `lakefile.toml` (the mathlib rev) and `lake-manifest.json`, but it's an experiment, not Gamma's pin.\n  - Left out `README.md`, `docs/spec.md` and `pw/lean_gate.py`. They refer to `lean-toolchain` or read the version from it, but none of them gives a version number."
+  },
+  "places": [
+   {
+    "hidden": "lean/lean-toolchain",
+    "found": true,
+    "as": [
+     "lean/lean-toolchain"
+    ]
+   },
+   {
+    "hidden": "experiments/selfcheck/lean/lean-toolchain",
+    "found": false,
+    "as": []
+   },
+   {
+    "hidden": ".github/workflows/decisions.yml",
+    "found": true,
+    "as": [
+     ".github/workflows/decisions.yml"
+    ]
+   }
+  ],
+  "extras": []
+ }
+]

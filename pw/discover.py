@@ -28,11 +28,11 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 
 from .check import FACTS
-from .kernel import CALIBRATION, LOG, RULES, KernelError, _anchored, _json_part, _md_section, _py_part, _read_pattern, locate, pattern
+from .kernel import CALIBRATION, LOG, KernelError, _anchored, _json_part, _md_section, _py_part, _read_pattern, locate, pattern
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TYPES = {"String": str, "Nat": int, "Int": int, "List String": str, "List Nat": int}
-OWN = (FACTS, LOG, CALIBRATION, RULES)       # the project's own bookkeeping is not a place
+OWN = (FACTS, LOG, CALIBRATION)       # the list of places, the record and the measurements are not places themselves
 
 HOW = """You are looking through a project's files for places that state the same thing, so that the
 project can be told when they stop agreeing. You change nothing: you can read files (Read, Grep,
@@ -66,7 +66,7 @@ What to report for a place
   No look-around, back-references or named groups. Leave the pattern out for prose.
 
 Each report is checked against the file, and you are told what is wrong: fix it and report again.
-Ignore pw-facts.json, pw-log.jsonl, pw-calibration.json, pw-rules.json and anything under .git.
+Ignore pw-facts.json, pw-log.jsonl, pw-calibration.json and anything under .git.
 """
 
 FURTHER = """

@@ -1,0 +1,382 @@
+[
+ {
+  "run": {
+   "model": "claude-sonnet-5-5",
+   "turns": 13,
+   "cost_usd": 0.1,
+   "said": "- lean_version: Lean 4 release is 4.14.0 in `lean/lean-toolchain`, `experiments/selfcheck/lean/lean-toolchain`, `.github/workflows/decisions.yml` and `experiments/selfcheck/lean/lakefile.toml`. The places agree.\n- python_version: CI's Python minor version is 3.13 in `.github/workflows/decisions.yml` and `requirements-ci.txt`. The places agree.\n- default_model: the default model is claude-opus-5-5 in `pw/orchestrator.py::main`, `pw/calibrate.py::main`, `pw/discover.py::main` and `pw/maintain.py::main`, plus the README's \"動かす\" section. The places agree.\n\nThe first `python_version` report was rejected because the value went in as a number. I resent it as a JSON string and it was kept."
+  },
+  "declared places": [
+   {
+    "fact": "default dependence class",
+    "hidden": "docs/spec.md::3. モデル",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "default dependence class",
+    "hidden": "docs/spec.md::2. v0.1 からの変更",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "default dependence class",
+    "hidden": "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "default dependence class",
+    "hidden": "pw/kernel.py::Kernel.__init__",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "hidden": "docs/spec.md::5. Lean Gate",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "hidden": "pw/lean_gate.py::ALLOWED_AXIOMS",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "hidden": "docs/spec.md::7. 未解決",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "hidden": "pw/kernel.py::Kernel.__init__",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "hidden": "docs/spec.md::4. 操作（MCPツール）",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "hidden": "pw/mcp_server.py",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "hidden": "pw/orchestrator.py::main",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "hidden": "pw/check.py::main",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "hidden": "pw/maintain.py::main",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "Lean version",
+    "hidden": "lean/lean-toolchain",
+    "found": true,
+    "in": [
+     "lean_version"
+    ]
+   },
+   {
+    "fact": "Lean version",
+    "hidden": "experiments/selfcheck/lean/lean-toolchain",
+    "found": true,
+    "in": [
+     "lean_version"
+    ]
+   },
+   {
+    "fact": "Lean version",
+    "hidden": ".github/workflows/decisions.yml",
+    "found": true,
+    "in": [
+     "lean_version"
+    ]
+   }
+  ],
+  "proposed": [
+   {
+    "name": "lean_version",
+    "type": "String",
+    "gloss": "The Lean 4 release version (without leading v) that the project's proofs and CI are pinned to.",
+    "agree": true,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "read": {
+       "as": "string",
+       "find": "lean4:v([0-9.]+)"
+      },
+      "value": "4.14.0",
+      "quote": "leanprover/lean4:v4.14.0"
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "read": {
+       "as": "string",
+       "find": "lean4:v([0-9.]+)"
+      },
+      "value": "4.14.0",
+      "quote": "leanprover/lean4:v4.14.0"
+     },
+     {
+      "at": ".github/workflows/decisions.yml",
+      "read": {
+       "as": "string",
+       "find": "LEAN_VERSION: ([0-9.]+)"
+      },
+      "value": "4.14.0",
+      "quote": "LEAN_VERSION: 4.14.0"
+     },
+     {
+      "at": "experiments/selfcheck/lean/lakefile.toml",
+      "read": {
+       "as": "string",
+       "find": "rev = \"v([0-9.]+)\""
+      },
+      "value": "4.14.0",
+      "quote": "rev = \"v4.14.0\""
+     }
+    ]
+   },
+   {
+    "name": "default_model",
+    "type": "String",
+    "gloss": "The default Claude model ID used for workers and readers by the pw command-line tools.",
+    "agree": true,
+    "places": [
+     {
+      "at": "pw/orchestrator.py::main",
+      "read": {
+       "as": "string",
+       "find": "--model\", default=\"([^\"]+)\""
+      },
+      "value": "claude-opus-5-5",
+      "quote": "ap.add_argument(\"--model\", default=\"claude-opus-5-5\")"
+     },
+     {
+      "at": "pw/calibrate.py::main",
+      "read": {
+       "as": "string",
+       "find": "--model\", default=\"([^\"]+)\""
+      },
+      "value": "claude-opus-5-5",
+      "quote": "ap.add_argument(\"--model\", default=\"claude-opus-5-5\")"
+     },
+     {
+      "at": "pw/discover.py::main",
+      "read": {
+       "as": "string",
+       "find": "--model\", default=\"([^\"]+)\""
+      },
+      "value": "claude-opus-5-5",
+      "quote": "ap.add_argument(\"--model\", default=\"claude-opus-5-5\")"
+     },
+     {
+      "at": "pw/maintain.py::main",
+      "read": {
+       "as": "string",
+       "find": "--model\", default=\"([^\"]+)\""
+      },
+      "value": "claude-opus-5-5",
+      "quote": "ap.add_argument(\"--model\", default=\"claude-opus-5-5\", help=\"the model that reads places and re-establishes decisions\")"
+     },
+     {
+      "at": "README.md::動かす",
+      "read": {
+       "as": "string",
+       "find": "# (claude-[a-z0-9-]+) のワーカー"
+      },
+      "value": "claude-opus-5-5",
+      "quote": "python -m pw.orchestrator tasks.json # claude-opus-5-5 のワーカーを起動（課金あり）"
+     }
+    ]
+   },
+   {
+    "name": "python_version",
+    "type": "String",
+    "gloss": "The Python minor version that CI runs and the CI requirements are pinned for.",
+    "agree": true,
+    "places": [
+     {
+      "at": ".github/workflows/decisions.yml",
+      "read": {
+       "as": "string",
+       "find": "python-version: \"([0-9.]+)\""
+      },
+      "value": "3.13",
+      "quote": "python-version: \"3.13\""
+     },
+     {
+      "at": "requirements-ci.txt",
+      "read": {
+       "as": "string",
+       "find": "Python ([0-9.]+),"
+      },
+      "value": "3.13",
+      "quote": "# What CI installs, pinned by version and by hash (Python 3.13, Linux x86_64)."
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "run": {
+   "model": "claude-sonnet-5-5",
+   "turns": 10,
+   "cost_usd": 0.07,
+   "said": "I reported one fact, `lean_version` (String): the Lean 4 toolchain version, `v4.14.0`.\n\n- **Kept places:** `lean/lean-toolchain`, `experiments/selfcheck/lean/lean-toolchain` and `experiments/selfcheck/lean/lakefile.toml::rev` all say `v4.14.0`, so they agree.\n- **Fourth place, not added:** `.github/workflows/decisions.yml` sets `LEAN_VERSION: 4.14.0`, without the `v`. The checker refused it, because its pattern read `4.14.0` where I had given `v4.14.0`. Adding it afterwards also failed, with \"no declared fact is named 'lean_version'\", so it isn't recorded.\n- **README:** it says `prove` needs the same Lean 4 version as `lean/lean-toolchain`. It names no version, so I didn't report it.\n\nI also checked the numeric defaults in the code and docs, including the 0.9 threshold and the budgets, and found nothing else to report."
+  },
+  "declared places": [
+   {
+    "fact": "default dependence class",
+    "hidden": "docs/spec.md::3. モデル",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "default dependence class",
+    "hidden": "docs/spec.md::2. v0.1 からの変更",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "default dependence class",
+    "hidden": "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "default dependence class",
+    "hidden": "pw/kernel.py::Kernel.__init__",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "hidden": "docs/spec.md::5. Lean Gate",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "hidden": "pw/lean_gate.py::ALLOWED_AXIOMS",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "hidden": "docs/spec.md::7. 未解決",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "hidden": "pw/kernel.py::Kernel.__init__",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "hidden": "docs/spec.md::4. 操作（MCPツール）",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "hidden": "pw/mcp_server.py",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "hidden": "pw/orchestrator.py::main",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "hidden": "pw/check.py::main",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "hidden": "pw/maintain.py::main",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "Lean version",
+    "hidden": "lean/lean-toolchain",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "Lean version",
+    "hidden": "experiments/selfcheck/lean/lean-toolchain",
+    "found": false,
+    "in": []
+   },
+   {
+    "fact": "Lean version",
+    "hidden": ".github/workflows/decisions.yml",
+    "found": false,
+    "in": []
+   }
+  ],
+  "proposed": [
+   {
+    "name": "lean_version",
+    "type": "String",
+    "gloss": "The Lean 4 toolchain version (as a tag like v4.14.0, without the leanprover/lean4: prefix) used by the project.",
+    "agree": true,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "read": {
+       "as": "string",
+       "find": "leanprover/lean4:(v[0-9.]+)"
+      },
+      "value": "v4.14.0",
+      "quote": "leanprover/lean4:v4.14.0"
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "read": {
+       "as": "string",
+       "find": "leanprover/lean4:(v[0-9.]+)"
+      },
+      "value": "v4.14.0",
+      "quote": "leanprover/lean4:v4.14.0"
+     },
+     {
+      "at": "experiments/selfcheck/lean/lakefile.toml",
+      "read": {
+       "as": "string",
+       "find": "rev = \"(v[0-9.]+)\""
+      },
+      "value": "v4.14.0",
+      "quote": "rev = \"v4.14.0\""
+     }
+    ]
+   }
+  ]
+ }
+]

@@ -1,0 +1,373 @@
+[
+ {
+  "round": 0,
+  "run": {
+   "model": "claude-opus-5-5",
+   "turns": 22,
+   "cost_usd": 0.47,
+   "said": "I found and reported 10 more places, and all were accepted. Every new place gives the same value as the known places, so nothing disagrees right now.\n\n- **default dependence class:** I searched for `pqd`, 既定, \"copula\" and `dependence=`. I added `docs/spec.md::3. モデル` (\"既定の `pqd` は正の依存…\") and `docs/symbols.md::9. 置いている仮定` (\"既定は正の依存（`pqd`）\"). I skipped the run records and tests.\n- **axioms a proof may depend on:** I searched for the three axiom names and 公理/許可リスト. I added `docs/spec.md::5. Lean Gate`, the list of `propext`, `Classical.choice` and `Quot.sound`. I skipped `experiments/selfcheck/RESULTS.md` because it is a record of one run.\n- **largest component inference solves:** I searched for `14`, `max_atoms`, 原子 and 連結成分. I added `docs/spec.md::7. 未解決` (\"連結成分が14原子を超えると解けない\").\n- **names of the MCP tools:** I compared the `@mcp.tool` functions with the docs. I added the tool table in `docs/spec.md::4. 操作（MCPツール）`, which lists the same 15 tools. The README describes the server but doesn't name the tools.\n- **default threshold, in thousandths:** I searched for `--threshold`, `0.9` and 閾値. I added `pw/orchestrator.py::main` (`default=0.9`) and the usage lines at the top of `pw/check.py` and `pw/maintain.py` (`[--threshold 0.9]`). I skipped the \"閾値0.9\" lines in the spec's run log (§8) because they describe past runs.\n- **Lean version:** I searched for `4.14`, `lean-toolchain` and `leanprover`. I added `lean/lean-toolchain` (`leanprover/lean4:v4.14.0`) and `experiments/selfcheck/lean/lakefile.toml`. The second one pins mathlib to `rev = \"v4.14.0\"`, which has to change together with the Lean version. I left out `lake-manifest.json` because it is generated and comes out of the lakefile."
+  },
+  "trials": [
+   {
+    "fact": "default dependence class",
+    "hidden": "docs/spec.md::3. モデル",
+    "found": true,
+    "as": [
+     "docs/spec.md::3. モデル"
+    ],
+    "extras": [
+     {
+      "at": "docs/symbols.md::9. 置いている仮定",
+      "read": null,
+      "value": "pqd",
+      "quote": "4. **証拠の依存のクラス** 既定は正の依存（`pqd`）。`frechet` を選べばこの仮定は外れる。",
+      "overlaps a known place": false
+     }
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "hidden": "docs/spec.md::5. Lean Gate",
+    "found": true,
+    "as": [
+     "docs/spec.md::5. Lean Gate"
+    ],
+    "extras": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "hidden": "docs/spec.md::7. 未解決",
+    "found": true,
+    "as": [
+     "docs/spec.md::7. 未解決"
+    ],
+    "extras": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "hidden": "docs/spec.md::4. 操作（MCPツール）",
+    "found": true,
+    "as": [
+     "docs/spec.md::4. 操作（MCPツール）"
+    ],
+    "extras": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "hidden": "pw/orchestrator.py::main",
+    "found": true,
+    "as": [
+     "pw/orchestrator.py::main"
+    ],
+    "extras": [
+     {
+      "at": "pw/check.py",
+      "read": {
+       "as": "permille",
+       "find": "\\[--threshold ([0-9.]+)\\]"
+      },
+      "value": 900,
+      "quote": "python -m pw.check [--repo DIR] [--db PATH] [--lean-dir DIR] [--threshold 0.9]",
+      "overlaps a known place": true
+     },
+     {
+      "at": "pw/maintain.py",
+      "read": {
+       "as": "permille",
+       "find": "\\[--threshold ([0-9.]+)\\]"
+      },
+      "value": 900,
+      "quote": "python -m pw.maintain [--repo DIR] [--lean-dir DIR] [--threshold 0.9]",
+      "overlaps a known place": true
+     }
+    ]
+   },
+   {
+    "fact": "Lean version",
+    "hidden": "lean/lean-toolchain",
+    "found": true,
+    "as": [
+     "lean/lean-toolchain"
+    ],
+    "extras": [
+     {
+      "at": "experiments/selfcheck/lean/lakefile.toml",
+      "read": {
+       "as": "string",
+       "find": "rev = \"v([0-9.]+)\""
+      },
+      "value": "4.14.0",
+      "quote": "rev = \"v4.14.0\"",
+      "overlaps a known place": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "round": 1,
+  "run": {
+   "model": "claude-opus-5-5",
+   "turns": 23,
+   "cost_usd": 0.56,
+   "said": "I found 8 more places across five of the six facts, and the tool accepted all 8. All of them agree with the values already known. I found nothing new for the Lean version.\n\n- **Default dependence class** (`pqd`): I searched for `pqd`, `既定` and `dependence`. I found two more places in the docs:\n  - `docs/spec.md::2. v0.1 からの変更`, in change table row 9, which says `pqd`（既定）. This table is partly a change record, but its row 9 still names the current default.\n  - `docs/symbols.md::9. 置いている仮定`, which says 既定は正の依存（`pqd`）.\n  - The default in `pw/kernel.py` was already listed.\n- **Axioms a proof may depend on**: I searched for `propext`, `Quot.sound`, `Classical.choice` and `axioms`. I found one more place, `pw/lean_gate.py::ALLOWED_AXIOMS`. The mention in `experiments/selfcheck/RESULTS.md` is a record of one run, so I skipped it.\n- **Largest component inference solves** (14): I searched for `14`, `max_atoms` and 原子. I found one more place, the `max_atoms=14` default in `pw/kernel.py::Kernel.__init__`. The other 14s are in tests or unrelated.\n- **Names of the MCP tools**: I searched for the `@mcp.tool()` functions and the tool names. I found one more place, the whole file `pw/mcp_server.py`. It defines the same 15 tools as the spec table. `pw/orchestrator.py` names a few tools in its instructions to workers, but not the full list, so I didn't report it.\n- **Default threshold, in thousandths** (900): I searched for `threshold`, `0.9` and 閾値. I found three more places:\n  - `pw/check.py::main`, where the argument defaults to `0.9`.\n  - The usage lines at the top of `pw/check.py` and `pw/maintain.py`, which both say `[--threshold 0.9]`. I reported each as the whole file.\n  - The 閾値0.9 mentions in spec §8 are records of past runs, so I skipped them.\n- **Lean version** (4.14.0): I searched for `v4`, `4.14` and `toolchain`. I found nothing new:\n  - `lean/lakefile.toml` and the README don't state a version.\n  - `experiments/selfcheck/lean/` has its own toolchain file and lake files with v4.14.0, but they pin a separate experiment project, not Gamma's, so I didn't report them."
+  },
+  "trials": [
+   {
+    "fact": "default dependence class",
+    "hidden": "docs/spec.md::2. v0.1 からの変更",
+    "found": true,
+    "as": [
+     "docs/spec.md::2. v0.1 からの変更"
+    ],
+    "extras": [
+     {
+      "at": "docs/symbols.md::9. 置いている仮定",
+      "read": null,
+      "value": "pqd",
+      "quote": "4. **証拠の依存のクラス** 既定は正の依存（`pqd`）。`frechet` を選べばこの仮定は外れる。",
+      "overlaps a known place": false
+     }
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "hidden": "pw/lean_gate.py::ALLOWED_AXIOMS",
+    "found": true,
+    "as": [
+     "pw/lean_gate.py::ALLOWED_AXIOMS"
+    ],
+    "extras": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "hidden": "pw/kernel.py::Kernel.__init__",
+    "found": true,
+    "as": [
+     "pw/kernel.py::Kernel.__init__"
+    ],
+    "extras": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "hidden": "pw/mcp_server.py",
+    "found": true,
+    "as": [
+     "pw/mcp_server.py"
+    ],
+    "extras": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "hidden": "pw/check.py::main",
+    "found": true,
+    "as": [
+     "pw/check.py::main",
+     "pw/check.py"
+    ],
+    "extras": [
+     {
+      "at": "pw/maintain.py",
+      "read": {
+       "as": "permille",
+       "find": "\\[--threshold ([0-9.]+)\\]"
+      },
+      "value": 900,
+      "quote": "python -m pw.maintain [--repo DIR] [--lean-dir DIR] [--threshold 0.9]",
+      "overlaps a known place": true
+     }
+    ]
+   },
+   {
+    "fact": "Lean version",
+    "hidden": "experiments/selfcheck/lean/lean-toolchain",
+    "found": false,
+    "as": [],
+    "extras": []
+   }
+  ]
+ },
+ {
+  "round": 2,
+  "run": {
+   "model": "claude-opus-5-5",
+   "turns": 17,
+   "cost_usd": 0.49,
+   "said": "I added five places across three of the six facts. The other three got nothing new: there were no further places for them beyond the ones already listed.\n\n- **default dependence class**: I searched for `pqd`, `dependence`, 既定 and the copula wording. I added `docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則` (the table row marked `pqd`（既定）) and `docs/symbols.md::9. 置いている仮定` (it says the default is `pqd`). Both say \"pqd\", the same as the known places. Lines in the run records in spec §8 and in tests were left out because they are records or test input.\n- **axioms a proof may depend on**: I searched for `propext`, `Quot.sound`, `Classical.choice`, `ALLOWED_AXIOMS`, axiom and 公理. Nothing new. `experiments/selfcheck/RESULTS.md` names the three axioms, but only as the result of a past run. `docs/symbols.md` mentions the allow-list without giving its contents.\n- **largest component inference solves**: I searched for `14`, `max_atoms`, atoms and 原子. Nothing new. Every other \"14\" is test data, a record, or an unrelated number such as a hash or line count.\n- **names of the MCP tools**: I searched for `@mcp.tool`, the tool names and `allowedTools`/`mcp__`. Nothing new. `pw/orchestrator.py` grants `mcp__pw` as a whole, `pw/maintain.py` grants only `read_place`, and `docs/symbols.md` mentions only `sample_model`, so none of them lists the full set.\n- **default threshold, in thousandths**: I searched for `--threshold`, `0.9` and 閾値. I added `pw/maintain.py::main` (`default=0.9`, which is 900). The \"閾値 0.9\" mentions in spec §8 are run records.\n- **Lean version**: I searched for `4.14`, toolchain and `LEAN_VERSION`. I added `.github/workflows/decisions.yml` (`LEAN_VERSION: 4.14.0`) and `experiments/selfcheck/lean/lakefile.toml` (`rev = \"v4.14.0\"`). Note that the CI file writes it without the `v`. I skipped the `inputRev` entries in `experiments/selfcheck/lean/lake-manifest.json` because that file is generated from the lakefile. `lean/lakefile.toml` doesn't pin a version."
+  },
+  "trials": [
+   {
+    "fact": "default dependence class",
+    "hidden": "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則",
+    "found": true,
+    "as": [
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則"
+    ],
+    "extras": [
+     {
+      "at": "docs/symbols.md::9. 置いている仮定",
+      "read": null,
+      "value": "pqd",
+      "quote": "4. **証拠の依存のクラス** 既定は正の依存（`pqd`）。`frechet` を選べばこの仮定は外れる。",
+      "overlaps a known place": false
+     }
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "hidden": null,
+    "found": false,
+    "as": [],
+    "extras": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "hidden": null,
+    "found": false,
+    "as": [],
+    "extras": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "hidden": null,
+    "found": false,
+    "as": [],
+    "extras": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "hidden": "pw/maintain.py::main",
+    "found": true,
+    "as": [
+     "pw/maintain.py::main"
+    ],
+    "extras": []
+   },
+   {
+    "fact": "Lean version",
+    "hidden": ".github/workflows/decisions.yml",
+    "found": true,
+    "as": [
+     ".github/workflows/decisions.yml"
+    ],
+    "extras": [
+     {
+      "at": "experiments/selfcheck/lean/lakefile.toml",
+      "read": {
+       "as": "string",
+       "find": "rev = \"([^\"]+)\""
+      },
+      "value": "v4.14.0",
+      "quote": "rev = \"v4.14.0\"",
+      "overlaps a known place": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "round": 3,
+  "run": {
+   "model": "claude-opus-5-5",
+   "turns": 31,
+   "cost_usd": 0.69,
+   "said": "I found and reported 6 new places for 4 of the 6 things. For the other two I found nothing beyond the known places. All 6 were accepted by the checker; one was rejected first for a misquoted line and accepted on the second try. Every new place agrees with the values already known.\n\n- **default dependence class:** I grepped for `pqd`, `frechet`, `comonotone` and \"既定\" (default). Two new places, both `\"pqd\"`:\n  - `pw/kernel.py::Kernel.__init__` (`dependence=\"pqd\"`).\n  - `docs/symbols.md::9. 置いている仮定`, which says \"既定は正の依存（`pqd`）\".\n  - Not reported: the §7 table in `symbols.md` (already known) and the `pqd` mentions in tests and in §8 run notes (examples or dated records).\n- **axioms a proof may depend on:** I grepped for `propext`, `Quot.sound`, `Classical.choice` and `ALLOWED_AXIOMS`. Nothing new. The only other full list is in `experiments/selfcheck/RESULTS.md`, a dated experiment record, so I left it out. `symbols.md` mentions only `Classical.choice`, not the whole list.\n- **largest component inference solves:** I grepped for `14`, `max_atoms`, \"atoms\" and \"原子\" (atom). Nothing new; every other `14` is test data or unrelated.\n- **names of the MCP tools:** I listed the `@mcp.tool` functions and searched other files for tool names and `allowedTools`. Nothing new. `orchestrator.py` and `maintain.py` name single tools, never the full set.\n- **default threshold, in thousandths:** I grepped for `threshold`, `0.9` and `900`. Two new places, both 900 (0.9): the usage line `[--threshold 0.9]` in the docstrings of `pw/check.py` and `pw/maintain.py`. Not reported: the \"閾値0.9\" (threshold 0.9) remarks in spec §8 (run records) and the `formalizations.json` notes (experiment results).\n- **Lean version:** I grepped for `4.14`, `lean4:` and `toolchain`. Two new places, both `\"4.14.0\"`:\n  - the mathlib pin `rev = \"v4.14.0\"` in `experiments/selfcheck/lean/lakefile.toml`.\n  - mathlib's `inputRev` in `experiments/selfcheck/lean/lake-manifest.json` (`packages.0.inputRev`).\n  - Not reported: the `v4.14.0` `inputRev` entries for importGraph, aesop and batteries in the same manifest, because they are pulled in by mathlib. That's a judgment call; they would change along with a version bump too."
+  },
+  "trials": [
+   {
+    "fact": "default dependence class",
+    "hidden": "pw/kernel.py::Kernel.__init__",
+    "found": true,
+    "as": [
+     "pw/kernel.py::Kernel.__init__"
+    ],
+    "extras": [
+     {
+      "at": "docs/symbols.md::9. 置いている仮定",
+      "read": null,
+      "value": "pqd",
+      "quote": "4. **証拠の依存のクラス** 既定は正の依存（`pqd`）。`frechet` を選べばこの仮定は外れる。",
+      "overlaps a known place": false
+     }
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "hidden": null,
+    "found": false,
+    "as": [],
+    "extras": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "hidden": null,
+    "found": false,
+    "as": [],
+    "extras": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "hidden": null,
+    "found": false,
+    "as": [],
+    "extras": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "hidden": null,
+    "found": false,
+    "as": [],
+    "extras": [
+     {
+      "at": "pw/check.py",
+      "read": {
+       "as": "permille",
+       "find": "\\[--threshold (\\d+\\.\\d+)\\]"
+      },
+      "value": 900,
+      "quote": "python -m pw.check [--repo DIR] [--db PATH] [--lean-dir DIR] [--threshold 0.9]",
+      "overlaps a known place": true
+     },
+     {
+      "at": "pw/maintain.py",
+      "read": {
+       "as": "permille",
+       "find": "\\[--threshold (\\d+\\.\\d+)\\]"
+      },
+      "value": 900,
+      "quote": "python -m pw.maintain [--repo DIR] [--lean-dir DIR] [--threshold 0.9]",
+      "overlaps a known place": true
+     }
+    ]
+   },
+   {
+    "fact": "Lean version",
+    "hidden": null,
+    "found": false,
+    "as": [],
+    "extras": [
+     {
+      "at": "experiments/selfcheck/lean/lakefile.toml",
+      "read": {
+       "as": "string",
+       "find": "rev = \"v([\\d.]+)\""
+      },
+      "value": "4.14.0",
+      "quote": "rev = \"v4.14.0\"",
+      "overlaps a known place": false
+     },
+     {
+      "at": "experiments/selfcheck/lean/lake-manifest.json::packages.0.inputRev",
+      "read": {
+       "as": "string",
+       "find": "v([\\d.]+)"
+      },
+      "value": "4.14.0",
+      "quote": "v4.14.0",
+      "overlaps a known place": false
+     }
+    ]
+   }
+  ]
+ }
+]
