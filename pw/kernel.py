@@ -732,7 +732,7 @@ class Kernel:
             entry["state"] = {"holds": "re-established" if new and reread else "current", "not": "violated"}.get(verdict, "uncovered")
         st = self.state()
         for p in entry["places"]:                    # how well each reading stands on its own
-            p["lo"] = self.infer(p["m"], current=current)["lo"]
+            p["lo"] = self.infer(p["m"], current=current, alone=True)["lo"]
             info = st.models[p["m"]]
             if not info["binding"]:
                 p["blind by"] = sorted(info["blind"])
@@ -1053,12 +1053,16 @@ class Kernel:
         return items
 
     # ---- inference -------------------------------------------------------
-    def infer(self, query, current=None, tree=None):
+    def infer(self, query, current=None, tree=None, alone=False):
         """Lower and upper probability [lo, hi] of a formula, given all evidence and proofs.
 
         `current` maps a piece of code ("path::name") to its present version, and `tree` names
         the present working tree. Given them, only what was learnt about the code as it is now
         counts: models of other versions and check runs on other trees are set aside.
+
+        `alone` asks about the queried atoms by themselves: their base rates and the evidence
+        about them, leaving out everything they are connected to. For a single reading this is
+        how well it stands on what was learnt about it, whatever the other readings are like.
         """
         st = self.state()
         if current is not None:
@@ -1092,7 +1096,7 @@ class Kernel:
         decided = alg.decided()
         comp = set(fm.atoms(q))
         seeds = set(comp)
-        grew = True
+        grew = not alone
         while grew:
             grew = False
             for grp in map(fm.atoms, theory):

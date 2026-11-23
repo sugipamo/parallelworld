@@ -576,6 +576,18 @@ def test_what_stands_behind_a_reading_no_person_confirmed(tmp_path):
     a.read_place(h, "doc.md::Limits", "14", cwd=cwd, quote="At most 14 atoms.", blind=True)
     assert lo(h, "doc.md::Limits") > 0.94                                       # read blind, and the code says 14 too
 
+    # a reading is judged on what was learnt about it: more places in the fact do not change that
+    one = lo(h, "doc.md::Limits")
+    (tmp_path / "c.txt").write_text("limit 14\n")
+    (tmp_path / "d.txt").write_text("limit 14\n")
+    a.claim_fact("limit", "Nat", ["doc.md::Limits", "notes.md::Size",
+                                  {"at": "k.py::LIMIT", "reader": pattern(find=r"= (\d+)", kind="nat")},
+                                  {"at": "c.txt", "reader": pattern(find=r"limit (\d+)", kind="nat")},
+                                  {"at": "d.txt", "reader": pattern(find=r"limit (\d+)", kind="nat")}])
+    a.read_place(h, "notes.md::Size", "14", cwd=cwd, quote="Components have up to 14 atoms.", blind=True)
+    assert lo(h, "doc.md::Limits") == pytest.approx(one) == pytest.approx(lo(h, "notes.md::Size"))
+    assert lo(h, "k.py::LIMIT") == pytest.approx(0.98)
+
     # no computed place: two prose places
     g = a.claim_fact("size", "Nat", ["notes.md::Size", "doc.md::Limits"])["h"]
     a.read_place(g, "notes.md::Size", "14", cwd=cwd, quote="Components have up to 14 atoms.", blind=True)
