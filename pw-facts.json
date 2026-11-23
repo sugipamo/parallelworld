@@ -109,6 +109,13 @@
      "find": ":v([0-9.]+)",
      "as": "string"
     }
+   },
+   {
+    "at": ".github/workflows/decisions.yml",
+    "read": {
+     "find": "LEAN_VERSION: ([0-9.]+)",
+     "as": "string"
+    }
    }
   ]
  }

@@ -27,7 +27,7 @@ python -m pytest tests
 python -m pw.orchestrator tasks.json --dry-run     # 起動コマンドの確認のみ
 python -m pw.orchestrator tasks.json               # claude-opus-5-5 のワーカーを起動（課金あり）
 python -m pw.check --repo .                        # 決定をいまのファイルで確かめ直す。機械的に通らないものがあれば終了コード 1
-python -m pw.check --repo . --verify               # 加えて、記録にある証明を Lean に通し直す（CI ではこちら）
+python -m pw.check --repo . --verify               # 加えて、記録にある証明を Lean に通し直す（CI はこれを回す：.github/workflows/decisions.yml）
 python -m pw.maintain --repo .                     # 上に加えて、変わったファイルをエージェントに読み直させる（課金あり）
 python -m pw.confirm --repo .                      # エージェントの読みのうち、誰も確認していないものを一覧する
 ```

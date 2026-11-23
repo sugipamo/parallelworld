@@ -1,0 +1,55 @@
+name: decisions
+
+# Hold the project's facts and decisions against the files as they are in this commit.
+# Nothing here needs an agent: places with a declared way of reading are read again, the
+# recorded proofs are run through Lean again, and readings stated by an agent count only
+# for the exact content they were made for.
+
+on:
+  push:
+  pull_request:
+
+env:
+  LEAN_VERSION: 4.14.0   # must equal lean/lean-toolchain; pw-facts.json holds the two together
+  LEAN_SHA256: 320f18e7d58271d95fced740522b5a5ed41b85b2af5bf0e8ab9a8dbc380e450a
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - run: pip install numpy scipy pytest
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/lean
+          key: lean-${{ env.LEAN_VERSION }}-${{ env.LEAN_SHA256 }}
+
+      - name: Lean
+        run: |
+          dir="$HOME/lean/lean-$LEAN_VERSION-linux"
+          if [ ! -x "$dir/bin/lake" ]; then
+            mkdir -p "$HOME/lean"
+            curl -fsSL -o "$HOME/lean/lean.tar.zst" \
+              "https://github.com/leanprover/lean4/releases/download/v$LEAN_VERSION/lean-$LEAN_VERSION-linux.tar.zst"
+            echo "$LEAN_SHA256  $HOME/lean/lean.tar.zst" | sha256sum -c --quiet
+            tar --zstd -xf "$HOME/lean/lean.tar.zst" -C "$HOME/lean"
+            rm "$HOME/lean/lean.tar.zst"
+          fi
+          echo "$dir/bin" >> "$GITHUB_PATH"
+
+      - name: Facts and decisions, with the recorded proofs verified again
+        run: python -m pw.check --verify
+
+      - name: What a person still has to confirm
+        if: always()
+        run: python -m pw.confirm | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Tests
+        if: always()
+        run: python -m pytest -q tests

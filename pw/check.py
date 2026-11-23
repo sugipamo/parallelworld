@@ -19,9 +19,14 @@ from .lean_gate import LEAN_DIR, LeanGate
 FACTS = "pw-facts.json"      # a project's list of facts and the places that state them
 
 
-def show(report, threshold):
-    """Print where every decision stands. Returns True if anything needs attention."""
+def show(report, threshold, unconfirmed="fail"):
+    """Print where every decision stands. Returns True if anything needs attention.
+
+    With unconfirmed="warn", a decision that holds mechanically but rests on a reading nobody has
+    confirmed is reported and does not count as needing attention.
+    """
     bad = bool(report["conflicts"])
+    mark = lambda ok, soft=False: "ok  " if ok else ("WARN" if soft and unconfirmed == "warn" else "FAIL")
     for d in report["decisions"]:
         if d.get("natural_language"):
             # held only by its own checks: the bound says how far those checks go, and is not a gate
@@ -37,8 +42,9 @@ def show(report, threshold):
             # (any one reading may be the wrong one), so each reading is held to the threshold by itself.
             weak = [p for p in d["places"] if p["lo"] < threshold]
             ok = d["state"] in ("current", "re-established") and not weak
-            bad |= not ok
-            print(f"{'ok  ' if ok else 'FAIL'} {d['state']:<15} [{d['lo']:.3f}, {d['hi']:.3f}] {d['h']} fact: {d['fact']}")
+            soft = d["state"] in ("current", "re-established")          # the places agree; only confirmation is missing
+            bad |= not ok and not (soft and unconfirmed == "warn")
+            print(f"{mark(ok, soft)} {d['state']:<15} [{d['lo']:.3f}, {d['hi']:.3f}] {d['h']} fact: {d['fact']}")
             if not ok or len({p["reads as"] for p in d["places"]}) > 1:
                 for p in d["places"]:
                     how = "" if p["by"] == "reader" else f"   (stated, {p['m']}" + (", not confirmed)" if p in weak else ")")
@@ -54,8 +60,9 @@ def show(report, threshold):
             if "error" in d:
                 print(f"       {d['error'][:300]}")
             continue
-        bad |= not ok
-        print(f"{'ok  ' if ok else 'FAIL'} {d['state']:<15} [{d['lo']:.3f}, {d['hi']:.3f}] {d['h']} {d['subject'].split('@')[0]} satisfies {d['spec']}")
+        soft = d["state"] in ("current", "re-established")
+        bad |= not ok and not (soft and unconfirmed == "warn")
+        print(f"{mark(ok, soft)} {d['state']:<15} [{d['lo']:.3f}, {d['hi']:.3f}] {d['h']} {d['subject'].split('@')[0]} satisfies {d['spec']}")
         if d["state"] == "stale":
             print("       the file changed since an agent read it; it has to be read again (python -m pw.maintain)")
         elif d["state"] == "violated":
@@ -84,12 +91,14 @@ def main():
     ap.add_argument("--threshold", type=float, default=0.9)
     ap.add_argument("--verify", action="store_true",
                     help="run every recorded proof through Lean again instead of believing the record (use this in CI)")
+    ap.add_argument("--unconfirmed", choices=("fail", "warn"), default="fail",
+                    help="what to do about decisions that hold mechanically but rest on a reading nobody has confirmed")
     args = ap.parse_args()
     repo = os.path.abspath(args.repo)
     kernel = Kernel(args.db or os.path.join(repo, LOG), gate=LeanGate(args.lean_dir), actor="check")
     if os.path.exists(os.path.join(repo, FACTS)):
         kernel.sync_facts(os.path.join(repo, FACTS))
-    bad = show(kernel.recheck(repo), args.threshold)
+    bad = show(kernel.recheck(repo), args.threshold, args.unconfirmed)
     if args.verify:
         refused = kernel.verify()
         for r in refused:
