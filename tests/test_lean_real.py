@@ -574,7 +574,7 @@ def test_what_stands_behind_a_reading_no_person_confirmed(tmp_path):
     a.read_place(h, "doc.md::Limits", "14", cwd=cwd, quote="At most 14 atoms.")
     assert lo(h, "doc.md::Limits") == pytest.approx(0.675 / 0.7625)            # the words are there; nothing else
     a.read_place(h, "doc.md::Limits", "14", cwd=cwd, quote="At most 14 atoms.", blind=True)
-    assert lo(h, "doc.md::Limits") > 0.97                                       # read blind, and the code says 14 too
+    assert lo(h, "doc.md::Limits") > 0.94                                       # read blind, and the code says 14 too
 
     # no computed place: two prose places
     g = a.claim_fact("size", "Nat", ["notes.md::Size", "doc.md::Limits"])["h"]

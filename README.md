@@ -17,7 +17,7 @@
 - `pw-facts.json` — このプロジェクトの事実と、それを述べている箇所の一覧
 - `pw-log.jsonl` — 記録（読み、証明、人の確認）。追記式のテキストで、リポジトリに含める
 
-実験の記録: [依存のある並列タスク](experiments/dependency/RESULTS.md)、[自己適用](experiments/selfcheck/RESULTS.md)、[過去の決定との矛盾](experiments/decisions/RESULTS.md)、[自然言語の決定の形式化](experiments/nl/RESULTS.md)、[コードでないファイル](experiments/artifacts/RESULTS.md)、[散文](experiments/prose/RESULTS.md)、[事実と箇所](experiments/facts/RESULTS.md)
+実験の記録: [依存のある並列タスク](experiments/dependency/RESULTS.md)、[自己適用](experiments/selfcheck/RESULTS.md)、[過去の決定との矛盾](experiments/decisions/RESULTS.md)、[自然言語の決定の形式化](experiments/nl/RESULTS.md)、[コードでないファイル](experiments/artifacts/RESULTS.md)、[散文](experiments/prose/RESULTS.md)、[事実と箇所](experiments/facts/RESULTS.md)、[読み手の測定](experiments/calibration/RESULTS.md)
 
 ## 動かす
 
@@ -30,6 +30,7 @@ python -m pw.check --repo .                        # 決定をいまのファイ
 python -m pw.check --repo . --verify               # 加えて、記録にある証明を Lean に通し直す（CI はこれを回す：.github/workflows/decisions.yml）
 python -m pw.maintain --repo .                     # 上に加えて、変わったファイルをエージェントに読み直させる（課金あり）
 python -m pw.confirm --repo .                      # エージェントの読みのうち、誰も確認していないものを一覧する
+python -m pw.calibrate --repo .                    # 値をわざと書き換えた本文を目隠しの読み手に読ませ、読みの正答率を測る（課金あり）
 ```
 
 `prove` には `lean/lean-toolchain` と同じ版の Lean 4 が必要。`lake` が PATH にないときは `PW_LAKE` でパスを渡す。
