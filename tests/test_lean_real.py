@@ -5,7 +5,7 @@ import subprocess
 
 import pytest
 
-from pw.kernel import Conflict, Kernel, KernelError
+from pw.kernel import Kernel, KernelError
 from pw.lean_gate import LeanGate
 
 LAKE = os.environ.get("PW_LAKE") or shutil.which("lake")
@@ -231,9 +231,8 @@ def test_past_decisions_are_held_against_the_code_as_it_is_now(tmp_path):
     assert k.prove("pred_disjoint", [d["p"], e["p"]], proof)["accepted"]
     c = k.recheck(cwd)["conflicts"]
     assert [(x["a"], x["b"]) for x in c] == [(d["h"], e["h"])]
-    with pytest.raises(Conflict):                 # one is established, so the other cannot even sit at its base rate
-        k.infer(f"{d['h']} & {e['h']}")
-    assert all("error" in x for x in k.recheck(cwd)["decisions"])
+    assert k.infer(f"{d['h']} & {e['h']}")["hi"] == 0.0
+    assert not any("error" in x for x in k.recheck(cwd)["decisions"])
     k.withdraw(d["h"], "superseded: callers now detect overflow by the sentinel")
     rep = k.recheck(cwd)
     assert rep["conflicts"] == [] and [x["h"] for x in rep["decisions"]] == [e["h"]]

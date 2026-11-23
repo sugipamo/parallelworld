@@ -317,3 +317,26 @@ def test_outputs_are_compared_by_value_not_by_spelling():
     assert _values("[0.75, True]") == _values("[3/4, true]")
     assert _values("0.30000000000000004") != _values("3/10")     # a float that is not the exact value
     assert _values("5") != _values("6") and _values("-2") == _values("-2.0")
+
+
+def test_a_proposed_decision_that_contradicts_an_established_one_does_not_block_the_rest(k):
+    """Found in the first decisions run: one unsupported, contradictory proposal made every
+    claim about the same code impossible to evaluate."""
+    old = k.claim_formal("f.py::f", T, "fun f => ∀ n, n ≤ f n")
+    a = k.attach_model(old["h"], "fun n => n + 1", subject_version="f.py::f@v1")
+    k.prove("holds", [a["f"]], "x")
+    for i in range(20):
+        k._record(a["m"], "sampled_check", "agree", f"d{i}", {"args": [i], **k.catalog["sampling"]})
+    third = k.claim_formal("f.py::f", T, "fun f => ∀ n, 0 < f n")
+    b = k.attach_model(third["h"], "fun n => n + 1", subject_version="f.py::f@v1")
+    k.prove("holds", [b["f"]], "x")
+    before = k.infer(old["h"])["lo"], k.infer(third["h"])["lo"]
+
+    new = k.claim_formal("f.py::f", T, "fun f => ∀ n, f n < n")      # proposed, nothing attached
+    k.prove("pred_disjoint", [old["p"], new["p"]], "x")
+    # the established decision and the bystander stand; they give up only the little room in
+    # which their model is wrong and the proposal could then be right
+    assert k.infer(old["h"])["lo"] == pytest.approx(before[0], abs=0.01)
+    assert k.infer(third["h"])["lo"] == pytest.approx(before[1], abs=0.01)
+    assert k.infer(new["h"])["hi"] < 0.02                                    # the proposal is all but excluded
+    approx(k.infer(f"{old['h']} & {new['h']}"), 0.0, 0.0)

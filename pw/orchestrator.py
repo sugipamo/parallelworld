@@ -20,7 +20,7 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
-from .kernel import Kernel
+from .kernel import Kernel, KernelError
 from .lean_gate import LEAN_DIR, LeanGate
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -130,6 +130,7 @@ def main():
         tasks = json.load(fh)
 
     kernel = Kernel(args.db, gate=LeanGate(args.lean_dir), actor="orchestrator")
+    before = set(kernel.state().formal)      # decisions that stood before this run
     for task in tasks:
         task["_required"] = required(kernel, task)
     st = kernel.state()
@@ -138,7 +139,8 @@ def main():
         subjects = {st.formal[h]["subject"] for h in mine if h in st.formal}
         task["_past"] = [f'{h}: {st.formal[h]["subject"]} satisfies `{st.algebra.preds[st.formal[h]["pred"]]["text"]}` '
                          f'(specification {st.formal[h]["pred"]}) — {st.atoms[h]["text"]}'
-                         for h in st.formal if h not in mine and h not in st.withdrawn and st.formal[h]["subject"] in subjects]
+                         for h in st.formal if h in before and h not in mine and h not in st.withdrawn
+                         and st.formal[h]["subject"] in subjects]
     by_name = {t["name"]: t for t in tasks}
     for task in tasks:
         task["_depends"] = [c for d in task.get("depends_on", []) for c in by_name[d]["_required"]]
@@ -151,14 +153,18 @@ def main():
 
     for task in tasks:
         verdicts = []
+        def judge(query, text):
+            try:
+                b = kernel.infer(query)
+                verdicts.append((b["lo"] >= args.threshold, b["lo"], b["hi"], text))
+            except KernelError as e:      # e.g. it contradicts a decision that is established
+                verdicts.append((False, 0.0, 1.0, f"{text}\n       cannot be evaluated: {e}"))
+
         for h, text in task["_required"]:
-            b = kernel.infer(h)
-            verdicts.append((b["lo"] >= args.threshold, b["lo"], b["hi"], text))
+            judge(h, text)
         if task["_depends"]:
-            hs = [h for h, _ in task["_required"] + task["_depends"]]
-            b = kernel.infer(" & ".join(hs))
-            verdicts.append((b["lo"] >= args.threshold, b["lo"], b["hi"],
-                             "together with what it depends on: " + ", ".join(h for h, _ in task["_depends"])))
+            judge(" & ".join(h for h, _ in task["_required"] + task["_depends"]),
+                  "together with what it depends on: " + ", ".join(h for h, _ in task["_depends"]))
         ok = all(v[0] for v in verdicts)
         print(f"{'MERGEABLE' if ok else 'HOLD     '} pw/{task['name']}")
         for good, lo, hi, text in verdicts:

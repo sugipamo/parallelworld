@@ -559,7 +559,8 @@ class Kernel:
         }
         theory = [("imp", all_of([A(g) for g in gs]), ("iff", A(h), A(f))) for gs, h, f in links]
         theory += [shape[rel](*ids) for rel, ids in order]
-        theory += [("not", ("and", A(a), A(b))) for a, b in self._conflicts(st)]   # decisions nothing can meet together
+        conflicts = self._conflicts(st)
+        theory += [("not", ("and", A(a), A(b))) for a, b in conflicts]   # decisions nothing can meet together
 
         # The component of the query. A class Lean has decided is a constant: sharing
         # it creates no dependence, so it does not pull unrelated claims together.
@@ -585,7 +586,8 @@ class Kernel:
         # Reliability model (Bovens-Hartmann). A link is reliable when all its hypotheses hold.
         #   - each hypothesis sits at its base rate; how hypotheses depend on one another is left open
         #   - the fact reported is independent of the hypotheses of the link reporting it
-        #   - with no reliable link, a claim is a draw at its base rate, whatever the hypotheses are
+        #   - with no reliable link, a claim is a draw at its base rate, whatever the hypotheses are;
+        #     the base rate is taken among the worlds where no decision that excludes it holds
         K = CredalSet(m)
         everywhere = np.ones(m, dtype=bool)
 
@@ -604,9 +606,13 @@ class Kernel:
                 K.constrain(env[a], everywhere, st.prior[a])
             elif kind == "H":
                 mine = [l for l in links if l[1] == a]
+                possible = everywhere.copy()
+                for x, y in conflicts:
+                    if a in (x, y) and {x, y} <= comp:
+                        possible &= ~env[y if a == x else x]
                 for event, val in settings(sorted({g for l in mine for g in l[0]})):
                     if not any(all(val[g] for g in l[0]) for l in mine):
-                        K.constrain(env[a], event, st.prior[a])
+                        K.constrain(env[a], event & possible, st.prior[a])
             elif a not in related:
                 K.constrain(env[a], everywhere, st.prior[a])
                 for l in links:

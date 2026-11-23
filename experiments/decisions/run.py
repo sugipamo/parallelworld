@@ -141,7 +141,7 @@ def main():
 
     # session 2
     log = orchestrate(repo, lean, SESSION2, "s2")
-    start = min(i for i in (log.find("MERGEABLE"), log.find("HOLD")) if i >= 0)
+    start = min([i for i in (log.find("MERGEABLE"), log.find("HOLD")) if i >= 0] or [0])
     step("session2", {"output": log[start:], "workers": reports(repo, SESSION2)})
     step("check after session 2", check(repo, lean))
     for b in ("pw/s2-sentinel", "pw/s2-identity"):
