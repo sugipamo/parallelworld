@@ -59,6 +59,37 @@
 - **宣言を変えた直後の 1 回目だけ、チェックが落ちた。** パターンを書き換えたあとの最初の `pw.check` が、いま計算したばかりの読みを見ずに「目隠しの確認がない」と判定し、2 回目は通った。不具合で、直した（同じ中身から同じ値を計算するパターンなら、読み手の確認はそのまま有効）。
 - **見出しが箇所の名前になる。** `🛠️ システムコマンド` と `システムコマンド` のように、絵文字の有無だけが違う見出しが別の箇所になった。同じ文字列の見出しが 2 つあれば、先のものしか指せない。
 
+## その後：一部だけを挙げる箇所（包含）
+
+「一覧は等しいとしか言えない」に対応した。一覧の事実には、一部だけを挙げている箇所を宣言できる（`"some": true`）。そういう箇所は全部を挙げなくてよいが、挙げたものは全体の一覧に入っていなければならない。判定は Lean（`∀ x ∈ 一部, x ∈ 全体`）。読み手には「この箇所が挙げているものだけを答える」という別の問いを渡す。
+
+miclow の宣言に、例と抜粋を足した（クローンの中だけ）。
+
+| 事実 | 足した箇所 | 結果 |
+|------|-----------|------|
+| システムコマンド | README「主な特徴」の節を、一部を挙げる箇所に変更 | 食い違いが消えた（2 つは 3 つに含まれる）。上で「判断が分かれる」とした 1 件 |
+| タスク設定のキー | README のクイックスタートの設定例、`examples/config.toml` | どちらも、コードのキーに含まれる |
+| Python クライアントのメソッド | `python/README.md` の Quick Start | 読み手は `receive_message`・`send_message`・`subscribe_topic` を挙げた |
+
+次に写しの上で、README「設定ファイル形式」も一部を挙げる箇所とし、`examples/config.toml` のキーを 1 つ書き換えた（`view_stderr` → `show_stderr`）。
+
+```
+FAIL violated  fact: task configuration keys
+   README.md::設定ファイル形式 lists (in part) ["args", "command", "environment", "task_name", "topics", "working_directory"]
+      not among the entries the other places state: environment, topics
+   src/config.rs reads as ["args", "command", "environment_vars", ...]
+   README.md::基本的な使用方法 lists (in part) [...]   (blind + words occur in the place + contained in a computed place)
+   examples/config.toml lists (in part) ["args", "command", "show_stderr", ...]
+      not among the entries the other places state: show_stderr
+```
+
+- 等しさだけのときは「2 つの一覧が違う」としか言えなかった。包含なら、**どの項目がコードにないか**が出る。README の `environment`・`topics` は、存在しないキーとして名指しされた。
+- 例の中の誤ったキーを拾えるようになった。入れた `show_stderr` はパターンで読んだ箇所なので、エージェントなしで検出される。
+- 一部を挙げる散文の箇所は、挙げたものがすべて計算した箇所に含まれていれば、目隠しの読み手 1 人で成り立つ（規則の表に行を足した）。含まれないとき、つまり食い違いを報告するときは、2 つ目のモデルにも読ませる。
+- **見逃す向き。** 読み手が、存在しないキーだけを読み落とすと、包含は成り立って見える。等しさのときと違い、読み落としは検出されない。読み手の測定（書き換えた値を読めるか）がこの穴をどこまで覆うかは、一部を挙げる箇所では測っていない。
+- 探索役にも、一部を挙げる箇所を報告できるようにした。miclow で走らせると（書き込みなし、$0.45）、伏せておいた既知の 7 箇所は 7 箇所とも挙がり、新しく `python/README.md` の Context Managers の節を、メソッドの一部（`listen_to_topic`）を挙げる箇所として提案した。目隠しの読み手も同じ値を読んだ。
+- 書式の食い違い（README のメッセージ例がパーサと合わない）は、依然として宣言できない。
+
 ## 分かったこと
 
 - **流れそのものは、別のリポジトリ、別の言語でも動く。** 探索、目隠しの確認、測定、チェックのどれも、手を入れずに通った。

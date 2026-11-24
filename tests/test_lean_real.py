@@ -426,3 +426,65 @@ def test_changing_a_pattern_keeps_what_a_reader_confirmed_on_the_same_content(tm
     assert a.recheck(cwd)["decisions"][0]["places"][0]["stands"]
     assert declare(r'^version = "([0-9.]+)"') == h
     assert a.recheck(cwd)["decisions"][0]["places"][0]["stands"]
+
+
+def test_a_place_may_state_only_some_entries_of_a_list(tmp_path):
+    """An example uses some of the keys there are. It need not list all of them; what it lists has to exist."""
+    import json
+    from pw.kernel import pattern
+    (tmp_path / "config.py").write_text('KEYS = ["args", "command", "env_vars", "name"]\n')
+    (tmp_path / "doc.md").write_text("## Format\n\nKeys: `args`, `command`, `env_vars`, `name`.\n\n"
+                                     "## Example\n\nA task sets `name` and `command`.\n")
+    (tmp_path / "example.toml").write_text('name = "a"\ncommand = "b"\nargs = []\n')
+    cwd = str(tmp_path)
+    _measure(cwd, opus=27)
+    a = Kernel(str(tmp_path / "pw-log.jsonl"), gate=LeanGate(), actor="reader-a")
+    code = {"at": "config.py::KEYS", "reader": pattern(find_all=r'"(\w+)"', sort=True)}
+    toml = {"at": "example.toml", "reader": pattern(find_all=r"^(\w+) = ", sort=True), "some": True}
+    with pytest.raises(KernelError):
+        a.claim_fact("keys", "List String", [{"at": "doc.md::Example", "some": True}, toml])     # nothing states the whole of it
+    with pytest.raises(KernelError):
+        a.claim_fact("limit", "Nat", ["doc.md::Format", {"at": "doc.md::Example", "some": True}])  # a number is not stated in part
+    (tmp_path / "pw-facts.json").write_text(json.dumps([{"name": "keys", "type": "List String", "gloss": "the keys of a task, sorted", "places": [
+        {"at": "config.py::KEYS", "read": {"find_all": '"(\\w+)"', "sort": True}}, "doc.md::Format",
+        {"at": "doc.md::Example", "some": True}, {"at": "example.toml", "some": True, "read": {"find_all": "^(\\w+) = ", "sort": True}}]}]))
+    h, = a.sync_facts(str(tmp_path / "pw-facts.json"))
+    fact = lambda: a.recheck(cwd)["decisions"][0]
+    place = lambda at: next(p for p in fact()["places"] if p["at"] == at)
+    r = fact()
+    assert r["state"] == "stale" and [(u["at"], u.get("some", False)) for u in r["unread"]] == [("doc.md::Format", False), ("doc.md::Example", True)]
+    assert "only expected to mention some" in r["unread"][1]["question"] and "only expected" not in r["unread"][0]["question"]
+
+    whole = '["args", "command", "env_vars", "name"]'
+    a.read_place(h, "doc.md::Format", whole, blind=True, model="opus", cwd=cwd, quote="Keys: `args`, `command`, `env_vars`, `name`.")
+    a.read_place(h, "doc.md::Example", '["command", "name"]', blind=True, model="opus", cwd=cwd, quote="A task sets `name` and `command`.")
+    r = fact()
+    assert r["state"] == "current", r                                    # two of four, three of four: nothing that does not exist
+    assert [p.get("contained") for p in r["places"]] == [None, None, True, True]
+    assert place("doc.md::Format")["why"] == "blind + words occur in the place + agrees with a computed place"
+    p = place("doc.md::Example")
+    assert p["why"] == "blind + words occur in the place + contained in a computed place" and "agrees with a computed place" not in p["has"]
+    assert not place("example.toml")["stands"]                           # a pattern on an example is checked by a reader like any other
+    a.read_place(h, "example.toml", '["args", "command", "name"]', blind=True, model="opus", cwd=cwd, quote='name = "a"')
+    assert place("example.toml")["why"] == "computed + read the same blind"
+
+    # an example that uses a key the code does not know
+    (tmp_path / "example.toml").write_text('name = "a"\ncommand = "b"\nenvironment = {}\n')
+    r = fact()
+    assert r["state"] == "violated" and place("example.toml")["not in the whole"] == ["environment"], r
+    (tmp_path / "example.toml").write_text('name = "a"\ncommand = "b"\nargs = []\n')
+    (tmp_path / "doc.md").write_text("## Format\n\nKeys: `args`, `command`, `env_vars`, `name`.\n\n"
+                                     "## Example\n\nA task sets `name` and `cmd`.\n")
+    assert fact()["state"] == "stale"                                    # the example changed: read it again
+    a.read_place(h, "doc.md::Example", '["cmd", "name"]', blind=True, model="opus", cwd=cwd, quote="A task sets `name` and `cmd`.")
+    r = fact()
+    p = place("doc.md::Example")
+    assert r["state"] == "violated" and p["not in the whole"] == ["cmd"] and not p["stands"] and p["has"]["contained in a computed place"] is False
+
+    # what was read as the whole list is not an answer to "which of them does this mention", nor the other way round
+    declared = json.loads((tmp_path / "pw-facts.json").read_text())
+    declared[0]["places"][1] = {"at": "doc.md::Format", "some": True}
+    (tmp_path / "pw-facts.json").write_text(json.dumps(declared))
+    a.sync_facts(str(tmp_path / "pw-facts.json"))
+    r = fact()
+    assert r["state"] == "stale" and r["unread"][0]["at"] == "doc.md::Format" and "another question" in r["unread"][0]["why"], r

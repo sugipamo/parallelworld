@@ -21,6 +21,11 @@
   [
    "blind",
    "words occur in the place",
+   "contained in a computed place"
+  ],
+  [
+   "blind",
+   "words occur in the place",
    "read the same by a second model"
   ]
  ]

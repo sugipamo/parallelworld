@@ -39,9 +39,12 @@ def show(report, unconfirmed="fail"):
         ok = agree and not loose
         bad |= not ok and not (agree and unconfirmed == "warn")
         print(f"{mark(ok, agree)} {d['state']:<15} {d['h']} fact: {d['fact']}")
-        if not ok or len({p["reads as"] for p in d["places"]}) > 1:
+        if not ok:
             for p in d["places"]:
-                print(f"       {p['at']} reads as {p['reads as'][:100]}   ({p['why'] if p['stands'] else 'does not stand'})")
+                part = "lists (in part) " if p.get("some") else "reads as "
+                print(f"       {p['at']} {part}{p['reads as'][:100]}   ({p['why'] if p['stands'] else 'does not stand'})")
+                if p.get("not in the whole"):
+                    print(f"          not among the entries the other places state: {', '.join(map(str, p['not in the whole']))[:200]}")
                 if not p["stands"]:
                     print("          " + ", ".join(f"{c}: {'yes' if v else 'no'}" for c, v in p["has"].items()))
                     if p["unmeasured readers"]:
@@ -52,7 +55,9 @@ def show(report, unconfirmed="fail"):
         for u in d.get("unread", []):
             print(f"       {u['at']}: {u['why'][:160]}")
             declined(u.get("declined", []))
-        if d["state"] == "violated":
+        if d["state"] == "violated" and any(p.get("not in the whole") for p in d["places"]):
+            print("       a place lists something the others do not have (verified by Lean); which one is right is for a person to say")
+        elif d["state"] == "violated":
             print("       the places do not say the same thing (verified by Lean); which one is right is for a person to say")
         elif d["state"] == "stale":
             print("       read the place(s) again: python -m pw.maintain")

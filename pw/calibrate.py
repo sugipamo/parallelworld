@@ -126,12 +126,13 @@ def decoys(facts, st, repo, rng, n):
             for b in facts:
                 if b is a or st.facts[b["h"]]["type"] != st.facts[a["h"]]["type"]:
                     continue
-                value = json.loads(b["places"][0]["reads as"])
+                value = json.loads(next(q for q in b["places"] if not q.get("some"))["reads as"])
                 stated = all(_whole(e).search(text) for e in value) if isinstance(value, list) else bool(_whole(value).search(text))
                 if stated or any(overlap(p["at"], q["at"]) for q in st.facts[b["h"]]["places"]):
                     continue                                   # the place may well state it: not a decoy
                 found.setdefault(b["fact"], []).append({
-                    "fact": b["fact"], "asked": f'{b["fact"]}: {b["text"]}', "type": st.facts[b["h"]]["type"], "place": p["at"],
+                    "fact": b["fact"], "asked": next(q for q in b["places"] if not q.get("some"))["question"],
+                    "type": st.facts[b["h"]]["type"], "place": p["at"],
                     "kind": "decoy", "text": text, "planted": None, "before": None, "about": a["fact"],
                     "around": context(p["at"], repo)})         # shown as a real reader would be shown it
     for pairs in found.values():
@@ -163,7 +164,7 @@ def trials(kernel, repo, per_place, rng, n_decoys=0):
             text = locate(p["at"], repo).decode("utf-8", "replace")
             made = mutants(text, value, rng, per_place)
             for kind, changed, planted in made + [("unchanged", text, value)]:
-                out.append({"fact": d["fact"], "asked": f'{d["fact"]}: {d["text"]}', "type": st.facts[d["h"]]["type"], "place": p["at"],
+                out.append({"fact": d["fact"], "asked": p["question"], "type": st.facts[d["h"]]["type"], "place": p["at"],
                             "kind": kind, "text": changed, "planted": planted, "before": value, "about": d["fact"]})
     return out + decoys(facts, st, repo, rng, n_decoys)
 

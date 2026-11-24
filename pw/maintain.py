@@ -26,10 +26,11 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 from .check import FACTS, show
-from .kernel import LOG, READER, Kernel, _sha, context, locate
+from .kernel import LOG, READER, Kernel, _sha, context, locate, question
 from .lean_gate import LEAN_DIR, LeanGate
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -84,9 +85,11 @@ def read_blind(kernel, repo, args, wanted, model, label):
         # a place too small to tell what it belongs to is shown with what surrounds it, unless
         # another place of the same fact is in that file: the reader must not see two places of one fact
         alone = all(p["at"] == at or p["at"].partition("::")[0] != at.partition("::")[0] for p in st.facts[d["h"]]["places"])
-        batches.setdefault(n, []).append((d["h"], at, st.facts[d["h"]]["type"], f'{d["fact"]}: {d["text"]}',
-                                          context(at, repo) if alone else None))
-    tag = _sha(model, label, *[at for _, at in wanted])[:6]
+        asked = question(st.facts[d["h"]], next(p for p in st.facts[d["h"]]["places"] if p["at"] == at))[0]
+        batches.setdefault(n, []).append((d["h"], at, st.facts[d["h"]]["type"], asked, context(at, repo) if alone else None))
+    # a reader's name is its session's: reading the same places again is another session, so that
+    # what an earlier one said is never taken for an answer of this one
+    tag = _sha(model, label, str(time.time_ns()), *[at for _, at in wanted])[:6]
     print(f"{len(wanted)} place(s) to read {label}, blind, by {model} in {len(batches)} session(s)", flush=True)
     with ThreadPoolExecutor(4) as pool:
         runs = list(pool.map(lambda kv: blind_read(repo, args.lean_dir, model, f"{label}-{tag}-{kv[0]}", kv[1], args.budget,
@@ -144,7 +147,8 @@ def main():
         st = kernel.state()
         alone = [(d, p["at"]) for d in report["decisions"] if d["state"] in ("current", "re-established", "violated")
                  for p in d["places"] if p["by"] == "stated" and not p["stands"]
-                 and args.second_model not in st.models[p["m"]]["asked"].get(st.facts[d["h"]]["asked"], {}).get("models", ())]
+                 and args.second_model not in st.models[p["m"]]["asked"].get(
+                     question(st.facts[d["h"]], next(x for x in st.facts[d["h"]]["places"] if x["at"] == p["at"]))[1], {}).get("models", ())]
         if alone:
             silent += read_blind(kernel, repo, args, alone, args.second_model, "second")
             report = kernel.recheck(repo)

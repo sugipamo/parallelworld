@@ -115,6 +115,7 @@ CONDITIONS = {
     "agrees with another place read blind": "another place of the fact, read blind in another session, has the same value",
     "read the same by a second model": "two measured readers of different models, each blind, read this place the same",
     "read the same blind": "a computed place: a measured reader, shown the place and nothing else, read off it what the pattern computes",
+    "contained in a computed place": "a place that lists only some entries: every entry it lists is in a place of the fact read by a pattern",
 }
 
 
@@ -290,6 +291,19 @@ def _norm(text):
     return " ".join(text.split())
 
 
+SOME = (" This passage is only expected to mention some of them (it is an example, an excerpt, a list of highlights): "
+        "give the ones it mentions, and none it does not.")
+
+
+def question(fact, place):
+    """What a reader of this place is asked, and the identity of that question.
+
+    A place declared to state only some entries of a list is asked another question than one
+    that states the whole list, so a reading of the one is not an answer to the other."""
+    text = f'{fact["name"]}: {fact["text"]}'
+    return (text + SOME, _sha(fact["asked"], "some")) if place.get("some") else (text, fact["asked"])
+
+
 class State:
     """What the record says, replayed from its lines."""
     def __init__(self):
@@ -429,9 +443,12 @@ class Kernel:
         """
         typ = _norm(typ)
         self._screen(typ)
-        places = [{"at": p, "reader": None} if isinstance(p, str) else {"at": p["at"], "reader": p.get("reader")} for p in places]
-        if not places:
-            raise KernelError("a fact needs at least one place")
+        places = [{"at": p, "reader": None} if isinstance(p, str) else
+                  {"at": p["at"], "reader": p.get("reader"), **({"some": True} if p.get("some") else {})} for p in places]
+        if not [p for p in places if not p.get("some")]:
+            raise KernelError("a fact needs at least one place that states the whole of it")
+        if any(p.get("some") for p in places) and not typ.startswith("List "):
+            raise KernelError("only a list can be stated in part: a place that states some entries needs a List type")
         if value is not None:
             value = _norm(value)
             self._screen(value)
@@ -493,15 +510,16 @@ class Kernel:
                 literal = all(str(x) in where for x in (said if isinstance(said, list) else [said]))
             except ValueError:
                 pass
+        asked = question(fact, decl)[1]
         with self._tx() as (con, st):
-            known = st.models.get(m, {}).get("asked", {}).get(fact["asked"], {})     # as an answer to the question as it is now
+            known = st.models.get(m, {}).get("asked", {}).get(asked, {})     # as an answer to the question as it is now
             # who read it matters only for a reading someone stated; a computed one is the same whoever runs it
             if ((place, m) not in st.facts[h]["readings"]
                     or (how is None and (self.actor not in known.get("by", ()) or (blind and self.actor not in known.get("blind", ()))
                                          or (blind and model and model not in known.get("models", ()))))):
                 self._append(con, st, "reading", {
                     "h": h, "place": place, "subject": version, "m": m, "obj": ob, "binding": how, "quote": quote,
-                    "asked": fact["asked"],
+                    "asked": asked,
                     "blind": bool(blind) and how is None, "model": model if blind and how is None else None, "literal": literal,
                     "anchor": quote is not None and "List" not in fact["type"]})
         return {"m": m, "o": ob["id"], "read as": obj}
@@ -515,7 +533,8 @@ class Kernel:
         st = self.state()
         if h not in st.facts:
             raise KernelError(f"{h} is not a fact")
-        if place not in [p["at"] for p in st.facts[h]["places"]]:
+        decl = next((p for p in st.facts[h]["places"] if p["at"] == place), None)
+        if decl is None:
             raise KernelError(f"{place} is not a place of this fact")
         if locate(place, cwd) is None:
             raise KernelError(f"{place} is not there")
@@ -523,19 +542,26 @@ class Kernel:
             raise KernelError("say what the place is about instead")
         with self._tx() as (con, st):
             self._append(con, st, "decline", {"h": h, "place": place, "subject": subject_id(place, cwd), "why": _norm(why)[:400],
-                                              "asked": st.facts[h]["asked"],
+                                              "asked": question(st.facts[h], decl)[1],
                                               "blind": bool(blind), "model": model if blind else None})
         return {"declined": place}
 
     def _agreement(self, h, guards, terms):
         """The proposition that the present readings agree; stated once, then settled by Lean."""
-        st = self.state()
-        fact = st.facts[h]
+        fact = self.state().facts[h]
         t = fact["type"]
         parts = [f"((({terms[0]}) : {t}) = (({x}) : {t}))" for x in terms[1:]]
         if fact["value"] is not None:
             parts.append(f"((({terms[0]}) : {t}) = (({fact['value']}) : {t}))")
-        lean = " ∧ ".join(parts) or "True"
+        return self._settle(h, guards, " ∧ ".join(parts) or "True")
+
+    def _contained(self, h, guards, part, whole):
+        """The proposition that every entry a place lists is an entry of the whole list."""
+        t = self.state().facts[h]["type"]
+        return self._settle(h, guards, f"(∀ x ∈ (({part}) : {t}), x ∈ (({whole}) : {t}))")
+
+    def _settle(self, h, guards, lean):
+        fact = self.state().facts[h]
         f = "F:" + _sha(lean)
         new = (tuple(guards), f) not in fact["agreed"]
         if new:
@@ -551,27 +577,29 @@ class Kernel:
         st = self.state()
         fact = st.facts[h]
         entry = {"h": h, "fact": fact["name"], "text": fact["text"], "places": []}
-        guards, unread, reread = [], [], False
-        asked = fact["asked"]
+        unread, reread = [], False
+        asked_at = {p["at"]: question(fact, p) for p in fact["places"]}
 
-        def view(m):
-            """A reading as an answer to the question as it is now: None if it answered another one."""
+        def view(m, at):
+            """A reading as an answer to the question this place is asked now: None if it answered another one."""
             info = st.models[m]
             if info["binding"]:
                 return info
-            mine = info["asked"].get(asked)
+            mine = info["asked"].get(asked_at[at][1])
             return None if mine is None else {**info, **mine}
 
         for decl in fact["places"]:
             at, now = decl["at"], subject_id(decl["at"], cwd)
+            text, asked = asked_at[at]
+            about = {"at": at, "question": text, **({"some": True} if decl.get("some") else {})}
             rejected = {e["target"] for e in st.confirmations.values() if e["outcome"] == "rejected"}
             ever = [m for p, m in fact["readings"] if p == at and m not in rejected]
-            seen = [m for m in ever if view(m)]
+            seen = [m for m in ever if view(m, at)]
             have = [m for m in seen if st.models[m]["subject"] == now
                     or (st.models[m].get("anchor") and _anchored(st.models[m]["quote"], at, cwd))]
             said = {st.models[m]["obj"]: m for m in have if not st.models[m]["binding"]}
             if not decl["reader"] and len(said) > 1:      # two readers, two values: not for the kernel to choose
-                unread.append({"at": at, "why": "its readers disagree: " + "; ".join(
+                unread.append({**about, "why": "its readers disagree: " + "; ".join(
                     f'{m} ({", ".join(sorted(st.models[m]["by"]))}) reads {st.objs[o]["text"][:60]}' for o, m in said.items())})
                 continue
             if decl["reader"]:                       # computed afresh every time, never taken from the record
@@ -580,23 +608,37 @@ class Kernel:
                     have = [self.read_place(h, at, cwd=cwd)["m"]]
                     reread = reread or (bool(seen) and have != was[-1:])
                 except KernelError as e:
-                    unread.append({"at": at, "why": str(e)})
+                    unread.append({**about, "why": str(e)})
                     continue
             elif not have:
                 no = [d for d in fact["declined"] if d["place"] == at and d["subject"] == now and d["asked"] == asked]
-                unread.append({"at": at, "why": "it changed since it was read" if seen else
+                unread.append({**about, "why": "it changed since it was read" if seen else
                                "the fact's description changed since it was read: what was read answered another question" if ever else
                                "nobody has read it yet",
                                **({"declined": no} if no else {})})
                 continue
-            guards.append(have[-1])
             st = self.state()
-            entry["places"].append({"at": at, "reads as": st.objs[st.models[have[-1]]["obj"]]["text"], "m": have[-1],
+            entry["places"].append({**about, "reads as": st.objs[st.models[have[-1]]["obj"]]["text"], "m": have[-1],
                                     "by": "reader" if st.models[have[-1]]["binding"] else "stated"})
+        whole = [p for p in entry["places"] if not p.get("some")]
         if unread:
             entry.update(state="disputed" if any("disagree" in u["why"] for u in unread) else "stale", unread=unread)
         else:
-            verdict, new = self._agreement(h, guards, [p["reads as"] for p in entry["places"]])
+            # the places that state the whole of it have to read the same; a place that states some
+            # entries has to list nothing the whole does not have
+            verdict, new = self._agreement(h, [p["m"] for p in whole], [p["reads as"] for p in whole])
+            if verdict == "holds":
+                for p in entry["places"]:
+                    if p.get("some"):
+                        inside, fresh = self._contained(h, [p["m"], whole[0]["m"]], p["reads as"], whole[0]["reads as"])
+                        p["contained"], new = inside == "holds", new or fresh
+                        if inside != "holds":
+                            verdict = "contested" if "contested" in (inside, verdict) else "not" if "not" in (inside, verdict) else None
+                        if inside == "not":
+                            try:
+                                p["not in the whole"] = sorted(set(json.loads(p["reads as"])) - set(json.loads(whole[0]["reads as"])))
+                            except (ValueError, TypeError):
+                                pass
             entry["state"] = {"holds": "re-established" if new and reread else "current", "not": "violated",
                               "contested": "contested"}.get(verdict, "uncovered")
         # Whether each reading stands is decided by the project's rules, not by a number.
@@ -604,7 +646,8 @@ class Kernel:
         fact = st.facts[h]                # with the readings this very check has just computed
         rules = load_rules(cwd)
         measured = measured_readers(cwd, rules)
-        confirmed = {e["target"] for e in st.confirmations.values() if e["outcome"] == "confirmed" and e.get("asked") in (None, asked)}
+        confirmed = {(e["target"], e.get("asked")) for e in st.confirmations.values() if e["outcome"] == "confirmed"}
+
         def value(obj):
             text = st.objs[obj]["text"]
             try:
@@ -613,30 +656,33 @@ class Kernel:
                 return text
 
         for p in entry["places"]:
-            info = view(p["m"])
-            others = [view(q["m"]) for q in entry["places"] if q is not p and st.models[q["m"]]["obj"] == info["obj"]]
+            info, asked = view(p["m"], p["at"]), asked_at[p["at"]][1]
+            # agreeing with another place means something between places that state the whole of it
+            others = [view(q["m"], q["at"]) for q in whole if q is not p and not p.get("some") and st.models[q["m"]]["obj"] == info["obj"]]
             readers = info["models"] & measured
             # a computed place: was the pattern ever checked against a reader who saw only the place?
-            mine = [v for at, m in fact["readings"] if at == p["at"] for v in [view(m)] if v]
+            mine = [v for at, m in fact["readings"] if at == p["at"] for v in [view(m, at)] if v]
             stated = [s for s in mine if not s["binding"] and s["models"] & measured]
             same_blind = bool(info["binding"]) and any(
                 s["subject"] == c["subject"] and value(s["obj"]) == value(c["obj"])
                 for s in stated for c in mine if c["binding"] == info["binding"])
             has = {
                 "computed": bool(info["binding"]),
-                "confirmed by a person": p["m"] in confirmed,
+                "confirmed by a person": bool({(p["m"], None), (p["m"], asked)} & confirmed),
                 "blind": bool(readers),
                 "words occur in the place": info["literal"],
                 "agrees with a computed place": any(o["binding"] for o in others),
                 "agrees with another place read blind": any(not o["binding"] and o["models"] & measured and o["blind"] - info["blind"] for o in others),
                 "read the same by a second model": len(readers) > 1,
                 "read the same blind": same_blind,
+                "contained in a computed place": bool(p.get("contained")) and any(st.models[q["m"]]["binding"] for q in whole),
             }
             met = next((rule for rule in rules["a reading stands if any of"] if all(has[c] for c in rule)), None)
             p["stands"] = met is not None
             p["why"] = " + ".join(met) if met else "no rule is met"
             if not info["binding"]:
-                p["has"] = {c: v for c, v in has.items() if c not in ("computed", "read the same blind")}
+                skip = ("agrees with a computed place", "agrees with another place read blind") if p.get("some") else ("contained in a computed place",)
+                p["has"] = {c: v for c, v in has.items() if c not in ("computed", "read the same blind", *skip)}
                 p["unmeasured readers"] = sorted(info["models"] - measured) + (
                     ["a reader whose model was not recorded"] if info["blind"] and not info["models"] else [])
             else:
@@ -652,7 +698,9 @@ class Kernel:
 
         The file is a JSON list of {"name", "type", "places", "value"?, "gloss"?}. A place is
         "path" or "path::part" (someone has to read it), or {"at": ..., "read": {...}} where
-        "read" describes how to read it mechanically: see `pattern`.
+        "read" describes how to read it mechanically: see `pattern`. A place of a list that
+        states only some of its entries (an example, an excerpt) carries "some": true; what it
+        lists has to be among the entries, it need not be all of them.
         """
         with open(path, encoding="utf-8") as fh:
             declared = json.load(fh)
@@ -662,16 +710,19 @@ class Kernel:
             for p in d["places"]:
                 if isinstance(p, str):
                     places.append(p)
-                elif "read" in p and set(p) == {"at", "read"}:
+                elif set(p) == {"at", "some"} and p["some"] is True:
+                    places.append({"at": p["at"], "some": True})
+                elif "read" in p and set(p) in ({"at", "read"}, {"at", "read", "some"}) and p.get("some", True) is True:
                     r = p["read"]
                     extra = set(r) - {"find", "find_all", "as", "sort", "unique"}
                     if extra:
                         raise KernelError(f"{d['name']}, {p['at']}: unknown keys in \"read\": {sorted(extra)}")
-                    places.append({"at": p["at"], "reader": pattern(r.get("find"), r.get("find_all"), r.get("as", "string"),
-                                                                    r.get("sort", False), r.get("unique", False))})
+                    places.append({"at": p["at"], "some": p.get("some", False),
+                                   "reader": pattern(r.get("find"), r.get("find_all"), r.get("as", "string"),
+                                                     r.get("sort", False), r.get("unique", False))})
                 else:
-                    raise KernelError(f"{d['name']}: a place is a string or {{\"at\": ..., \"read\": {{...}}}}; "
-                                      "expressions are not accepted in a list of facts")
+                    raise KernelError(f"{d['name']}: a place is a string, or {{\"at\": ..., \"read\": {{...}}}}, "
+                                      "either with \"some\": true if it states only some entries of a list")
             keep.add(self.claim_fact(d["name"], d["type"], places, d.get("value"), d.get("gloss", ""))["h"])
         st = self.state()
         for h in st.facts:
@@ -686,9 +737,10 @@ class Kernel:
         over to another description. The same person cannot say both of the same reading."""
         outcome = "confirmed" if confirmed else "rejected"
         with self._tx() as (con, st):
-            asked = next((f["asked"] for f in st.facts.values() if any(x == m for _, x in f["readings"])), None)
+            asked = next((question(f, p)[1] for f in st.facts.values() for at, x in f["readings"] if x == m
+                          for p in f["places"] if p["at"] == at), None)
             if asked is None:
-                raise KernelError(f"{m} is not a reading of a place")
+                raise KernelError(f"{m} is not a reading of a declared place")
             eid = "E:" + _sha(m, "sign_off", f"person:{who}/{asked}")
             old = st.confirmations.get(eid)
             if old is not None:
@@ -752,7 +804,8 @@ class Kernel:
 
           current         every place is read and they agree
           re-established  a computed place changed and they still agree
-          violated        Lean has verified that the places do not state the same value
+          violated        Lean has verified that the places do not state the same value, or that a
+                          place stating some entries of a list has one the whole list does not
           stale           a place has to be read (again) before anything can be said
           disputed        readers of one place disagree about what it says
           uncovered       the places are read, and Lean could settle neither that they agree nor that they differ

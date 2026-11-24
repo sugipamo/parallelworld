@@ -64,6 +64,12 @@ What a place is
   Not a place: a dated record of what was the case once (results of an experiment, a changelog
   entry, a log), an example that merely happens to use the value, a test's input data.
 
+  A list can also be stated in part. An example configuration uses some of the keys there are; a
+  list of highlights names some of the commands. Such a place does not have to list everything,
+  but whatever it lists has to exist: report it with `some` set to true, and as its value give
+  the entries it mentions. An example that uses a key the code does not know is exactly what
+  the project wants to hear about.
+
 How to name a place
   "path" for a whole file, or "path::part" for the smallest part that holds the statement:
     Markdown   the text of a heading, exactly as written, without the #'s    docs/guide.md::3. Limits
@@ -248,19 +254,23 @@ def serve():
         return {"noted": fact or "new facts"}
 
     @mcp.tool()
-    def add_place(fact: str, at: str, value: str | int | list, quote: str, find: str = "", find_all: str = "", kind: str = "") -> dict:
+    def add_place(fact: str, at: str, value: str | int | list, quote: str, find: str = "", find_all: str = "", kind: str = "",
+                  some: bool = False) -> dict:
         """Report a further place that states a declared fact. `fact` is the fact's name exactly
         as listed, `at` the place ("path" or "path::part"), `value` what the place says as JSON
         text ("\\"fast\\"", "14", "[\\"a\\", \\"b\\"]"), `quote` the line of the place that says it,
         copied character for character. For code and configuration give `find` (or `find_all`
-        for a list) and `kind` as well."""
+        for a list) and `kind` as well. Set `some` for a place that lists only some entries of a
+        list (an example, an excerpt): `value` is then the entries it mentions."""
         if fact not in facts:
             return {"error": f"no declared fact is named {fact!r}; the names are {sorted(facts)}"}
         known = [p if isinstance(p, str) else p["at"] for p in facts[fact]["places"]]
         if at in known:
             return {"error": f"{at} is already listed for this fact"}
+        if some and not facts[fact]["type"].startswith("List "):
+            return {"error": "only a list can be stated in part"}
         try:
-            place = screen(repo, facts[fact]["type"], at, value, quote, find, find_all, kind)
+            place = {**screen(repo, facts[fact]["type"], at, value, quote, find, find_all, kind), "some": bool(some)}
         except Refused as e:
             return {"error": str(e)}
         keep({"fact": fact, "place": place})
@@ -271,8 +281,9 @@ def serve():
     def new_fact(name: str, type: str, gloss: str, places: list[dict]) -> dict:
         """Report a thing stated in two or more places that is not declared yet. Each place is
         {"at": ..., "value": ..., "quote": ...} plus, for code and configuration, "find" or
-        "find_all" and "kind". `value` is what that place says, as JSON; places that state
-        different values are reported as they are."""
+        "find_all" and "kind", and "some": true for a place that lists only some entries of a
+        list. `value` is what that place says, as JSON; places that state different values are
+        reported as they are. At least one place has to state the whole of it."""
         if name in facts:
             return {"error": f"{name!r} is already declared; use add_place for further places"}
         if not gloss.strip():
@@ -280,19 +291,24 @@ def serve():
         kept, wrong = [], {}
         for p in places:
             try:
-                extra = set(p) - {"at", "value", "quote", "find", "find_all", "kind"}
+                extra = set(p) - {"at", "value", "quote", "find", "find_all", "kind", "some"}
                 if extra or not {"at", "value", "quote"} <= set(p):
-                    raise Refused(f"a place has at, value, quote and optionally find, find_all, kind; not {sorted(extra)}")
-                kept.append(screen(repo, type, p["at"], p["value"], p["quote"], p.get("find"), p.get("find_all"), p.get("kind")))
+                    raise Refused(f"a place has at, value, quote and optionally find, find_all, kind, some; not {sorted(extra)}")
+                if p.get("some") and not type.startswith("List "):
+                    raise Refused("only a list can be stated in part")
+                kept.append({**screen(repo, type, p["at"], p["value"], p["quote"], p.get("find"), p.get("find_all"), p.get("kind")),
+                             "some": bool(p.get("some"))})
             except Refused as e:
                 wrong[str(p.get("at"))] = str(e)
         if wrong:
             return {"error": "nothing was kept; fix these places and report the thing again", "places": wrong}
         if len({p["at"] for p in kept}) < 2:
             return {"error": "a thing stated in one place has nothing to disagree with; give at least two different places"}
+        if all(p["some"] for p in kept):
+            return {"error": "every place is marked as stating only some entries; one place has to state the whole list"}
         keep({"new": {"name": name, "type": type, "gloss": " ".join(gloss.split())}, "places": kept})
         facts[name] = {"type": type, "places": [p["at"] for p in kept]}      # further places can be added to it
-        return {"kept": name, "the places agree": _agree(kept)}
+        return {"kept": name, "the places that state the whole agree": _agree([p for p in kept if not p["some"]])}
 
     mcp.run()
 
@@ -428,11 +444,12 @@ def confirm(repo, lean_dir, facts, proposals, model, budget, record):
     final, _ = merge(facts, [{**p, "places": [q for q in p["places"] if (p["new"]["name"], q["at"]) in kept]} if "new" in p else p
                              for p in proposals if "new" in p or (p["fact"], p["place"]["at"]) in kept])
     declared = {f["name"] for f in facts}
-    for f in [f for f in final if f["name"] not in declared and len(f["places"]) < 2]:
-        final.remove(f)                                    # one place left: nothing to compare it with
+    partial = lambda p: isinstance(p, dict) and p.get("some")
+    for f in [f for f in final if f["name"] not in declared and (len(f["places"]) < 2 or all(partial(p) for p in f["places"]))]:
+        final.remove(f)                                    # nothing left to compare, or nothing that states the whole of it
         for v in verdicts:
             if v["fact"] == f["name"] and v["kept"]:
-                v.update(kept=False, why=v["why"] + "; but it is the only place of this thing that was kept")
+                v.update(kept=False, why=v["why"] + "; but what was kept of this thing is one place, or only places that state it in part")
     return final, verdicts, runs
 
 
@@ -452,7 +469,8 @@ def merge(facts, proposals):
     def put(f, place):
         if place["at"] in [p if isinstance(p, str) else p["at"] for p in f["places"]]:
             return
-        f["places"].append({"at": place["at"], "read": place["read"]} if place["read"] else place["at"])
+        entry = {"at": place["at"], **({"read": place["read"]} if place["read"] else {}), **({"some": True} if place.get("some") else {})}
+        f["places"].append(entry if len(entry) > 1 else place["at"])
         added.append((f["name"], place))
 
     for p in proposals:
@@ -525,10 +543,11 @@ def main():
         for p in places:
             v = by[(name, p["at"])]
             mark = "keep" if v["kept"] else "drop" if v["answered"] else "????"
-            print(f"   {mark} {p['at']}  says {json.dumps(p['value'], ensure_ascii=False)[:100]}" + ("  (pattern)" if p["read"] else ""))
+            print(f"   {mark} {p['at']}  {'lists in part' if p.get('some') else 'says'} {json.dumps(p['value'], ensure_ascii=False)[:100]}"
+                  + ("  (pattern)" if p["read"] else ""))
             print(f"        {p['quote'][:160]}")
             print(f"        {v['why'][:300]}")
-        if name not in declared and not _agree([p for p in places if by[(name, p['at'])]['kept']]):
+        if name not in declared and not _agree([p for p in places if by[(name, p['at'])]['kept'] and not p.get("some")]):
             print("   the kept places do not state the same value")
     unanswered = [v for v in verdicts if not v["answered"]]
     kept = [v for v in verdicts if v["kept"]]

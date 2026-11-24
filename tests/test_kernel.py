@@ -202,6 +202,10 @@ def test_a_proposed_place_is_checked_against_the_file(tmp_path):
     assert merged[1] == {"name": "class", "type": "String", "gloss": "the class",
                          "places": ["guide.md::Limits", {"at": "app.py::run", "read": {"find": r'mode="(\w+)"', "as": "string"}}]}
     assert len(added) == 3 and _agree([p for _, p in added[1:]]) and not _agree([{"value": 1}, {"value": 2}])
+    # a place that states only some entries of a list is declared as such
+    part = {**screen(repo, "List String", "app.py::NAMES", ["a"], 'NAMES = ["b", "a"]'), "some": True}
+    merged2, _ = merge([{"name": "names", "type": "List String", "places": ["guide.md::Limits"]}], [{"fact": "names", "place": part}])
+    assert merged2[0]["places"] == ["guide.md::Limits", {"at": "app.py::NAMES", "some": True}]
     k = Kernel(str(tmp_path / "e.db"), gate=FakeGate())
     (tmp_path / "facts.json").write_text(json.dumps(merged))
     assert len(k.sync_facts(str(tmp_path / "facts.json"))) == 2                      # what is merged is a valid declaration
