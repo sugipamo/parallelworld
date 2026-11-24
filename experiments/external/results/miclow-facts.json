@@ -1,0 +1,152 @@
+[
+ {
+  "name": "project_version",
+  "type": "String",
+  "gloss": "The release version of miclow (Rust crate and Python client package), e.g. \"0.1.0\".",
+  "places": [
+   {
+    "at": "Cargo.toml",
+    "read": {
+     "as": "string",
+     "find": "^version = \"([^\"]+)\""
+    }
+   },
+   {
+    "at": "python/pyproject.toml",
+    "read": {
+     "as": "string",
+     "find": "^version = \"([^\"]+)\""
+    }
+   },
+   {
+    "at": "python/miclow/__init__.py::__version__",
+    "read": {
+     "as": "string",
+     "find": "__version__ = \"([^\"]+)\""
+    }
+   },
+   {
+    "at": "Cargo.lock",
+    "read": {
+     "as": "string",
+     "find": "name = \"miclow\"\\nversion = \"([^\"]+)\""
+    }
+   }
+  ]
+ },
+ {
+  "name": "license",
+  "type": "String",
+  "gloss": "The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
+  "places": [
+   {
+    "at": "Cargo.toml",
+    "read": {
+     "as": "string",
+     "find": "^license = \"([^\"]+)\""
+    }
+   },
+   "README.md::📄 ライセンス",
+   {
+    "at": "LICENSE",
+    "read": {
+     "as": "string",
+     "find": "^(MIT) License"
+    }
+   }
+  ]
+ },
+ {
+  "name": "task_id_env_var",
+  "type": "String",
+  "gloss": "Name of the environment variable through which miclow passes the task ID to each spawned task process.",
+  "places": [
+   {
+    "at": "src/shell_backend.rs",
+    "read": {
+     "as": "string",
+     "find": "command_builder\\.env\\(\"([A-Z_]+)\""
+    }
+   },
+   {
+    "at": "python/miclow/__init__.py::MiclowClient.__init__",
+    "read": {
+     "as": "string",
+     "find": "os\\.environ\\['([A-Z_]+)'\\]"
+    }
+   },
+   {
+    "at": "python/miclow/__init__.py",
+    "read": {
+     "as": "string",
+     "find": "os\\.environ\\.get\\('([A-Z_]+)'\\)"
+    }
+   }
+  ]
+ },
+ {
+  "name": "system_commands",
+  "type": "List String",
+  "gloss": "The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
+  "places": [
+   {
+    "at": "src/system_control_command.rs",
+    "read": {
+     "as": "string",
+     "find_all": "\"(system\\.[a-z-]+)\" => \\{",
+     "sort": true
+    }
+   },
+   "README.md::システムコマンド",
+   "README.md::🛠️ システムコマンド"
+  ]
+ },
+ {
+  "name": "task configuration keys",
+  "type": "List String",
+  "gloss": "the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
+  "places": [
+   "README.md::設定ファイル形式",
+   {
+    "at": "src/config.rs",
+    "read": {
+     "as": "string",
+     "find_all": "(?:rename = \"|,\\n    pub |\\(default\\)\\]\\n    pub )([a-hj-z][a-z_]*)(?:\"|: (?:String|Vec<String>|Option<[^\\n]*>|bool))",
+     "sort": true
+    }
+   }
+  ]
+ },
+ {
+  "name": "Python client methods",
+  "type": "List String",
+  "gloss": "the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
+  "places": [
+   "python/README.md::Methods",
+   {
+    "at": "python/miclow/__init__.py::MiclowClient",
+    "read": {
+     "as": "string",
+     "find_all": "\\n    def ([a-z]\\w*)\\(self",
+     "sort": true
+    }
+   }
+  ]
+ },
+ {
+  "name": "repository URL",
+  "type": "String",
+  "gloss": "the URL of the project's source repository on GitHub, without a trailing .git",
+  "places": [
+   {
+    "at": "Cargo.toml",
+    "read": {
+     "as": "string",
+     "find": "^repository = \"([^\"]+)\""
+    }
+   },
+   "README.md::インストール",
+   "README.md::📞 サポート"
+  ]
+ }
+]

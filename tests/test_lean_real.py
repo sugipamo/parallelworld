@@ -748,3 +748,19 @@ def test_a_small_place_is_shown_with_what_surrounds_it(tmp_path):
     assert "how many atoms" in context("app.py::LIMIT", cwd) and "def f" in context("app.py::LIMIT", cwd)    # the lines around it
     assert context("doc.md::Limits", cwd) is None and context("app.py", cwd) is None                         # big enough, or whole
     assert context("missing.json::a", cwd) is None
+
+
+def test_changing_a_pattern_keeps_what_a_reader_confirmed_on_the_same_content(tmp_path):
+    """A reader read the value off the place; another pattern that computes that value from the same
+    content is confirmed by the same reading, at the first check and not only at the second."""
+    from pw.kernel import pattern
+    (tmp_path / "pin.toml").write_text('name = "x"\nversion = "0.1.0"\n')
+    cwd = str(tmp_path)
+    _measure(cwd, opus=27)
+    a = Kernel(str(tmp_path / "pw-log.jsonl"), gate=LeanGate(), actor="reader-a")
+    declare = lambda rx: a.claim_fact("version", "String", [{"at": "pin.toml", "reader": pattern(find=rx)}])["h"]
+    h = declare(r'version = "([^"]+)"')
+    a.read_place(h, "pin.toml", '"0.1.0"', blind=True, model="opus", cwd=cwd, quote='version = "0.1.0"')
+    assert a.recheck(cwd)["decisions"][0]["places"][0]["stands"]
+    assert declare(r'^version = "([0-9.]+)"') == h
+    assert a.recheck(cwd)["decisions"][0]["places"][0]["stands"]

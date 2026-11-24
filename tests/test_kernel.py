@@ -477,6 +477,8 @@ def test_a_proposed_place_is_checked_against_the_file(tmp_path):
     assert "needs a pattern" in refused("Nat", "app.py::run", 900, "def run(threshold=0.9")
     assert "not the value you gave" in refused("Nat", "app.py::LIMIT", 15, "LIMIT = 14", find=r"LIMIT = (\d+)")
     assert "does not work" in refused("Nat", "app.py", 14, "LIMIT = 14", find=r"(\d+)")                      # matches more than once
+    assert "inline flags" in refused("Nat", "app.py::LIMIT", 14, "LIMIT = 14", find=r"(?m)^LIMIT = (\d+)")   # not common to all engines
+    assert screen(repo, "Nat", "app.py::LIMIT", 14, "LIMIT = 14", find=r"^(?:LIMIT) = (\d+)")["read"]         # (?: ) is fine
     p = screen(repo, "List String", "app.py::NAMES", ["a", "b"], 'NAMES = ["b", "a"]', find_all=r'"(\w)"')
     assert p["read"] == {"find_all": r'"(\w)"', "as": "string", "sort": True}
     (tmp_path / "notes.txt").write_text("14\n")

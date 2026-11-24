@@ -176,6 +176,8 @@ def pattern(find=None, find_all=None, kind="string", sort=False, unique=False):
         raise KernelError(f"a value is one of {sorted(_KINDS)}, not {kind!r}")
     if re.search(r"\(\?[=!<P]|\\[1-9]", rx):
         raise KernelError("look-around, back-references and named groups are not accepted in a pattern")
+    if re.search(r"\(\?[a-zA-Z-]+[:)]", rx):
+        raise KernelError("inline flags such as (?m) are not accepted in a pattern; ^ and $ already match at line ends")
     try:
         if re.compile(rx).groups != 1:
             raise KernelError("the pattern needs exactly one group: the part in ( ) is the value")
@@ -892,6 +894,7 @@ class Kernel:
             entry["state"] = {"holds": "re-established" if new and reread else "current", "not": "violated"}.get(verdict, "uncovered")
         # Whether each reading stands is decided by the project's rules, not by a number.
         st = self.state()
+        fact = st.facts[h]                # with the readings this very check has just computed
         rules = load_rules(cwd)
         measured = measured_readers(cwd, rules)
         confirmed = {e["target"] for e in st.evidence.values() if e["kind"] == "sign_off" and e["outcome"] == "confirmed"

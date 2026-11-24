@@ -155,8 +155,11 @@ def main():
         silent += read_blind(kernel, repo, args, unchecked(report), args.model, "pattern")
         report = kernel.recheck(repo)
     if args.second_model:
-        alone = [(d, p["at"]) for d in report["decisions"] if "fact" in d and d["state"] in ("current", "re-established")
-                 for p in d["places"] if p["by"] == "stated" and not p["stands"]]
+        # also where the places disagree: before a disagreement is put to a person, the reading that
+        # differs should not rest on one reader, who may simply have misread
+        alone = [(d, p["at"]) for d in report["decisions"] if "fact" in d and d["state"] in ("current", "re-established", "violated")
+                 for p in d["places"] if p["by"] == "stated" and not p["stands"]
+                 and args.second_model not in kernel.state().models[p["m"]]["asked"].get(kernel.state().facts[d["h"]]["asked"], {}).get("models", ())]
         if alone:
             silent += read_blind(kernel, repo, args, alone, args.second_model, "second")
             report = kernel.recheck(repo)

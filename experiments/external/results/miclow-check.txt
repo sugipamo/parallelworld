@@ -1,0 +1,22 @@
+ok   current         H:45815a2e80 fact: project_version
+FAIL violated        H:7b797df0dc fact: license
+       Cargo.toml reads as "MIT OR Apache-2.0"   (computed + read the same blind)
+       README.md::📄 ライセンス reads as "MIT"   (blind + words occur in the place + agrees with a computed place)
+       LICENSE reads as "MIT"   (computed + read the same blind)
+       the places do not say the same thing (verified by Lean); which one is right is for a person to say
+ok   current         H:218cc97e05 fact: task_id_env_var
+FAIL violated        H:0a77e779d4 fact: system_commands
+       src/system_control_command.rs reads as ["system.status", "system.subscribe-topic", "system.unsubscribe-topic"]   (computed + read the same blind)
+       README.md::システムコマンド reads as ["system.status", "system.subscribe-topic", "system.unsubscribe-topic"]   (blind + words occur in the place + agrees with a computed place)
+       README.md::🛠️ システムコマンド reads as ["system.subscribe-topic","system.unsubscribe-topic"]   (does not stand)
+          confirmed by a person: no, blind: yes, words occur in the place: yes, agrees with a computed place: no, agrees with another place read blind: no, read the same by a second model: no
+       the places do not say the same thing (verified by Lean); which one is right is for a person to say
+FAIL violated        H:98603b1c98 fact: task configuration keys
+       README.md::設定ファイル形式 reads as ["args", "command", "environment", "task_name", "topics", "working_directory"]   (blind + words occur in the place + read the same by a second model)
+       src/config.rs reads as ["args", "command", "environment_vars", "stderr_topic", "stdout_topic", "subscribe_topics", "task_na   (computed + read the same blind)
+       the places do not say the same thing (verified by Lean); which one is right is for a person to say
+FAIL violated        H:77eff6b7f6 fact: Python client methods
+       python/README.md::Methods reads as ["get_status", "receive_message", "send_message", "start_task", "stderr", "stdout", "stop_task", "su   (blind + words occur in the place + read the same by a second model)
+       python/miclow/__init__.py::MiclowClient reads as ["call_function", "get_status", "listen_to_topic", "receive_message", "return_value", "send_message"   (computed + read the same blind)
+       the places do not say the same thing (verified by Lean); which one is right is for a person to say
+ok   current         H:bb5dee1cd1 fact: repository URL
