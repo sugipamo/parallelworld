@@ -141,7 +141,14 @@
   "type": "List String",
   "gloss": "the names of the subcommands of the `dotenv` command-line interface, sorted alphabetically",
   "places": [
-   "src/dotenv/cli.py",
+   {
+    "at": "src/dotenv/cli.py",
+    "read": {
+     "find_all": "@cli\\.command\\([\\s\\S]*?(?:name=\"|\\ndef )(\\w+)",
+     "as": "string",
+     "sort": true
+    }
+   },
    {
     "at": "README.md::Command-line Interface",
     "some": true
