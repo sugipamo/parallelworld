@@ -701,3 +701,70 @@ def test_a_definition_takes_its_value_from_other_facts(tmp_path):
                 {**count, "defined": {"from": ["twice the modes"], "as": "fun n => n"}}):           # in a circle
         with pytest.raises(KernelError):
             check(bad, modes, twice)
+
+
+def test_an_agent_may_propose_the_new_text_of_a_place_and_it_is_read_back(tmp_path):
+    """Where a pattern cannot write (a list, prose), an agent's proposed text is taken only if
+    it is an edit, leaves every other declared place as it reads, and reads back as the value."""
+    import json
+    from pw.propagate import plan
+    from pw.lean_gate import LEAN_DIR
+    code = 'MODES = ["fast", "safe"]\nDEFAULT = "fast"\n'
+    (tmp_path / "app.py").write_text(code)
+    (tmp_path / "doc.md").write_text("## Modes\n\nThe modes are `fast` and `safe`. The default is `fast`.\n")
+    cwd = str(tmp_path)
+    facts = [{"name": "modes", "type": "List String", "gloss": "the modes, sorted", "instructions": [{"is": ["fast", "safe", "turbo"], "by": "alice"}],
+              "places": [{"at": "app.py", "read": {"find_all": '"(\\w+)"[,\\]]', "sort": True}}, "doc.md::Modes"]},
+             {"name": "default", "type": "String", "places": [{"at": "app.py", "read": {"find": 'DEFAULT = "(\\w+)"'}}]}]
+    (tmp_path / "pw-facts.json").write_text(json.dumps(facts))
+    k = Kernel(str(tmp_path / "pw-log.jsonl"), gate=LeanGate())
+    k.sync_facts(str(tmp_path / "pw-facts.json"))
+    h = next(h for h, f in k.state().facts.items() if f["name"] == "modes")
+    k.read_place(h, "doc.md::Modes", '["fast", "safe"]', cwd=cwd, quote="The modes are `fast` and `safe`. The default is `fast`.")
+    got = plan(cwd, LEAN_DIR, facts)
+    assert [b["at"] for b in got["by hand"]] == ["app.py", "doc.md::Modes"] and got["files"] == {}       # without an agent: left by hand
+
+    new_doc = "## Modes\n\nThe modes are `fast`, `safe` and `turbo`. The default is `fast`.\n"
+    def editor(answers):
+        return lambda items: ({i["id"]: answers.get(i["at"]) for i in items}, {}, [], 0)
+    def reader(read):
+        def run(kernel, files, wanted):
+            r = Kernel(kernel.db_path, gate=LeanGate(), actor="written-test")
+            for hh, at in wanted:
+                assert open(os.path.join(files, "doc.md")).read() == new_doc                            # it is shown the proposed text
+                r.read_place(hh, at, read, cwd=files, quote="The modes are `fast`, `safe` and `turbo`. The default is `fast`.", blind=True, model="opus")
+            events = [e for e in r.events() if e.get("actor") == "written-test"]
+            return {(e["h"], e["place"]): e["obj"]["text"] for e in events}, events, 0
+        return run
+    good = {"app.py": 'MODES = ["fast", "safe", "turbo"]\nDEFAULT = "fast"\n', "doc.md::Modes": new_doc}
+
+    got = plan(cwd, LEAN_DIR, facts, None, editor(good), reader('["fast", "safe", "turbo"]'))
+    assert [(w["at"], w["how"]) for w in got["written"]] == [("app.py", "changed by an agent; read back with its pattern"),
+                                                             ("doc.md::Modes", "changed by an agent; read back by a blind reader")]
+    assert got["files"]["app.py"][1] == good["app.py"] and got["files"]["doc.md"][1] == new_doc and not got["by hand"]
+    assert len(got["readings"]) == 1 and (tmp_path / "app.py").read_text() == code                       # nothing written by looking
+
+    # written, with the reader's reading taken over: the places now say what was laid down
+    for path, (_, new) in got["files"].items():
+        (tmp_path / path).write_text(new)
+    k.adopt(got["readings"])
+    r = next(d for d in k.recheck(cwd)["decisions"] if d["fact"] == "modes")
+    assert r["state"] in ("current", "re-established") and all("against" not in p for p in r["places"]), r
+    (tmp_path / "app.py").write_text(code)
+    (tmp_path / "doc.md").write_text("## Modes\n\nThe modes are `fast` and `safe`. The default is `fast`.\n")
+
+    def why(answers, read='["fast", "safe", "turbo"]'):
+        got = plan(cwd, LEAN_DIR, facts, None, editor(answers), reader(read))
+        return {b["at"]: b["why"] for b in got["by hand"]}, got
+    # the edit does not give the value when read back
+    assert "reads as" in why({**good, "app.py": 'MODES = ["fast", "turbo"]\nDEFAULT = "fast"\n'})[0]["app.py"]
+    # the edit would change what another declared place reads as
+    assert "would read as" in why({**good, "app.py": 'MODES = ["fast", "safe", "turbo"]\nDEFAULT = "turbo"\n'})[0]["app.py"]
+    # a rewrite, not an edit
+    assert "rewrote" in why({**good, "app.py": "# modes\n" * 60 + 'MODES = ["fast", "safe", "turbo"]\nDEFAULT = "fast"\n'})[0]["app.py"]
+    # no answer; and the passage returned as it was
+    assert "no answer" in why({"doc.md::Modes": new_doc})[0]["app.py"]
+    assert "unchanged" in why({**good, "app.py": code})[0]["app.py"]
+    # the blind reader does not read the value off the proposed prose: the prose is not taken
+    left, got = why(good, '["fast", "safe"]')
+    assert "a blind reader shown it reads" in left["doc.md::Modes"] and "doc.md" not in got["files"] and "app.py" in got["files"]

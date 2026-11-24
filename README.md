@@ -41,6 +41,7 @@ python -m pw.discover --repo . --apply            # 宣言した事実につい�
 python -m pw.discover --repo . --new --apply      # 加えて、まだ宣言されていない事柄を提案させる
 python -m pw.propagate --repo .                    # 人が定めた値と違う箇所への書き戻しを、差分で示す（--apply で適用）
 python -m pw.propagate --repo . --suppose 'Lean version=4.15.0'   # 仮にこの値にしたら、どこを書き換えることになるか
+python -m pw.propagate --repo . --agent            # 一覧や散文は、エージェントに新しい本文を出させて読み戻す（課金あり）
 ```
 
 一致の判定には `lean/lean-toolchain` と同じ版の Lean 4 が必要。`lake` が PATH にないときは `PW_LAKE` でパスを渡す。

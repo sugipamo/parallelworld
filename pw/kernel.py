@@ -986,6 +986,18 @@ class Kernel:
                 self.withdraw(h, f"no longer declared in {os.path.basename(path)}")
         return keep
 
+    def adopt(self, events):
+        """Take over readings that were made against a copy of this record, of text that has
+        since been written into the files. A reading names the content it is of, so it holds
+        here exactly if the file now has that content; otherwise it is simply never used."""
+        with self._tx() as (con, st):
+            for e in events:
+                if e.get("type") != "reading" or e.get("h") not in st.facts or e["place"] not in [p["at"] for p in st.facts[e["h"]]["places"]]:
+                    raise KernelError("only readings of declared places can be taken over")
+                e = {k: v for k, v in e.items() if k != "id"}
+                con.write(json.dumps(e, ensure_ascii=False) + "\n")
+                st.apply("reading", e)
+
     def sign_off(self, m, who, confirmed=True):
         """A person has compared a reading with the place itself, and confirms or rejects it.
 
