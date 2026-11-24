@@ -47,6 +47,9 @@ def show(report, unconfirmed="fail"):
                 print(f"          {i['by']}{' (' + i['on'] + ')' if i.get('on') else ''}: {i['is'][:100]}{words}")
             if "without the instructions set aside" in d:
                 print(f"       judged without them, the fact is: {d['without the instructions set aside']}")
+        if d.get("defined") and not ok:
+            gives = f"; that gives {d['gives'][:100]}" if d.get("gives") else ""
+            print(f"       defined from {', '.join(d['defined']['from'])} as {d['defined']['as'][:100]}{gives}")
         for i in d.get("instructions", []):
             if "set aside" not in i and not ok:
                 print(f"       laid down by {i['by']}: {i['is'][:100]}")
@@ -56,6 +59,8 @@ def show(report, unconfirmed="fail"):
                 print(f"       {p['at']} {part}{p['reads as'][:100]}   ({p['why'] if p['stands'] else 'does not stand'})")
                 if p.get("against"):
                     print(f"          against the instruction of {', '.join(p['against'])}")
+                if p.get("differs from the definition"):
+                    print("          not what the definition gives")
                 if p.get("not in the whole"):
                     print(f"          not among the entries the other places state: {', '.join(map(str, p['not in the whole']))[:200]}")
                 if not p["stands"]:
@@ -68,7 +73,11 @@ def show(report, unconfirmed="fail"):
         for u in d.get("unread", []):
             print(f"       {u['at']}: {u['why'][:160]}")
             declined(u.get("declined", []))
-        if d["state"] == "conflict":
+        if d["state"] == "waits":
+            print(f"       nothing to hold its places against yet: {'; '.join(d['waits for'])[:200]}")
+        elif d["state"] == "violated" and any(p.get("differs from the definition") for p in d["places"]):
+            print("       a place does not say what the definition gives (verified by Lean): the place, or one of the facts it is defined from, has to change")
+        elif d["state"] == "conflict":
             print("       which instruction holds is for the people who gave them: take the other out of pw-facts.json")
         elif d["state"] == "violated" and any(p.get("against") for p in d["places"]):
             print("       a place does not say what was laid down (verified by Lean): change the place, or have the instruction withdrawn")

@@ -637,3 +637,67 @@ def test_what_was_laid_down_is_written_into_the_places_and_read_back(tmp_path):
     # what the pattern cannot confirm is not written: "so safe" is not a word the pattern reads
     got = plan(cwd, LEAN_DIR, declare()[0], {"mode": "so safe"})
     assert got["files"] == {} and all("can no longer be read" in b["why"] for b in got["by hand"] if b["at"] != "doc.md::Mode")
+
+
+def test_a_definition_takes_its_value_from_other_facts(tmp_path):
+    """A count, a first entry: nothing new is claimed, only what follows from facts already declared."""
+    import json
+    from pw.propagate import plan
+    from pw.lean_gate import LEAN_DIR
+    (tmp_path / "app.py").write_text('MODES = ["fast", "safe"]\nVERSIONS = ["3.10", "3.11"]\n')
+    (tmp_path / "doc.md").write_text("## Modes\n\nThere are 2 modes.\n")
+    (tmp_path / "pyproject.toml").write_text('requires-python = ">=3.10"\nversions = ["3.10", "3.11"]\n')
+    cwd = str(tmp_path)
+    modes = {"name": "modes", "type": "List String", "places": [{"at": "app.py::MODES", "read": {"find_all": '"(\\w+)"', "sort": True}}]}
+    versions = {"name": "versions", "type": "List String", "places": [
+        {"at": "app.py::VERSIONS", "read": {"find_all": '"([0-9.]+)"', "sort": True}},
+        {"at": "pyproject.toml", "read": {"within": "versions = \\[([^\\]]*)\\]", "find_all": '"([0-9.]+)"', "sort": True}}]}
+    count = {"name": "number of modes", "type": "Nat", "defined": {"from": ["modes"], "as": "fun ms => ms.length"},
+             "places": [{"at": "doc.md::Modes", "read": {"find": "There are (\\d+) modes", "as": "nat"}}]}
+    oldest = {"name": "oldest version", "type": "String", "defined": {"from": ["versions"], "as": 'fun vs => vs.headD ""'},
+              "places": [{"at": "pyproject.toml", "read": {"find": 'requires-python = ">=([0-9.]+)"'}}]}
+    def check(*facts):
+        (tmp_path / "pw-facts.json").write_text(json.dumps(list(facts)))
+        k = Kernel(str(tmp_path / "pw-log.jsonl"), gate=LeanGate())
+        k.sync_facts(str(tmp_path / "pw-facts.json"))
+        return {d["fact"]: d for d in k.recheck(cwd)["decisions"]}
+    r = check(count, modes, versions, oldest)                                    # (declared before the facts it is defined from: no matter)
+    assert [r[n]["state"] for n in ("modes", "number of modes", "versions", "oldest version")] == ["current"] * 4, r
+
+    # a mode is added in the code: the list is still one place agreeing with itself, but the count in the document is now wrong
+    (tmp_path / "app.py").write_text('MODES = ["fast", "safe", "turbo"]\nVERSIONS = ["3.10", "3.11"]\n')
+    r = check(count, modes, versions, oldest)
+    d = r["number of modes"]
+    assert r["modes"]["state"] == "re-established" and d["state"] == "violated" and d["gives"] == "3", d
+    assert d["places"][0]["differs from the definition"] and "against" not in d["places"][0]
+    got = plan(cwd, LEAN_DIR, [count, modes, versions, oldest])                  # and written back, it reads 3
+    assert got["files"]["doc.md"][1] == "## Modes\n\nThere are 3 modes.\n" and got["written"][0]["by"] == ["the definition from modes"]
+    (tmp_path / "doc.md").write_text(got["files"]["doc.md"][1])
+    assert check(count, modes, versions, oldest)["number of modes"]["state"] in ("current", "re-established")
+
+    # the facts a definition is built on disagree: there is nothing to hold its places against
+    (tmp_path / "pyproject.toml").write_text('requires-python = ">=3.10"\nversions = ["3.9", "3.10", "3.11"]\n')
+    r = check(count, modes, versions, oldest)
+    assert r["versions"]["state"] == "violated" and r["oldest version"]["state"] == "waits" and r["oldest version"]["waits for"] == ["versions is violated"]
+    # a person settles it; the definition follows what was laid down, and names the place that now differs
+    r = check(count, modes, {**versions, "instructions": [{"is": ["3.9", "3.10", "3.11"], "by": "alice"}]}, oldest)
+    d = r["oldest version"]
+    assert r["versions"]["state"] == "violated" and d["state"] == "violated" and d["gives"] == '"3.9"' and d["places"][0]["differs from the definition"], d
+    # supposing a value for a fact shows what follows for the facts defined from it
+    (tmp_path / "pyproject.toml").write_text('requires-python = ">=3.10"\nversions = ["3.10", "3.11"]\n')
+    got = plan(cwd, LEAN_DIR, [count, modes, versions, oldest], {"versions": ["3.11", "3.12"]})
+    assert ('pyproject.toml', '"3.11"') in [(w["at"], w["to"]) for w in got["written"]]
+    assert 'requires-python = ">=3.11"' in got["files"]["pyproject.toml"][1]
+
+    # a definition of a definition; and what is not a definition
+    twice = {"name": "twice the modes", "type": "Nat", "defined": {"from": ["number of modes"], "as": "fun n => 2 * n"},
+             "places": [{"at": "doc.md::Modes", "read": {"find": "There are (\\d+) modes", "as": "nat"}}]}
+    r = check(count, modes, twice)
+    assert r["twice the modes"]["state"] == "violated" and r["twice the modes"]["gives"] == "6"
+    for bad in ({**count, "defined": {"from": ["nothing"], "as": "fun ms => ms.length"}},          # from a fact that is not declared
+                {**count, "defined": {"from": ["modes"], "as": "fun ms => ms"}},                    # not a Nat
+                {**count, "defined": {"from": ["number of modes"], "as": "fun n => n"}},            # from itself
+                {**count, "instructions": [{"is": 2, "by": "alice"}]},                              # a definition takes no instruction
+                {**count, "defined": {"from": ["twice the modes"], "as": "fun n => n"}}):           # in a circle
+        with pytest.raises(KernelError):
+            check(bad, modes, twice)

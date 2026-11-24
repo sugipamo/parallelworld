@@ -178,5 +178,25 @@
     }
    }
   ]
+ },
+ {
+  "name": "number of conditions a rule may ask for",
+  "type": "Nat",
+  "gloss": "how many conditions a rule of the table may ask for",
+  "defined": {
+   "from": [
+    "conditions a rule may ask for"
+   ],
+   "as": "fun cs => cs.length"
+  },
+  "places": [
+   {
+    "at": "docs/spec.md::読みが成り立つ条件",
+    "read": {
+     "find": "規則に使える条件は次の (\\d+) つ",
+     "as": "nat"
+    }
+   }
+  ]
  }
 ]

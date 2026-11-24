@@ -4,7 +4,8 @@
 
 `pw.check` reads the places and holds them against what a person laid down. This goes the other
 way: for every fact with an instruction, each place that is against it gets the instructed value
-written into it.
+written into it. The same for a fact that is a definition: a place that does not say what the
+definition gives gets that value.
 
   - A place read by a simple pattern (one value found by `find`) is written mechanically: the
     piece the pattern matched is replaced, nothing else. What was written is read back with the
@@ -93,16 +94,22 @@ def plan(repo, lean_dir, facts, suppose=None):
             # what was supposed, or what people laid down, cannot all hold: nothing follows, so nothing is written
             out["refused"].append({"fact": d["fact"], "instructions": aside, "supposed": any(i["by"] == SUPPOSED for i in aside)})
             continue
-        if not said:
+        if not said and not d.get("defined"):
             continue
-        target = said[0]["is"]
+        # what the places are held against: what a person laid down, or what a definition gives
+        target = said[0]["is"] if said else d.get("gives")
+        source = [] if said else ["the definition from " + ", ".join(d["defined"]["from"])]
         out["unread"] += [{"fact": d["fact"], "at": u["at"], "why": u["why"]} for u in d.get("unread", [])]
         for p in d.get("places", []):
-            if not p.get("against"):
+            if not (p.get("against") or p.get("differs from the definition")):
+                continue
+            if target is None:
+                out["by hand"].append({"fact": d["fact"], "at": p["at"], "reads as": p["reads as"], "to": "(what the definition gives)",
+                                       "by": source, "why": "Lean did not evaluate the definition to a value that could be written"})
                 continue
             decl = next(x for x in st.facts[d["h"]]["places"] if x["at"] == p["at"])
             path = p["at"].partition("::")[0]
-            item = {"fact": d["fact"], "at": p["at"], "reads as": p["reads as"], "to": target, "by": p["against"]}
+            item = {"fact": d["fact"], "at": p["at"], "reads as": p["reads as"], "to": target, "by": p.get("against") or source}
             try:
                 if p.get("some"):
                     raise KernelError("it lists some entries: which to take out or rename is not determined by the instruction")

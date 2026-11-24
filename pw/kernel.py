@@ -551,7 +551,7 @@ class Kernel:
 
 
     # ---- facts: one thing, said in several places -----------------------------
-    def claim_fact(self, name, typ, places, gloss="", instructions=()):
+    def claim_fact(self, name, typ, places, gloss="", instructions=(), defined=None):
         """Declare that the listed places all state the same fact, a value of Lean type `typ`.
 
         Each place is `path` or `path::part`, optionally with a reader that computes the value
@@ -564,6 +564,12 @@ class Kernel:
         They are axioms here: nothing in the files can show one wrong, and the places are held
         against them. Two that Lean shows to differ are both set aside until a person withdraws
         one (see `_recheck_fact`): the kernel does not choose between people.
+
+        `defined` makes the fact a definition: {"from": [names of other facts], "as": a Lean
+        function of their values}. Its value is then nothing new, only what the function gives
+        for the values of those facts, and its places are held against that. A definition adds
+        no claim of its own, so it cannot be at odds with an instruction; and for the same
+        reason it takes none: lay down the facts it is defined from.
         """
         typ = _norm(typ)
         self._screen(typ)
@@ -588,8 +594,18 @@ class Kernel:
             raise KernelError(f"{name}: the same instruction by the same person is listed twice")
         # `asked` identifies the question put to whoever reads a place: the description. When it
         # changes, what was read before answered another question and has to be read again.
+        if defined is not None:
+            if (not isinstance(defined, dict) or set(defined) != {"from", "as"} or not isinstance(defined["as"], str)
+                    or not isinstance(defined["from"], list) or not defined["from"] or not all(isinstance(x, str) for x in defined["from"])):
+                raise KernelError(f'{name}: a definition is {{"from": [names of facts], "as": a Lean function of their values}}')
+            if said:
+                raise KernelError(f"{name}: its value comes from its definition; an instruction belongs to the facts it is defined from")
+            if name in defined["from"]:
+                raise KernelError(f"{name} is defined from itself")
+            self._screen(defined["as"])
+            defined = {"from": list(defined["from"]), "as": _norm(defined["as"])}
         fact = {"name": name, "type": typ, "places": places, "asked": _sha("asked", _norm(gloss)),
-                **({"instructions": said} if said else {})}
+                **({"instructions": said} if said else {}), **({"defined": defined} if defined else {})}
         h = "H:" + _sha("fact", name, typ)       # the same fact, however its places come to be listed or read
         with self._tx() as (con, st):
             declared = {k: v for k, v in st.facts.get(h, {}).items() if k not in ("readings", "declined", "agreed", "text")}
@@ -726,7 +742,8 @@ class Kernel:
         said = self.state().verdict.get(f, set())
         return ("contested" if len(said) > 1 else next(iter(said), None)), new
 
-    def _recheck_fact(self, h, cwd):
+    def _recheck_fact(self, h, cwd, given=None):
+        """`given`: for a definition, what its facts are settled as: [(name, type, term or None, why not)]."""
         st = self.state()
         fact = st.facts[h]
         entry = {"h": h, "fact": fact["name"], "text": fact["text"], "places": []}
@@ -789,12 +806,24 @@ class Kernel:
             except (ValueError, TypeError):
                 return []
 
+        target, waits = (usable[0]["is"] if usable else None), []
+        if fact.get("defined"):
+            # A definition says nothing new: its value is what its function gives for the facts it is
+            # defined from. While one of those is not settled, there is nothing to hold the places against.
+            entry["defined"] = fact["defined"]
+            waits = [f"{name} {why}" for name, _, term, why in given or [] if term is None] or ([] if given else ["the facts it is defined from"])
+            if not waits:
+                target = f"(({fact['defined']['as']}) " + " ".join(f"(({term}) : {typ})" for _, typ, term, _ in given) + ")"
+        if target is not None:
+            entry["value"] = target                 # what this fact is settled as, for a definition that builds on it
         if unread:
             entry.update(state="disputed" if any("disagree" in u["why"] for u in unread) else "stale", unread=unread)
-        elif usable:
-            # Someone has laid down what the value is. Each place is held against that by itself,
-            # so that the places against it can be named, and by whose word.
-            t, target, who, new, verdicts = fact["type"], usable[0]["is"], sorted({i["by"] for i in usable}), False, []
+        elif waits:
+            entry.update(state="waits", **{"waits for": waits})
+        elif target is not None:
+            # Someone has laid down what the value is, or a definition gives it. Each place is held
+            # against that by itself, so that the places that differ can be named.
+            t, who, new, verdicts = fact["type"], sorted({i["by"] for i in usable}), False, []
             for p in entry["places"]:
                 if p.get("some"):
                     v, fresh = self._contained(h, [p["m"]], p["reads as"], target)
@@ -803,14 +832,18 @@ class Kernel:
                         p["not in the whole"] = outside(p, target)
                 else:
                     v, fresh = self._settle(h, [p["m"]], f"((({p['reads as']}) : {t}) = (({target}) : {t}))")
-                if v == "not":
+                if v == "not" and usable:
                     p["against"] = who
+                elif v == "not":
+                    p["differs from the definition"] = True
                 verdicts.append(v)
                 new = new or fresh
             verdict = ("contested" if "contested" in verdicts else "not" if "not" in verdicts
                        else "holds" if all(v == "holds" for v in verdicts) else None)
             entry["state"] = {"holds": "re-established" if new and reread else "current", "not": "violated",
                               "contested": "contested"}.get(verdict, "uncovered")
+            if fact.get("defined") and verdict != "holds" and self.gate is not None:
+                entry["gives"] = self.gate.evaluate(t, target)       # (to show; that a place differs was settled by a proof)
         else:
             # the places that state the whole of it have to read the same; a place that states some
             # entries has to list nothing the whole does not have
@@ -826,6 +859,8 @@ class Kernel:
                             p["not in the whole"] = outside(p, whole[0]["reads as"])
             entry["state"] = {"holds": "re-established" if new and reread else "current", "not": "violated",
                               "contested": "contested"}.get(verdict, "uncovered")
+            if verdict == "holds":
+                entry["value"] = whole[0]["reads as"]
         if len(usable) < len(said) and not unread:
             # Instructions that cannot both hold were set aside, and the places were judged without
             # them. That is as far as the kernel goes: the fact waits for a person, nothing else does.
@@ -892,9 +927,31 @@ class Kernel:
         lists has to be among the entries, it need not be all of them.
         "instructions" is what people have laid down about the fact: [{"is": value, "by": who,
         "said"?: their words, "on"?: when}], the value written as JSON.
+        "defined" makes the fact a definition: {"from": [names of facts], "as": a Lean function
+        of their values}, e.g. {"from": ["modes"], "as": "fun ms => ms.length"}.
         """
         with open(path, encoding="utf-8") as fh:
             declared = json.load(fh)
+        types = {d["name"]: _norm(d["type"]) for d in declared}
+        for d in declared:                         # a definition has to make sense before anything is recorded
+            how = d.get("defined")
+            if how is None:
+                continue
+            if not isinstance(how, dict) or not isinstance(how.get("from"), list) or not isinstance(how.get("as"), str):
+                raise KernelError(f'{d["name"]}: a definition is {{"from": [names of facts], "as": a Lean function of their values}}')
+            missing = [x for x in how["from"] if x not in types]
+            if missing:
+                raise KernelError(f"{d['name']} is defined from {missing[0]!r}, which is not declared")
+            seen, todo = set(), list(how["from"])
+            while todo:                            # nothing may be defined, however indirectly, from itself
+                x = todo.pop()
+                if x == d["name"]:
+                    raise KernelError(f"{d['name']} is defined in a circle")
+                if x not in seen:
+                    seen.add(x)
+                    todo += next(e for e in declared if e["name"] == x).get("defined", {}).get("from", [])
+            self._screen(how["as"])
+            self._well_typed((" → ".join(f"({types[x]})" for x in how["from"]) + f" → ({types[d['name']]})", how["as"]))
         keep = set()
         for d in declared:
             places = []
@@ -922,7 +979,7 @@ class Kernel:
             # an instruction's value is written as JSON ("pqd", 14, ["a", "b"]) and becomes the Lean term the places are read as
             said = [{**i, "is": json.dumps(i["is"], ensure_ascii=False) if _json_like(_norm(d["type"])) else i["is"]} if "is" in i else i
                     for i in said]
-            keep.add(self.claim_fact(d["name"], d["type"], places, d.get("gloss", ""), said)["h"])
+            keep.add(self.claim_fact(d["name"], d["type"], places, d.get("gloss", ""), said, d.get("defined"))["h"])
         st = self.state()
         for h in st.facts:
             if h not in keep and h not in st.withdrawn:
@@ -1014,10 +1071,33 @@ class Kernel:
                           them is not Lean's, and `verify` finds which
           conflict        people's instructions about the fact cannot both hold; they are set
                           aside, and the fact waits for a person to withdraw one
+          waits           a definition whose facts are not settled: nothing to hold its places against
 
         Where a person has laid down what the value is (and no other instruction differs), the
         places are not compared with one another but each with that: a place that differs is
         reported as against the instruction, by name.
         """
         st = self.state()
-        return {"decisions": [self._recheck_fact(h, cwd) for h in st.facts if h not in st.withdrawn]}
+        live = [h for h in st.facts if h not in st.withdrawn]
+        by_name = {st.facts[h]["name"]: h for h in live}
+        done = {}
+
+        def entry(h, above=()):
+            """A fact is held after the facts it is defined from, and with what they are settled as."""
+            if h in done:
+                return done[h]
+            given = None
+            if st.facts[h].get("defined"):
+                given = []
+                for name in st.facts[h]["defined"]["from"]:
+                    src = by_name.get(name)
+                    if src is None or src == h or src in above:
+                        given.append((name, None, None, "is not declared" if src is None else "is defined in a circle"))
+                        continue
+                    e = entry(src, above + (h,))
+                    given.append((name, st.facts[src]["type"], e.get("value"),
+                                  None if "value" in e else f"is {e['state']}"))
+            done[h] = self._recheck_fact(h, cwd, given)
+            return done[h]
+
+        return {"decisions": [entry(h) for h in live]}
