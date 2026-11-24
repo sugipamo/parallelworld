@@ -514,3 +514,66 @@ def test_a_place_may_state_only_some_entries_of_a_list(tmp_path):
     a.sync_facts(str(tmp_path / "pw-facts.json"))
     r = fact()
     assert r["state"] == "stale" and r["unread"][0]["at"] == "doc.md::Format" and "another question" in r["unread"][0]["why"], r
+
+
+def test_what_a_person_laid_down_is_an_axiom_and_conflicting_axioms_are_set_aside(tmp_path):
+    """An instruction cannot be shown wrong by the files: the places are held against it. Two that
+    cannot both hold are both set aside, and only that fact waits for a person."""
+    import json
+    (tmp_path / "a.py").write_text('MODE = "fast"\nLIMIT = 14\n')
+    (tmp_path / "b.toml").write_text('mode = "fast"\n')
+    (tmp_path / "c.md").write_text("## Example\n\nUse `safe` and `fast`.\n")
+    cwd = str(tmp_path)
+    rd = lambda rx, **kw: {"find": rx, **kw}
+    def declare(*said, extra=()):
+        facts = [{"name": "mode", "type": "String", "gloss": "the default mode", "places": [
+                      {"at": "a.py", "read": rd('MODE = "(\\w+)"')}, {"at": "b.toml", "read": rd('mode = "(\\w+)"')}],
+                  **({"instructions": list(said)} if said else {})},
+                 {"name": "limit", "type": "Nat", "places": [{"at": "a.py", "read": rd("LIMIT = (\\d+)", **{"as": "nat"})}]}, *extra]
+        (tmp_path / "pw-facts.json").write_text(json.dumps(facts))
+        k = Kernel(str(tmp_path / "pw-log.jsonl"), gate=LeanGate())
+        k.sync_facts(str(tmp_path / "pw-facts.json"))
+        return {d["fact"]: d for d in k.recheck(cwd)["decisions"]}
+    alice = {"is": "fast", "by": "alice", "said": "keep the default on fast", "on": "2026-03-01"}
+    bob, carol = {"is": "safe", "by": "bob"}, {"is": "fast", "by": "carol"}
+
+    assert "instructions" not in declare()["mode"]                                       # nobody said anything: the places only have to agree
+    r = declare(alice)["mode"]
+    assert r["state"] == "current" and r["instructions"] == [{"is": '"fast"', "by": "alice", "said": "keep the default on fast", "on": "2026-03-01"}]
+
+    # the places agree with each other, and both are against what was laid down
+    r = declare(bob)["mode"]
+    assert r["state"] == "violated" and [p.get("against") for p in r["places"]] == [["bob"], ["bob"]], r
+    # the places differ: without an instruction nobody can say which is wrong; with one, the kernel can
+    (tmp_path / "b.toml").write_text('mode = "safe"\n')
+    assert [p.get("against") for p in declare()["mode"]["places"]] == [None, None] and declare()["mode"]["state"] == "violated"
+    r = declare(alice, carol)["mode"]                                                    # two people, one value
+    assert r["state"] == "violated" and [p.get("against") for p in r["places"]] == [None, ["alice", "carol"]], r
+    (tmp_path / "b.toml").write_text('mode = "fast"\n')
+
+    # two instructions that cannot both hold: both are set aside, whichever came first, however many agree
+    r = declare(alice, bob)
+    assert r["mode"]["state"] == "conflict" and r["mode"]["without the instructions set aside"] == "current", r["mode"]
+    assert [i.get("set aside") for i in r["mode"]["instructions"]] == [["bob"], ["alice"]]
+    assert all("against" not in p for p in r["mode"]["places"])                          # nothing is concluded from either
+    assert r["limit"]["state"] == "current"                                              # and nothing else is touched
+    r = declare(alice, carol, bob)["mode"]
+    assert r["state"] == "conflict" and [sorted(i.get("set aside", [])) for i in r["instructions"]] == [["bob"], ["bob"], ["alice", "carol"]]
+    assert declare(alice, carol)["mode"]["state"] == "current"                           # bob's is withdrawn: the rest holds again
+
+    # a place that states only some entries is held against an instruction the same way
+    part = {"name": "modes", "type": "List String", "places": [{"at": "c.md::Example", "some": True, "read": {"find_all": "`(\\w+)`", "sort": True}},
+                                                               {"at": "a.py", "read": {"find_all": 'MODE = "(\\w+)"'}}],
+            "instructions": [{"is": ["fast"], "by": "alice"}]}
+    r = declare(extra=[part])["modes"]
+    assert r["state"] == "violated" and r["places"][0]["not in the whole"] == ["safe"] and r["places"][0]["against"] == ["alice"], r
+
+    # an instruction has an author and a value of the fact's type; the old anonymous "value" is not read
+    for bad in ({"is": "fast"}, {"is": 14, "by": "alice"}, {"by": "alice"}):
+        with pytest.raises(KernelError):
+            declare(bad)
+    with pytest.raises(KernelError):
+        declare(alice, dict(alice))
+    (tmp_path / "pw-facts.json").write_text(json.dumps([{"name": "mode", "type": "String", "places": ["a.py"], "value": '"fast"'}]))
+    with pytest.raises(KernelError):
+        Kernel(str(tmp_path / "pw-log.jsonl"), gate=LeanGate()).sync_facts(str(tmp_path / "pw-facts.json"))

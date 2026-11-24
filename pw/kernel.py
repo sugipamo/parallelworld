@@ -298,6 +298,11 @@ def locate(subject, cwd):
     return raw if found is None else found.encode("utf-8")
 
 
+def _json_like(typ):
+    """Is a value of this type written the same way in JSON and in Lean (a string, a number, a list of them)?"""
+    return typ in ("String", "Nat", "Int", "List String", "List Nat", "List Int")
+
+
 def unreadable(subject, cwd):
     """Why a declared place cannot be found as named, or None. `locate` falls back to the whole
     file when a part is not there; for a place someone declared, that fallback would quietly
@@ -378,7 +383,7 @@ def question(fact, place):
 class State:
     """What the record says, replayed from its lines."""
     def __init__(self):
-        self.facts = {}          # H id -> {"name", "type", "places": [{"at", "reader"}], "value", "asked", "text",
+        self.facts = {}          # H id -> {"name", "type", "places": [{"at", "reader"}], "instructions"?, "asked", "text",
         #                                   "readings": [(place, M)], "declined": [...], "agreed": [(guards, F)]}
         self.models = {}         # M id -> one way a place was read: {"subject", "obj", "binding", "quote", "anchor", ...}
         self.objs = {}           # O id -> {"type", "text"}: a value, as a Lean term
@@ -394,6 +399,8 @@ class State:
                 raise KeyError("a claim that is not a fact")
             was = self.facts.get(p["h"], {})
             fact = dict(p["fact"], text=p["text"], **{k: was.get(k, []) for k in ("readings", "declined", "agreed")})
+            if fact.pop("value", None) is not None:      # an earlier form: one fixed value, said by nobody in particular
+                raise KeyError("a fact with a fixed value; say whose instruction it is under \"instructions\"")
             if "asked" not in fact:         # recorded before descriptions were tracked: the text is the description, if one was given
                 given = p["text"] != f'the same {fact["name"]} is stated in {len(fact["places"])} place(s)'
                 fact["asked"] = _sha("asked", p["text"] if given else "")
@@ -504,13 +511,19 @@ class Kernel:
 
 
     # ---- facts: one thing, said in several places -----------------------------
-    def claim_fact(self, name, typ, places, value=None, gloss=""):
+    def claim_fact(self, name, typ, places, gloss="", instructions=()):
         """Declare that the listed places all state the same fact, a value of Lean type `typ`.
 
         Each place is `path` or `path::part`, optionally with a reader that computes the value
         from the content; a place without one has to be read by an agent or a person. The
-        decision is that all places read as the same value (and as `value`, if one is given).
-        No place is privileged: when they differ, which one is right is for a person to say.
+        decision is that all places read as the same value. No place is privileged: when they
+        differ, which one is right is for a person to say.
+
+        A person may have said it already. `instructions` are what people have laid down about
+        this fact: [{"is": the value as a Lean term, "by": who, "said"?: their words, "on"?: when}].
+        They are axioms here: nothing in the files can show one wrong, and the places are held
+        against them. Two that Lean shows to differ are both set aside until a person withdraws
+        one (see `_recheck_fact`): the kernel does not choose between people.
         """
         typ = _norm(typ)
         self._screen(typ)
@@ -523,13 +536,20 @@ class Kernel:
             raise KernelError(f"{name}: {', '.join(twice)} is listed more than once; a place is read one way per fact")
         if any(p.get("some") for p in places) and not typ.startswith("List "):
             raise KernelError("only a list can be stated in part: a place that states some entries needs a List type")
-        if value is not None:
-            value = _norm(value)
-            self._screen(value)
-            self._well_typed((typ, value))
+        said = []
+        for i in instructions:
+            if not isinstance(i, dict) or set(i) - {"is", "by", "said", "on"} or not str(i.get("by", "")).strip() or "is" not in i:
+                raise KernelError(f'{name}: an instruction is {{"is": value, "by": who}}, optionally with "said" and "on"')
+            term = _norm(i["is"])
+            self._screen(term)
+            self._well_typed((typ, term))
+            said.append({"is": term, "by": _norm(str(i["by"])), **{k: _norm(str(i[k])) for k in ("said", "on") if i.get(k)}})
+        if len({(i["is"], i["by"]) for i in said}) < len(said):
+            raise KernelError(f"{name}: the same instruction by the same person is listed twice")
         # `asked` identifies the question put to whoever reads a place: the description. When it
         # changes, what was read before answered another question and has to be read again.
-        fact = {"name": name, "type": typ, "places": places, "value": value, "asked": _sha("asked", _norm(gloss))}
+        fact = {"name": name, "type": typ, "places": places, "asked": _sha("asked", _norm(gloss)),
+                **({"instructions": said} if said else {})}
         h = "H:" + _sha("fact", name, typ)       # the same fact, however its places come to be listed or read
         with self._tx() as (con, st):
             declared = {k: v for k, v in st.facts.get(h, {}).items() if k not in ("readings", "declined", "agreed", "text")}
@@ -625,9 +645,28 @@ class Kernel:
         fact = self.state().facts[h]
         t = fact["type"]
         parts = [f"((({terms[0]}) : {t}) = (({x}) : {t}))" for x in terms[1:]]
-        if fact["value"] is not None:
-            parts.append(f"((({terms[0]}) : {t}) = (({fact['value']}) : {t}))")
         return self._settle(h, guards, " ∧ ".join(parts) or "True")
+
+    def _instructions(self, h):
+        """What people have laid down about a fact, and which of it can be used.
+
+        Two instructions that Lean shows to differ cannot both be axioms: with both, anything
+        would follow. Every instruction that differs from another one is set aside, the earlier
+        as much as the later, the one many share as much as the lone one: which of them holds is
+        for the people to settle. Where Lean can show neither that two are the same nor that
+        they differ, both are set aside as well. What is left says one and the same value.
+        """
+        fact = self.state().facts[h]
+        said, t = [dict(i) for i in fact.get("instructions", [])], fact["type"]
+        for a in range(len(said)):
+            for b in range(a + 1, len(said)):
+                if said[a]["is"] == said[b]["is"]:
+                    continue
+                same, _ = self._settle(h, [], f"((({said[a]['is']}) : {t}) = (({said[b]['is']}) : {t}))")
+                if same != "holds":
+                    for i, other in ((a, b), (b, a)):
+                        said[i].setdefault("set aside", []).append(said[other]["by"])
+        return said
 
     def _contained(self, h, guards, part, whole):
         """The proposition that every entry a place lists is an entry of the whole list."""
@@ -699,8 +738,39 @@ class Kernel:
             entry["places"].append({**about, "reads as": st.objs[st.models[have[-1]]["obj"]]["text"], "m": have[-1],
                                     "by": "reader" if st.models[have[-1]]["binding"] else "stated"})
         whole = [p for p in entry["places"] if not p.get("some")]
+        said = self._instructions(h)
+        usable = [i for i in said if "set aside" not in i]
+        if said:
+            entry["instructions"] = said
+
+        def outside(p, other):
+            try:
+                return sorted(set(json.loads(p["reads as"])) - set(json.loads(other)))
+            except (ValueError, TypeError):
+                return []
+
         if unread:
             entry.update(state="disputed" if any("disagree" in u["why"] for u in unread) else "stale", unread=unread)
+        elif usable:
+            # Someone has laid down what the value is. Each place is held against that by itself,
+            # so that the places against it can be named, and by whose word.
+            t, target, who, new, verdicts = fact["type"], usable[0]["is"], sorted({i["by"] for i in usable}), False, []
+            for p in entry["places"]:
+                if p.get("some"):
+                    v, fresh = self._contained(h, [p["m"]], p["reads as"], target)
+                    p["contained"] = v == "holds"
+                    if v == "not":
+                        p["not in the whole"] = outside(p, target)
+                else:
+                    v, fresh = self._settle(h, [p["m"]], f"((({p['reads as']}) : {t}) = (({target}) : {t}))")
+                if v == "not":
+                    p["against"] = who
+                verdicts.append(v)
+                new = new or fresh
+            verdict = ("contested" if "contested" in verdicts else "not" if "not" in verdicts
+                       else "holds" if all(v == "holds" for v in verdicts) else None)
+            entry["state"] = {"holds": "re-established" if new and reread else "current", "not": "violated",
+                              "contested": "contested"}.get(verdict, "uncovered")
         else:
             # the places that state the whole of it have to read the same; a place that states some
             # entries has to list nothing the whole does not have
@@ -713,12 +783,13 @@ class Kernel:
                         if inside != "holds":
                             verdict = "contested" if "contested" in (inside, verdict) else "not" if "not" in (inside, verdict) else None
                         if inside == "not":
-                            try:
-                                p["not in the whole"] = sorted(set(json.loads(p["reads as"])) - set(json.loads(whole[0]["reads as"])))
-                            except (ValueError, TypeError):
-                                pass
+                            p["not in the whole"] = outside(p, whole[0]["reads as"])
             entry["state"] = {"holds": "re-established" if new and reread else "current", "not": "violated",
                               "contested": "contested"}.get(verdict, "uncovered")
+        if len(usable) < len(said) and not unread:
+            # Instructions that cannot both hold were set aside, and the places were judged without
+            # them. That is as far as the kernel goes: the fact waits for a person, nothing else does.
+            entry["without the instructions set aside"], entry["state"] = entry["state"], "conflict"
         # Whether each reading stands is decided by the project's rules, not by a number.
         st = self.state()
         fact = st.facts[h]                # with the readings this very check has just computed
@@ -774,11 +845,13 @@ class Kernel:
     def sync_facts(self, path):
         """Make the standing facts those declared in a file; facts no longer declared are withdrawn.
 
-        The file is a JSON list of {"name", "type", "places", "value"?, "gloss"?}. A place is
+        The file is a JSON list of {"name", "type", "places", "gloss"?, "instructions"?}. A place is
         "path" or "path::part" (someone has to read it), or {"at": ..., "read": {...}} where
         "read" describes how to read it mechanically: see `pattern`. A place of a list that
         states only some of its entries (an example, an excerpt) carries "some": true; what it
         lists has to be among the entries, it need not be all of them.
+        "instructions" is what people have laid down about the fact: [{"is": value, "by": who,
+        "said"?: their words, "on"?: when}], the value written as JSON.
         """
         with open(path, encoding="utf-8") as fh:
             declared = json.load(fh)
@@ -801,7 +874,15 @@ class Kernel:
                 else:
                     raise KernelError(f"{d['name']}: a place is a string, or {{\"at\": ..., \"read\": {{...}}}}, "
                                       "either with \"some\": true if it states only some entries of a list")
-            keep.add(self.claim_fact(d["name"], d["type"], places, d.get("value"), d.get("gloss", ""))["h"])
+            if "value" in d:
+                raise KernelError(f'{d["name"]}: "value" is no longer read; say whose instruction it is: "instructions": [{{"is": ..., "by": ...}}]')
+            said = d.get("instructions", [])
+            if not isinstance(said, list) or not all(isinstance(i, dict) for i in said):
+                raise KernelError(f'{d["name"]}: "instructions" is a list of {{"is": value, "by": who}}')
+            # an instruction's value is written as JSON ("pqd", 14, ["a", "b"]) and becomes the Lean term the places are read as
+            said = [{**i, "is": json.dumps(i["is"], ensure_ascii=False) if _json_like(_norm(d["type"])) else i["is"]} if "is" in i else i
+                    for i in said]
+            keep.add(self.claim_fact(d["name"], d["type"], places, d.get("gloss", ""), said)["h"])
         st = self.state()
         for h in st.facts:
             if h not in keep and h not in st.withdrawn:
@@ -891,6 +972,12 @@ class Kernel:
           uncovered       the places are read, and Lean could settle neither that they agree nor that they differ
           contested       the record holds proofs both that they agree and that they differ: one of
                           them is not Lean's, and `verify` finds which
+          conflict        people's instructions about the fact cannot both hold; they are set
+                          aside, and the fact waits for a person to withdraw one
+
+        Where a person has laid down what the value is (and no other instruction differs), the
+        places are not compared with one another but each with that: a place that differs is
+        reported as against the instruction, by name.
         """
         st = self.state()
         return {"decisions": [self._recheck_fact(h, cwd) for h in st.facts if h not in st.withdrawn]}

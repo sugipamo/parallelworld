@@ -39,10 +39,23 @@ def show(report, unconfirmed="fail"):
         ok = agree and not loose
         bad |= not ok and not (agree and unconfirmed == "warn")
         print(f"{mark(ok, agree)} {d['state']:<15} {d['h']} fact: {d['fact']}")
+        aside = [i for i in d.get("instructions", []) if "set aside" in i]
+        if aside:
+            print("       people's instructions about this cannot both hold (verified by Lean). They are set aside until one is withdrawn:")
+            for i in aside:
+                words = f'  "{i["said"][:120]}"' if i.get("said") else ""
+                print(f"          {i['by']}{' (' + i['on'] + ')' if i.get('on') else ''}: {i['is'][:100]}{words}")
+            if "without the instructions set aside" in d:
+                print(f"       judged without them, the fact is: {d['without the instructions set aside']}")
+        for i in d.get("instructions", []):
+            if "set aside" not in i and not ok:
+                print(f"       laid down by {i['by']}: {i['is'][:100]}")
         if not ok:
             for p in d["places"]:
                 part = "lists (in part) " if p.get("some") else "reads as "
                 print(f"       {p['at']} {part}{p['reads as'][:100]}   ({p['why'] if p['stands'] else 'does not stand'})")
+                if p.get("against"):
+                    print(f"          against the instruction of {', '.join(p['against'])}")
                 if p.get("not in the whole"):
                     print(f"          not among the entries the other places state: {', '.join(map(str, p['not in the whole']))[:200]}")
                 if not p["stands"]:
@@ -55,7 +68,11 @@ def show(report, unconfirmed="fail"):
         for u in d.get("unread", []):
             print(f"       {u['at']}: {u['why'][:160]}")
             declined(u.get("declined", []))
-        if d["state"] == "violated" and any(p.get("not in the whole") for p in d["places"]):
+        if d["state"] == "conflict":
+            print("       which instruction holds is for the people who gave them: take the other out of pw-facts.json")
+        elif d["state"] == "violated" and any(p.get("against") for p in d["places"]):
+            print("       a place does not say what was laid down (verified by Lean): change the place, or have the instruction withdrawn")
+        elif d["state"] == "violated" and any(p.get("not in the whole") for p in d["places"]):
             print("       a place lists something the others do not have (verified by Lean); which one is right is for a person to say")
         elif d["state"] == "violated":
             print("       the places do not say the same thing (verified by Lean); which one is right is for a person to say")
