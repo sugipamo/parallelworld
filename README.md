@@ -17,6 +17,7 @@
 - `pw/calibrate.py` — 読み手を測る
 - `pw/discover.py` — 宣言した事実の面倒を探索役に見させる（読めなくなった箇所の付け替え、漏れている箇所の探索。頼めば新しい事実の提案も）
 - `pw/confirm.py` — エージェントの読みを、根拠の一文と並べて人が確認する
+- `pw/propagate.py` — 人が定めた値（または仮に置いた値）を、それと違う箇所に書き戻す
 - `pw-facts.json` — このプロジェクトの事実と、それを述べている箇所の一覧
 - `pw-log.jsonl` — 記録（読み、証明、人の確認）。追記式のテキストで、リポジトリに含める
 - `pw-rules.json` — 読みが成り立つ条件の表と、読み手に求める測定の基準
@@ -37,6 +38,8 @@ python -m pw.confirm --repo .                      # エージェントの読み
 python -m pw.calibrate --repo .                    # 値をわざと書き換えた本文とおとりを読ませ、読み手を測る（課金あり）
 python -m pw.discover --repo . --apply            # 宣言した事実について、読めなくなった箇所を付け替え、漏れている箇所を探す（課金あり）
 python -m pw.discover --repo . --new --apply      # 加えて、まだ宣言されていない事柄を提案させる
+python -m pw.propagate --repo .                    # 人が定めた値と違う箇所への書き戻しを、差分で示す（--apply で適用）
+python -m pw.propagate --repo . --suppose 'Lean version=4.15.0'   # 仮にこの値にしたら、どこを書き換えることになるか
 ```
 
 一致の判定には `lean/lean-toolchain` と同じ版の Lean 4 が必要。`lake` が PATH にないときは `PW_LAKE` でパスを渡す。

@@ -577,3 +577,63 @@ def test_what_a_person_laid_down_is_an_axiom_and_conflicting_axioms_are_set_asid
     (tmp_path / "pw-facts.json").write_text(json.dumps([{"name": "mode", "type": "String", "places": ["a.py"], "value": '"fast"'}]))
     with pytest.raises(KernelError):
         Kernel(str(tmp_path / "pw-log.jsonl"), gate=LeanGate()).sync_facts(str(tmp_path / "pw-facts.json"))
+
+
+def test_what_was_laid_down_is_written_into_the_places_and_read_back(tmp_path):
+    """The check in reverse: a place read by a simple pattern gets the instructed value written
+    into it, confirmed by reading it back. A value can also be supposed, to see what would follow."""
+    import json
+    from pw.propagate import SUPPOSED, diff, plan
+    from pw.lean_gate import LEAN_DIR
+    (tmp_path / "app.py").write_text('def run(mode="fast", limit=0.9):\n    return mode\n\nMODES = ["fast", "safe"]\n')
+    (tmp_path / "conf.toml").write_text('[a]\nmode = "x"\n\n[b]\nmode = "fast"\n')
+    (tmp_path / "doc.md").write_text("## Mode\n\nThe default mode is `fast`.\n")
+    cwd = str(tmp_path)
+    def facts(*said):
+        return [{"name": "mode", "type": "String", "gloss": "the default mode", "instructions": list(said), "places": [
+                     {"at": "app.py::run", "read": {"find": 'mode="(\\w+)"'}},
+                     {"at": "conf.toml", "read": {"within": "\\[b\\]\\n([^\\[]*)", "find": 'mode = "(\\w+)"'}},
+                     "doc.md::Mode"]},
+                {"name": "limit", "type": "Nat", "places": [{"at": "app.py::run", "read": {"find": "limit=([0-9.]+)", "as": "permille"}}]},
+                {"name": "modes", "type": "List String", "places": [{"at": "app.py::MODES", "read": {"find_all": '"(\\w+)"', "sort": True}}]}]
+    def declare(*said):
+        fs = [{k: v for k, v in f.items() if k != "instructions" or v} for f in facts(*said)]
+        (tmp_path / "pw-facts.json").write_text(json.dumps(fs))
+        k = Kernel(str(tmp_path / "pw-log.jsonl"), gate=LeanGate())
+        k.sync_facts(str(tmp_path / "pw-facts.json"))
+        return fs, k
+    fs, k = declare({"is": "fast", "by": "alice"})
+    h = next(h for h, f in k.state().facts.items() if f["name"] == "mode")
+    k.read_place(h, "doc.md::Mode", '"fast"', cwd=cwd, quote="The default mode is `fast`.")
+    got = plan(cwd, LEAN_DIR, fs)
+    assert got["files"] == {} and not got["written"] and not got["by hand"]            # every place already says it
+
+    # alice changes her mind: the instruction is edited, and the places follow
+    fs, k = declare({"is": "safe", "by": "alice"})
+    got = plan(cwd, LEAN_DIR, fs)
+    assert [(w["at"], w["to"]) for w in got["written"]] == [("app.py::run", '"safe"'), ("conf.toml", '"safe"')]
+    assert [(b["at"], "reader" in b["why"]) for b in got["by hand"]] == [("doc.md::Mode", True)]   # prose is not written by a pattern
+    assert sorted(got["files"]) == ["app.py", "conf.toml"]
+    assert got["files"]["app.py"][1] == 'def run(mode="safe", limit=0.9):\n    return mode\n\nMODES = ["fast", "safe"]\n'   # that piece and nothing else
+    assert got["files"]["conf.toml"][1] == '[a]\nmode = "x"\n\n[b]\nmode = "safe"\n'                                     # the one inside [b]
+    assert '-def run(mode="fast"' in diff(got["files"]) and '+def run(mode="safe"' in diff(got["files"])
+    assert (tmp_path / "app.py").read_text().startswith('def run(mode="fast"')                # looking writes nothing
+    for path, (_, new) in got["files"].items():
+        (tmp_path / path).write_text(new)
+    r = next(d for d in k.recheck(cwd)["decisions"] if d["fact"] == "mode")
+    assert [p.get("against") for p in r["places"]] == [None, None, ["alice"]]                 # only the prose is left
+
+    # a hypothesis: nobody laid it down, nothing is added to the declaration, but what would follow is shown
+    fs, _ = declare({"is": "safe", "by": "alice"})
+    got = plan(cwd, LEAN_DIR, fs, {"limit": 850, "modes": ["fast"]})
+    assert got["files"]["app.py"][1].startswith('def run(mode="safe", limit=0.85):') and got["written"][0]["by"] == [SUPPOSED]
+    assert [b["fact"] for b in got["by hand"]] == ["mode", "modes"] and "find" in got["by hand"][1]["why"]   # a list is not written back
+    assert json.loads((tmp_path / "pw-facts.json").read_text()) == fs
+    # supposing something against what a person laid down is refused, and nothing is written for that fact
+    got = plan(cwd, LEAN_DIR, fs, {"mode": "turbo"})
+    assert got["files"] == {} and got["refused"][0]["supposed"] and {i["by"] for i in got["refused"][0]["instructions"]} == {"alice", SUPPOSED}
+    with pytest.raises(KernelError):
+        plan(cwd, LEAN_DIR, fs, {"no such fact": 1})
+    # what the pattern cannot confirm is not written: "so safe" is not a word the pattern reads
+    got = plan(cwd, LEAN_DIR, declare()[0], {"mode": "so safe"})
+    assert got["files"] == {} and all("can no longer be read" in b["why"] for b in got["by hand"] if b["at"] != "doc.md::Mode")

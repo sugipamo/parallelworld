@@ -133,6 +133,46 @@ def _read_pattern(rd, text):
     return "[" + ", ".join(v[1] for v in values) + "]"
 
 
+def _spell(kind, term):
+    """How a value is written in a file, for a kind of pattern: the reverse of `_term`."""
+    value = json.loads(term)
+    if kind == "string" and isinstance(value, str):
+        return value
+    if kind in ("nat", "int") and isinstance(value, int) and not isinstance(value, bool):
+        return str(value)
+    if kind == "permille" and isinstance(value, int) and not isinstance(value, bool):
+        whole, rest = divmod(value, 1000)
+        return f"{whole}.{rest:03d}".rstrip("0").rstrip(".") if rest else f"{whole}.0"
+    raise KernelError(f"{term} cannot be written as a {kind}")
+
+
+def write_pattern(rd, text, term):
+    """The text with the value a pattern reads replaced by `term`: reading in reverse.
+
+    Only where the reverse is determined: one value found by `find` (inside `within`, if
+    given), not rewritten on the way. The piece the pattern's group matched is replaced and
+    nothing else. What was written is read back, and it has to read as `term`: a write that
+    the pattern itself does not confirm is not made.
+    """
+    if rd.get("language") != "pattern" or "find" not in rd or "rewrite" in rd:
+        raise KernelError("only a single value read by `find`, without `rewrite`, can be written back")
+    start, piece = 0, text
+    for step in [*rd.get("within", []), rd["find"]]:
+        found = list(re.finditer(step, piece, re.M))
+        if len(found) != 1:
+            raise KernelError(f"the pattern matches {len(found)} times here; it has to match exactly once")
+        a, b = found[0].span(1)
+        start, piece = start + a, piece[a:b]
+    new = text[:start] + _spell(rd["as"], term) + text[start + len(piece):]
+    try:
+        back = _read_pattern(rd, new)
+    except KernelError as e:
+        raise KernelError(f"after writing, the place can no longer be read: {e}")
+    if json.loads(back) != json.loads(term):
+        raise KernelError(f"after writing, the place reads as {back}, not {term}")
+    return new
+
+
 # How a computed place is read, by the kind of description it carries. One kind so far; a kind
 # that looks at syntax rather than text would be added here, and nowhere else.
 READERS = {"pattern": _read_pattern}
