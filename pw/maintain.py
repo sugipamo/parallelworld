@@ -1,11 +1,11 @@
-"""Keep the decisions true of the files as they change.
+"""Keep the facts true of the files as they change.
 
-    python -m pw.maintain [--repo DIR] [--lean-dir DIR] [--threshold 0.9]
+    python -m pw.maintain [--repo DIR] [--lean-dir DIR]
                           [--model claude-opus-5-5] [--second-model claude-sonnet-5-5] [--budget 3]
 
-One round of the loop that managing a project comes down to:
+One round of the loop that keeping a project consistent comes down to:
 
-  1. hold every decision against the files as they are (what `pw.check` does, mechanically);
+  1. hold every fact against the files as they are (what `pw.check` does, mechanically);
   2. have an agent read each place that changed or was never read. The reader is blind: it is
      given the text of that one place and no way to look at anything else, so that its reading
      agreeing with another place means something. It either states what the place says or says
@@ -13,13 +13,12 @@ One round of the loop that managing a project comes down to:
      session, not as a finding;
   3. have a blind reader look at each place that is read by a pattern and that no reader has
      looked at: a pattern computes a value, it does not show the value is about the thing asked;
-  4. where a reading does not stand by the project's rules (pw-rules.json), have a second model
-     read the place, blind as well;
+  4. where a reading does not stand by the project's rules (pw-rules.json), or differs from the
+     other places, have a second model read the place, blind as well;
   5. hold everything against the files once more and report.
 
-What is left after that is for a person: places that do not say the same thing, readers who
-disagree about a place, decisions that are violated or contradict each other. Exit status 1 if
-anything is left.
+What is left after that is for a person: places that do not say the same thing, and readers
+who disagree about a place. Exit status 1 if anything is left.
 """
 import argparse
 import json
@@ -34,19 +33,6 @@ from .kernel import LOG, READER, Kernel, _sha, context, locate
 from .lean_gate import LEAN_DIR, LeanGate
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-DECISIONS = """Some files changed, and the decisions below were tied to them only by an agent's reading of the
-earlier version. Read each file as it is now and state it again. Do not change any file.
-
-For each decision: write the file's content, as far as the decision is concerned, as a Lean term of
-the given type and state it with `model(h, object)`, leaving out setup, call and domains unless the
-file is code you can call. Be faithful to the file, not to the decision. Then prove `holds [F]` for
-the proposition `model` returns, or `not [F]` if the file as it is now does not satisfy the
-specification. In your final message say, for each decision, whether it still holds.
-
-Decisions:
-"""
 
 
 def blind_read(repo, lean_dir, model, actor, items, budget, db=None):
@@ -118,8 +104,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", default=os.getcwd())
     ap.add_argument("--lean-dir", default=LEAN_DIR)
-    ap.add_argument("--threshold", type=float, default=0.9)
-    ap.add_argument("--model", default="claude-opus-5-5", help="the model that reads places and re-establishes decisions")
+    ap.add_argument("--model", default="claude-opus-5-5", help="the model that reads places")
     ap.add_argument("--second-model", default="claude-sonnet-5-5",
                     help='a different model for a second, blind reading where the first stands alone; "" for none')
     ap.add_argument("--budget", type=float, default=3.0)
@@ -135,17 +120,16 @@ def main():
 
     def unchecked(report):
         """Computed places no blind reader has looked at: is the pattern reading the thing asked?"""
-        return [(d, p["at"]) for d in report["decisions"] if "fact" in d for p in d["places"]
+        return [(d, p["at"]) for d in report["decisions"] for p in d["places"]
                 if p["by"] == "reader" and not p["stands"]
                 and not (p["read blind as"] or any(x["model"] == args.model for x in p["declined"]))]
 
-    decisions = [d for d in report["decisions"] if d["state"] in ("stale", "unsupported") and "subject" in d]
-    unread = [(d, u["at"]) for d in report["decisions"] if "fact" in d for u in d.get("unread", [])
+    unread = [(d, u["at"]) for d in report["decisions"] for u in d.get("unread", [])
               if needs_agent(d, u) and not any(x["model"] == args.model for x in u.get("declined", []))]
-    if decisions or unread or unchecked(report):
+    if unread or unchecked(report):
         dirty = subprocess.run(["git", "status", "--porcelain", "--", ".", f":(exclude){LOG}"], cwd=repo, capture_output=True, text=True).stdout.strip()
         if dirty:
-            show(report, args.threshold)
+            show(report)
             sys.exit("\nCommit the changes first: what is read has to be what is committed.")
     silent = []
     if unread:
@@ -157,30 +141,14 @@ def main():
     if args.second_model:
         # also where the places disagree: before a disagreement is put to a person, the reading that
         # differs should not rest on one reader, who may simply have misread
-        alone = [(d, p["at"]) for d in report["decisions"] if "fact" in d and d["state"] in ("current", "re-established", "violated")
+        st = kernel.state()
+        alone = [(d, p["at"]) for d in report["decisions"] if d["state"] in ("current", "re-established", "violated")
                  for p in d["places"] if p["by"] == "stated" and not p["stands"]
-                 and args.second_model not in kernel.state().models[p["m"]]["asked"].get(kernel.state().facts[d["h"]]["asked"], {}).get("models", ())]
+                 and args.second_model not in st.models[p["m"]]["asked"].get(st.facts[d["h"]]["asked"], {}).get("models", ())]
         if alone:
             silent += read_blind(kernel, repo, args, alone, args.second_model, "second")
             report = kernel.recheck(repo)
-    if decisions:
-        st = kernel.state()
-        prompt = DECISIONS
-        for d in decisions:
-            pred = st.algebra.preds[st.formal[d["h"]]["pred"]]
-            prompt += (f'- {d["h"]}: {d["subject"].split("@")[0]} must satisfy `{pred["text"]}` — {d["text"]}\n'
-                       f'  type of the term: {pred["type"]}\n')
-        name = "maintain-" + _sha(report["tree"], *[d["h"] for d in decisions])[:6]
-        tasks = os.path.join(repo, ".pw", f"tasks-{name}.json")
-        os.makedirs(os.path.dirname(tasks), exist_ok=True)
-        with open(tasks, "w") as fh:
-            json.dump([{"name": name, "prompt": prompt, "requires": []}], fh, ensure_ascii=False)
-        print(f"{len(decisions)} decision(s) need a file read again; asking an agent ({name})", flush=True)
-        subprocess.run([sys.executable, "-m", "pw.orchestrator", tasks, "--repo", repo, "--lean-dir", args.lean_dir,
-                        "--model", args.model, "--budget", str(args.budget), "--parallel", "1"],
-                       cwd=ROOT, capture_output=True, text=True)
-        report = kernel.recheck(repo)
-    bad = show(report, args.threshold)
+    bad = show(report)
     failed = [r for r in silent if r.get("error") or r["no answer"]]
     if failed:
         print(f"\n{len(failed)} reader session(s) failed or left a place unanswered (see above). That is not a finding: run this again.")

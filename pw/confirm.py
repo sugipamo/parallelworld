@@ -16,13 +16,14 @@ from .lean_gate import LEAN_DIR, LeanGate
 
 
 def unconfirmed(kernel, repo):
+    """The readings stated by an agent that hold for the files as they are and that no person has confirmed or rejected."""
     st = kernel.state()
-    now = kernel.versions(repo)
-    signed = {e["target"] for e in st.evidence.values() if e["kind"] == "sign_off"}
-    for m, info in st.models.items():
-        base = info["subject"].split("@")[0]
-        if not info["binding"] and now.get(base) == info["subject"] and m not in signed:
-            yield m, base, st.algebra.objs[info["obj"]]["text"], info.get("quote"), info.get("anchor")
+    signed = {e["target"] for e in st.confirmations.values()}
+    for d in kernel.recheck(repo)["decisions"]:
+        for p in d["places"]:
+            info = st.models[p["m"]]
+            if p["by"] == "stated" and p["m"] not in signed:
+                yield p["m"], p["at"], p["reads as"], info.get("quote"), info.get("anchor")
 
 
 def main():

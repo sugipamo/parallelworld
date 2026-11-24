@@ -151,7 +151,7 @@ def trials(kernel, repo, per_place, rng, n_decoys=0):
     """Per place an agent has read: the planted changes, then a control. Then the decoys."""
     st = kernel.state()
     out = []
-    facts = [d for d in kernel.recheck(repo)["decisions"] if "fact" in d and d.get("places") and "unread" not in d]
+    facts = [d for d in kernel.recheck(repo)["decisions"] if d.get("places") and "unread" not in d]
     for d in facts:
         for p in d.get("places", []):
             if p["by"] != "stated":
@@ -182,7 +182,7 @@ def run_session(args, number, batch):
     run = blind_read(work, args.lean_dir, args.model, f"calibrate-{number}", items, args.budget)
     st = kernel.state()
     for t in batch:
-        said = [st.algebra.objs[st.models[m]["obj"]]["text"] for _, m in st.facts[t["h"]]["readings"]]
+        said = [st.objs[st.models[m]["obj"]]["text"] for _, m in st.facts[t["h"]]["readings"]]
         try:
             t["read"] = json.loads(said[-1]) if said else None
         except ValueError:

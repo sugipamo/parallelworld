@@ -24,6 +24,7 @@ from pw.kernel import LOG                                  # noqa: E402
 from pw.lean_gate import LEAN_DIR                          # noqa: E402
 
 BEFORE = "2ce25a5"       # the commit whose pw-facts.json is the hand-written declaration
+SUBJECT = "e11f8fe"      # the repository the proposals were made about; some of those places have since been removed
 JUDGED = {               # by hand: does the place state the fact?
     ("default dependence class", "docs/symbols.md::9. 置いている仮定"): (True, "says the default is pqd"),
     ("default threshold, in thousandths", "pw/check.py"): (True, "the usage line gives the default"),
@@ -58,7 +59,10 @@ def main():
     facts = json.loads(subprocess.run(["git", "show", f"{BEFORE}:pw-facts.json"], cwd=ROOT, capture_output=True, text=True, check=True).stdout)
     record = os.path.join(tempfile.mkdtemp(prefix="pw-membership-"), LOG)       # the project's record is only read
     shutil.copy(os.path.join(ROOT, LOG), record)
-    _, verdicts, runs = discover.confirm(ROOT, LEAN_DIR, facts, proposed(), args.model, args.budget, record)
+    repo = tempfile.mkdtemp(prefix="pw-membership-")
+    tar = subprocess.run(["git", "archive", SUBJECT], cwd=ROOT, capture_output=True, check=True).stdout
+    subprocess.run(["tar", "-x", "-C", repo], input=tar, check=True)
+    _, verdicts, runs = discover.confirm(repo, LEAN_DIR, facts, proposed(), args.model, args.budget, record)
     right = 0
     print(f"\n{'by hand':<8} {'reader':<8} place")
     for v in verdicts:

@@ -399,7 +399,7 @@ def confirm(repo, lean_dir, facts, proposals, model, budget, record):
         json.dump(merged, fh, ensure_ascii=False)
     kernel = Kernel(record, gate=LeanGate(lean_dir), actor="discover")
     kernel.sync_facts(os.path.join(work, FACTS))
-    decisions = {d["fact"]: d for d in kernel.recheck(repo)["decisions"] if "fact" in d}
+    decisions = {d["fact"]: d for d in kernel.recheck(repo)["decisions"]}
     args = argparse.Namespace(lean_dir=lean_dir, budget=budget)
     runs = read_blind(kernel, repo, args, [(decisions[name], place["at"]) for name, place in added], model, "proposed")
     actors = {r["actor"] for r in runs}
@@ -407,7 +407,7 @@ def confirm(repo, lean_dir, facts, proposals, model, budget, record):
     for e in kernel.events():
         if e.get("actor") in actors and e["type"] in ("reading", "decline"):
             said[(e["h"], e["place"])] = e
-    decisions = {d["fact"]: d for d in kernel.recheck(repo)["decisions"] if "fact" in d}
+    decisions = {d["fact"]: d for d in kernel.recheck(repo)["decisions"]}
     verdicts = []
     for name, place in added:
         d = decisions[name]

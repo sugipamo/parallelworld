@@ -1,7 +1,7 @@
-"""Lean gate: the only way a deterministic relation enters the kernel.
+"""Lean gate: the only way it enters the record that a proposition holds, or does not.
 
-The gate writes the theorem statement itself from registered proposition
-texts; the caller supplies only tactic text. Checking takes two Lean runs:
+The propositions are equations between the values read off a fact's places. The gate writes
+the theorem statement itself from the registered text; the caller supplies only tactic text. Checking takes two Lean runs:
 
   1. compile the module holding the statement and the caller's tactics;
   2. in a second file containing no caller text, import it and `#print axioms`.
@@ -34,14 +34,6 @@ _FORBIDDEN = re.compile(
 _GOALS = {
     "holds": "S0",
     "not": "_root_.Not S0",
-    "iff": "_root_.Iff S0 S1",
-    "implies": "S0 → S1",
-    "contradiction": "_root_.Not (_root_.And S0 S1)",
-    "pred_iff": "∀ x, _root_.Iff (S0 x) (S1 x)",
-    "pred_implies": "∀ x, S0 x → S1 x",
-    "obj_eq": "_root_.Eq S0 S1",
-    "pred_rejects": "_root_.Not (S0 S1)",
-    "pred_disjoint": "∀ x, _root_.Not (_root_.And (S0 x) (S1 x))",
 }
 
 
@@ -157,30 +149,6 @@ class LeanGate:
         except subprocess.TimeoutExpired:
             return {"ok": False, "reason": "timeout"}
         return {"ok": r.returncode == 0, "reason": (r.stdout + r.stderr)[-800:]}
-
-    def evaluate(self, typ, obj, args_list):
-        """Values of the Lean object applied to each entry of `args_list`, as Lean prints them."""
-        try:
-            for t in (typ, obj, *args_list):
-                self.screen(t)
-            lake = self._lake()
-        except GateError as e:
-            return {"ok": False, "reason": str(e)}
-        src = f"import Gamma\n\ndef pw_obj : ({typ}) := ({obj})\n\n" + "".join(f"#eval IO.println (toString (pw_obj {a}))\n" for a in args_list)
-        work = os.path.join(self.lean_dir, "PWCheck")
-        os.makedirs(work, exist_ok=True)
-        path = os.path.join(work, "PWEval_" + hashlib.sha256(src.encode()).hexdigest()[:16] + ".lean")
-        with open(path, "w") as fh:
-            fh.write(src)
-        try:
-            r = subprocess.run([lake, "env", "lean", path], cwd=self.lean_dir, capture_output=True,
-                               text=True, timeout=self.timeout)
-        except subprocess.TimeoutExpired:
-            return {"ok": False, "reason": "timeout"}
-        values = r.stdout.strip().splitlines()
-        if r.returncode != 0 or len(values) != len(args_list):
-            return {"ok": False, "reason": (r.stdout + r.stderr)[-800:]}
-        return {"ok": True, "values": [v.strip() for v in values]}
 
     @staticmethod
     def judge(returncode, output, gamma):

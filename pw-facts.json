@@ -1,28 +1,10 @@
 [
  {
-  "name": "default dependence class",
-  "type": "String",
-  "gloss": "the name of the copula class used by default for evidence on one target",
-  "places": [
-   "docs/spec.md::3. モデル",
-   "docs/spec.md::2. v0.1 からの変更",
-   "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則",
-   {
-    "at": "pw/kernel.py::Kernel.__init__",
-    "read": {
-     "find": "dependence=\"(\\w+)\"",
-     "as": "string"
-    }
-   },
-   "docs/symbols.md::9. 置いている仮定"
-  ]
- },
- {
   "name": "axioms a proof may depend on",
   "type": "List String",
   "gloss": "the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
   "places": [
-   "docs/spec.md::5. Lean Gate",
+   "docs/spec.md::3. Lean Gate",
    {
     "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
     "read": {
@@ -34,74 +16,17 @@
   ]
  },
  {
-  "name": "largest component inference solves",
-  "type": "Nat",
-  "gloss": "the largest number of atoms in a connected component that inference still solves",
-  "places": [
-   "docs/spec.md::7. 未解決",
-   {
-    "at": "pw/kernel.py::Kernel.__init__",
-    "read": {
-     "find": "max_atoms=(\\d+)",
-     "as": "nat"
-    }
-   }
-  ]
- },
- {
   "name": "names of the MCP tools",
   "type": "List String",
-  "gloss": "the names of the MCP tools offered to workers, sorted alphabetically",
+  "gloss": "the names of the MCP tools offered to a reader, sorted alphabetically",
   "places": [
-   "docs/spec.md::4. 操作（MCPツール）",
+   "docs/spec.md::4. 読み手の道具（MCP）",
    {
     "at": "pw/mcp_server.py",
     "read": {
      "find_all": "@mcp\\.tool\\(\\)\\ndef (\\w+)\\(",
      "as": "string",
      "sort": true
-    }
-   }
-  ]
- },
- {
-  "name": "default threshold, in thousandths",
-  "type": "Nat",
-  "gloss": "the lower bound a decision must reach by default",
-  "places": [
-   {
-    "at": "pw/orchestrator.py::main",
-    "read": {
-     "find": "\"--threshold\", type=float, default=([0-9.]+)",
-     "as": "permille"
-    }
-   },
-   {
-    "at": "pw/check.py::main",
-    "read": {
-     "find": "\"--threshold\", type=float, default=([0-9.]+)",
-     "as": "permille"
-    }
-   },
-   {
-    "at": "pw/maintain.py::main",
-    "read": {
-     "find": "\"--threshold\", type=float, default=([0-9.]+)",
-     "as": "permille"
-    }
-   },
-   {
-    "at": "pw/check.py",
-    "read": {
-     "as": "permille",
-     "find": "\\[--threshold ([0-9.]+)\\]"
-    }
-   },
-   {
-    "at": "pw/maintain.py",
-    "read": {
-     "as": "permille",
-     "find": "\\[--threshold ([0-9.]+)\\]"
     }
    }
   ]
@@ -135,54 +60,6 @@
   ]
  },
  {
-  "name": "default worker model",
-  "type": "String",
-  "gloss": "the model ID of the Claude model that the orchestrator launches as a worker by default",
-  "places": [
-   {
-    "at": "pw/orchestrator.py::main",
-    "read": {
-     "as": "string",
-     "find": "\"--model\", default=\"([\\w.-]+)\""
-    }
-   },
-   "README.md::動かす",
-   "docs/spec.md::1. 構成"
-  ]
- },
- {
-  "name": "range of random test inputs",
-  "type": "Nat",
-  "gloss": "the default upper bound of the range from which the kernel draws random inputs for each argument when checking a model against code",
-  "places": [
-   {
-    "at": "pw/kernel.py::binding",
-    "read": {
-     "as": "nat",
-     "find": "bound=(\\d+)"
-    }
-   },
-   "docs/spec.md::7. 未解決"
-  ]
- },
- {
-  "name": "dependence classes",
-  "type": "List String",
-  "gloss": "the names of the copula classes that can be chosen for the dependence of evidence on one target, sorted alphabetically",
-  "places": [
-   {
-    "at": "pw/credal.py::COPULAS",
-    "read": {
-     "as": "string",
-     "find_all": "\"(\\w+)\": lambda",
-     "sort": true
-    }
-   },
-   "docs/spec.md::2. v0.1 からの変更",
-   "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則"
-  ]
- },
- {
   "name": "conditions a rule may ask for",
   "type": "List String",
   "gloss": "the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
@@ -196,30 +73,6 @@
     }
    },
    "docs/spec.md::読みが成り立つ条件"
-  ]
- },
- {
-  "name": "proof relations",
-  "type": "List String",
-  "gloss": "the names of the relations a proof submitted with `prove` may establish, sorted alphabetically",
-  "places": [
-   {
-    "at": "pw/lindenbaum.py::RELATIONS",
-    "read": {
-     "as": "string",
-     "find_all": "\"(\\w+)\": \"",
-     "sort": true
-    }
-   },
-   {
-    "at": "pw/mcp_server.py::prove",
-    "read": {
-     "as": "string",
-     "find_all": "(\\w+) \\[",
-     "sort": true
-    }
-   },
-   "docs/spec.md::4. 操作（MCPツール）"
   ]
  },
  {

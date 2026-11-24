@@ -3,8 +3,10 @@
     python experiments/discovery/run.py [--model claude-opus-5-5] [--levels A B C] [--budget 5]
 
 The known answers are the places of the hand-written declaration: pw-facts.json as it was
-before any search was run (commit 2ce25a5; 6 facts, 16 places). A scratch copy of the repository
-is made with every file that names those places taken out, and `pw.discover` is run on it:
+before any search was run (commit 2ce25a5; 6 facts, 16 places). The repository that is searched
+is the one of commit e11f8fe, as it was when this was measured: much of what those places are
+in has since been removed. A scratch copy of it is made with every file that names those places
+taken out, and `pw.discover` (the current one) is run on it:
 
   A  one place of each fact is hidden; the fact and its other places are given
   B  only the fact (name, type, one-sentence description) is given; all its places are hidden
@@ -42,16 +44,24 @@ from pw.kernel import LOG, Kernel, locate                  # noqa: E402
 from pw.lean_gate import LEAN_DIR, LeanGate                # noqa: E402
 
 BEFORE = "2ce25a5"       # the commit whose pw-facts.json is the hand-written declaration
+SUBJECT = "e11f8fe"      # the repository as it is searched: its state when this was measured. The
+#                          places of that declaration are in code that has since been removed.
 
 LEAKS = ["pw-facts.json", "pw-log.jsonl", "pw-calibration.json", "docs/natural-language.md",
          "experiments/facts", "experiments/prose", "experiments/calibration", "experiments/discovery"]
 
 
-def scratch():
-    """The committed repository without anything that says which places are declared."""
+def subject():
+    """The repository as it was when this was measured."""
     work = tempfile.mkdtemp(prefix="pw-discovery-")
-    tar = subprocess.run(["git", "archive", "HEAD"], cwd=ROOT, capture_output=True, check=True).stdout
+    tar = subprocess.run(["git", "archive", SUBJECT], cwd=ROOT, capture_output=True, check=True).stdout
     subprocess.run(["tar", "-x", "-C", work], input=tar, check=True)
+    return work
+
+
+def scratch():
+    """That repository without anything that says which places are declared."""
+    work = subject()
     for leak in LEAKS:
         path = os.path.join(work, leak)
         shutil.rmtree(path) if os.path.isdir(path) else os.path.exists(path) and os.remove(path)
@@ -156,7 +166,7 @@ def main():
         fh.write(declared)
     kernel = Kernel(record, gate=LeanGate(LEAN_DIR), actor="discovery")
     kernel.sync_facts(os.path.join(work, FACTS))
-    values = {d["fact"]: norm(json.loads(d["places"][0]["reads as"])) for d in kernel.recheck(ROOT)["decisions"] if "fact" in d}
+    values = {d["fact"]: norm(json.loads(d["places"][0]["reads as"])) for d in kernel.recheck(subject())["decisions"]}
     repo = scratch()
     print(f"scratch copy: {repo}", flush=True)
     out = os.path.join(ROOT, "experiments/discovery/results")
