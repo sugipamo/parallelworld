@@ -119,7 +119,9 @@ def main():
     report = kernel.recheck(repo)
 
     def needs_agent(d, u):
-        return not next(p for p in kernel.state().facts[d["h"]]["places"] if p["at"] == u["at"])["reader"] and "disagree" not in u["why"]
+        # (a place that cannot be found as declared is not for a reader: the declaration has to be repaired)
+        return (not next(p for p in kernel.state().facts[d["h"]]["places"] if p["at"] == u["at"])["reader"]
+                and "disagree" not in u["why"] and not u.get("broken"))
 
     def unchecked(report):
         """Computed places no blind reader has looked at: is the pattern reading the thing asked?"""

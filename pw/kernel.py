@@ -298,6 +298,25 @@ def locate(subject, cwd):
     return raw if found is None else found.encode("utf-8")
 
 
+def unreadable(subject, cwd):
+    """Why a declared place cannot be found as named, or None. `locate` falls back to the whole
+    file when a part is not there; for a place someone declared, that fallback would quietly
+    read something else."""
+    path, _, part = subject.partition("::")
+    full = os.path.join(cwd, path)
+    if not os.path.isfile(full):
+        return f"{path} is no longer there"
+    if not part or not path.endswith((".md", ".markdown", ".json", ".py")):
+        return None
+    try:
+        with open(full, encoding="utf-8") as fh:
+            text = fh.read()
+        found = (_md_section if path.endswith((".md", ".markdown")) else _json_part if path.endswith(".json") else _py_part)(text, part)
+    except (UnicodeDecodeError, ValueError, SyntaxError, KeyError, IndexError, TypeError):
+        found = None
+    return None if found is not None else f"{path} no longer has a part named {part!r}"
+
+
 def context(subject, cwd, small=300, lines=8):
     """What surrounds a place that is too small to tell what it belongs to; None otherwise.
 
@@ -647,6 +666,10 @@ class Kernel:
             at, now = decl["at"], subject_id(decl["at"], cwd)
             text, asked = asked_at[at]
             about = {"at": at, "question": text, **({"some": True} if decl.get("some") else {})}
+            lost = unreadable(at, cwd)
+            if lost:                                 # a declared place that is not where it was declared: said, not worked around
+                unread.append({**about, "why": lost, "broken": True})
+                continue
             rejected = {e["target"] for e in st.confirmations.values() if e["outcome"] == "rejected"}
             ever = [m for p, m in fact["readings"] if p == at and m not in rejected]
             seen = [m for m in ever if view(m, at)]
@@ -662,8 +685,8 @@ class Kernel:
                     was = have
                     have = [self.read_place(h, at, cwd=cwd)["m"]]
                     reread = reread or (bool(seen) and have != was[-1:])
-                except KernelError as e:
-                    unread.append({**about, "why": str(e)})
+                except KernelError as e:             # the pattern no longer finds what it was declared to find
+                    unread.append({**about, "why": str(e), "broken": True})
                     continue
             elif not have:
                 no = [d for d in fact["declined"] if d["place"] == at and d["subject"] == now and d["asked"] == asked]
@@ -861,7 +884,9 @@ class Kernel:
           re-established  a computed place changed and they still agree
           violated        Lean has verified that the places do not state the same value, or that a
                           place stating some entries of a list has one the whole list does not
-          stale           a place has to be read (again) before anything can be said
+          stale           a place has to be read (again) before anything can be said, or can no
+                          longer be read as declared (its file or part is gone, its pattern does
+                          not find what it should): the declaration has to be repaired
           disputed        readers of one place disagree about what it says
           uncovered       the places are read, and Lean could settle neither that they agree nor that they differ
           contested       the record holds proofs both that they agree and that they differ: one of

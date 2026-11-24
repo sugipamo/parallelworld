@@ -59,6 +59,8 @@ def show(report, unconfirmed="fail"):
             print("       a place lists something the others do not have (verified by Lean); which one is right is for a person to say")
         elif d["state"] == "violated":
             print("       the places do not say the same thing (verified by Lean); which one is right is for a person to say")
+        elif d["state"] == "stale" and any(u.get("broken") for u in d["unread"]):
+            print("       a declared place cannot be read as declared any more: python -m pw.discover (it looks for where the statement went)")
         elif d["state"] == "stale":
             print("       read the place(s) again: python -m pw.maintain")
         elif d["state"] == "disputed":

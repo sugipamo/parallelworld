@@ -269,3 +269,58 @@ def test_a_search_that_failed_does_not_look_like_one_that_found_nothing(tmp_path
     assert [p["place"]["at"] for p in proposals] == ["other.py::LIMIT"] and run["controls"] == {"limit": {"at": "app.py::LIMIT", "found": True}}
     agent([{"started": True}, place("other.py::LIMIT"), {"finished": "limit"}], ok)
     assert discover.further(repo, "m", facts, 1.0, hide={"limit": "app.py::LIMIT"})[1]["controls"]["limit"]["found"] is False
+
+
+def test_a_declared_place_that_cannot_be_read_is_said_and_can_be_repaired(tmp_path, monkeypatch):
+    import json
+    from pw import discover
+    from pw.kernel import pattern, unreadable
+    (tmp_path / "guide.md").write_text("## Limits\n\nAt most 14 atoms are solved.\n")
+    (tmp_path / "app.py").write_text("LIMIT = 14\n")
+    repo = str(tmp_path)
+    facts = [{"name": "limit", "type": "Nat", "places": ["guide.md::Limits", {"at": "app.py::LIMIT", "read": {"find": "LIMIT = (\\d+)", "as": "nat"}}]}]
+    (tmp_path / "pw-facts.json").write_text(json.dumps(facts))
+    k = Kernel(str(tmp_path / "pw-log.jsonl"), gate=FakeGate())
+    h, = k.sync_facts(str(tmp_path / "pw-facts.json"))
+    k.read_place(h, "guide.md::Limits", "14", cwd=repo, quote="At most 14 atoms are solved.")
+    assert k.recheck(repo)["decisions"][0]["state"] == "current" and unreadable("guide.md::Limits", repo) is None
+
+    # the heading is renamed, the constant is renamed: neither place is where it was declared
+    (tmp_path / "guide.md").write_text("## Bounds\n\nAt most 14 atoms are solved.\n")
+    (tmp_path / "app.py").write_text("MAX_ATOMS = 14\n")
+    r = k.recheck(repo)["decisions"][0]
+    assert r["state"] == "stale" and [(u["at"], u["broken"]) for u in r["unread"]] == [("guide.md::Limits", True), ("app.py::LIMIT", True)]
+    assert "no longer has a part named 'Limits'" in r["unread"][0]["why"]            # not quietly read off the whole file instead
+    from pw.lean_gate import LEAN_DIR
+    broken = discover.broken_places(repo, LEAN_DIR, facts)                           # (nothing is put to Lean while a place is unread)
+    assert [(n, at) for n, at, _ in broken] == [("limit", "guide.md::Limits"), ("limit", "app.py::LIMIT")]
+
+    # what the agent would report, and what becomes of the declaration
+    proposals = [
+        {"replace": {"fact": "limit", "old": "guide.md::Limits"},
+         "place": {**discover.screen(repo, "Nat", "guide.md::Bounds", 14, "At most 14 atoms are solved."), "some": False}},
+        {"replace": {"fact": "limit", "old": "app.py::LIMIT"},
+         "place": {**discover.screen(repo, "Nat", "app.py::MAX_ATOMS", 14, "MAX_ATOMS = 14", find=r"MAX_ATOMS = (\d+)"), "some": False}},
+        {"gone": {"fact": "limit", "old": "guide.md::Limits", "why": "x"}}]
+    merged, added = discover.merge(facts, proposals)
+    assert merged[0]["places"] == ["guide.md::Bounds", {"at": "app.py::MAX_ATOMS", "read": {"find": r"MAX_ATOMS = (\d+)", "as": "nat"}}]
+    assert [at["at"] for _, at in added] == ["guide.md::Bounds", "app.py::MAX_ATOMS"] and facts[0]["places"][0] == "guide.md::Limits"
+    (tmp_path / "pw-facts.json").write_text(json.dumps(merged))
+    k.sync_facts(str(tmp_path / "pw-facts.json"))
+    r = k.recheck(repo)["decisions"][0]
+    assert r["state"] == "stale" and [(u["at"], u.get("broken")) for u in r["unread"]] == [("guide.md::Bounds", None)]   # found again; to be read
+
+    # the agent is told which places cannot be read, and only about the facts concerned
+    seen = {}
+    def run(cmd, **kw):
+        seen["prompt"] = cmd[cmd.index("-p") + 1]
+        with open(cmd[cmd.index("--mcp-config") + 1]) as fh:
+            env = json.load(fh)["mcpServers"]["find"]["env"]
+        with open(env["PW_DISCOVER_OUT"], "w") as fh:
+            fh.writelines(json.dumps(x) + "\n" for x in [{"started": True}, proposals[0], {"finished": "limit"}])
+        return type("R", (), {"stdout": json.dumps({"num_turns": 1, "total_cost_usd": 0, "result": "", "subtype": "success"}), "stderr": ""})()
+    monkeypatch.setattr(discover.subprocess, "run", run)
+    other = {"name": "other", "type": "Nat", "places": ["guide.md::Bounds"]}
+    got, info = discover.repair(repo, "m", facts + [other], broken, 1.0)
+    assert got == [proposals[0]] and info["problems"] == []
+    assert "CANNOT BE READ: guide.md no longer has a part named 'Limits'" in seen["prompt"] and '"other"' not in seen["prompt"]

@@ -1,18 +1,23 @@
-"""Find where the project states the same thing more than once.
+"""Look after the places of the facts a project has declared.
 
-    python -m pw.discover [--repo DIR] [--model claude-opus-5-5] [--budget 5] [--apply]
+    python -m pw.discover [--repo DIR] [--model claude-opus-5-5] [--budget 5] [--apply] [--new]
 
-`pw.check` only holds together the places someone listed in pw-facts.json. A place nobody listed
-can drift without a word. This asks an agent to look for what the list is missing:
+The scope is what has been declared in pw-facts.json. For those facts an agent, which can read
+files and nothing else, is asked two things:
 
-  further places   for each declared fact, other places in the repository that state it
-  new facts        things stated in two or more places that are not declared at all
+  repair    a declared place that can no longer be read as declared (its file or part was
+            removed or renamed, its pattern does not find what it should): where is that
+            statement now?
+  further   which other places of the repository state the fact, that the declaration misses?
 
-The agent can read files and nothing else. It reports through tools, and each report is
-checked against the files before it is kept: the place has to exist, the quote has to be in it
-word for word, the value has to be in the quote, and a pattern has to compute the value. What
-passes is a proposal, not a reading: the agent saw every place at once, so nothing it says about
-what a place reads as is recorded.
+What nobody declared is not looked at. Only with --new is the agent also asked to propose things
+stated in several places that are not declared yet: bringing something into scope is a step of
+its own, taken on request.
+
+The agent reports through tools, and each report is checked against the files before it is
+kept: the place has to exist, the quote has to be in it word for word, the value has to be in
+the quote, and a pattern has to compute the value. What passes is a proposal, not a reading:
+the agent saw every place at once, so nothing it says about what a place reads as is recorded.
 
 Is a proposed place about the same thing? The searcher is the wrong one to ask: it has seen the
 other places, and a number that happens to be the same looks like the same thing. So every
@@ -20,6 +25,8 @@ proposed place is shown, alone, to a blind reader with the fact's one-sentence d
 place is kept if that reader reads a value off it (for a place with a pattern: the value the
 pattern computes). A place the reader says does not state the thing is dropped, with the
 reader's reason. A place whose reading differs from the other places is kept: that is a finding.
+The agent may say a declared place is gone for good; taking it out of the declaration is left
+to a person.
 
 A search that failed must not look like a search that found nothing:
   - the agent has to say, per fact, that it finished searching; a session that does not is
@@ -113,6 +120,21 @@ place that is already listed. When you have finished searching for a thing, call
 `finished(fact, searched)` for it, whether or not you found anything: a thing you do not call
 it for counts as not searched. Then reply with one line per thing: how you searched and what
 you found.
+
+Declared:
+"""
+
+REPAIR = """
+Task. The project declared the things below and where each is stated. Some of those places can
+no longer be read as declared: the file or the part was removed or renamed, or the pattern does
+not find exactly what it should any more. They are marked CANNOT BE READ. For each of them, find
+where that same statement is now and report it with `replace_place(fact, old, at, value, quote, ...)`:
+`old` is the place as it is listed, `at` where the statement is now (the same place, if only
+the pattern has to change). It has to be the statement that was declared, moved or reworded,
+not another one that happens to give the same value. If the project no longer makes that
+statement anywhere, say so with `gone(fact, old, why)`; do not put something else in its
+place. When you are done with a thing, call `finished(fact, searched)`. Then reply with one
+line per place.
 
 Declared:
 """
@@ -289,6 +311,40 @@ def serve():
         return {"kept": at}
 
     @mcp.tool()
+    def replace_place(fact: str, old: str, at: str, value: str | int | list, quote: str, find: str = "", find_all: str = "",
+                      kind: str = "", within: str = "", rewrite: list[str] | None = None) -> dict:
+        """Report where a declared place that can no longer be read is now. `old` is the place
+        exactly as listed; `at`, `value`, `quote` and the pattern are as for `add_place`. `at`
+        may equal `old` when only the pattern has to change."""
+        if fact not in facts:
+            return {"error": f"no declared fact is named {fact!r}; the names are {sorted(facts)}"}
+        listed = {(p if isinstance(p, str) else p["at"]): p for p in facts[fact]["places"]}
+        if old not in listed:
+            return {"error": f"{old} is not listed for this fact; its places are {sorted(listed)}"}
+        if at != old and at in listed:
+            return {"error": f"{at} is already listed for this fact"}
+        some = isinstance(listed[old], dict) and bool(listed[old].get("some"))
+        try:
+            place = {**screen(repo, facts[fact]["type"], at, value, quote, find, find_all, kind, within, rewrite), "some": some}
+        except Refused as e:
+            return {"error": str(e)}
+        keep({"replace": {"fact": fact, "old": old}, "place": place})
+        return {"kept": f"{old} -> {at}"}
+
+    @mcp.tool()
+    def gone(fact: str, old: str, why: str) -> dict:
+        """Say that a declared place cannot be repaired because the project no longer makes that
+        statement there or anywhere it moved to. `why` says what happened to it."""
+        if fact not in facts:
+            return {"error": f"no declared fact is named {fact!r}; the names are {sorted(facts)}"}
+        if old not in [p if isinstance(p, str) else p["at"] for p in facts[fact]["places"]]:
+            return {"error": f"{old} is not listed for this fact"}
+        if not why.strip():
+            return {"error": "say what happened to the statement"}
+        keep({"gone": {"fact": fact, "old": old, "why": " ".join(why.split())[:400]}})
+        return {"noted": old}
+
+    @mcp.tool()
     def new_fact(name: str, type: str, gloss: str, places: list[dict]) -> dict:
         """Report a thing stated in two or more places that is not declared yet. Each place is
         {"at": ..., "value": ..., "quote": ...} plus, for code and configuration, "find" or
@@ -350,14 +406,15 @@ def session(repo, model, prompt, facts, budget, expect):
         json.dump({"mcpServers": {"find": {"command": sys.executable, "args": ["-P", "-m", "pw.discover", "--serve"], "env": {     # -P: not the pw of the repository being searched
             "PW_WORKDIR": repo, "PW_DISCOVER_OUT": out, "PW_DISCOVER_FACTS": known, "PYTHONPATH": ROOT}}}}, fh)
     r = subprocess.run(["claude", "-p", prompt, "--model", model, "--tools", "Read,Grep,Glob", "--mcp-config", cfg, "--strict-mcp-config",
-                        "--allowedTools", "Read,Grep,Glob,mcp__find__add_place,mcp__find__new_fact,mcp__find__finished",
+                        "--allowedTools", "Read,Grep,Glob," + ",".join(
+                            f"mcp__find__{t}" for t in ("add_place", "new_fact", "replace_place", "gone", "finished")),
                         "--output-format", "json", "--max-budget-usd", str(budget)],
                        cwd=repo, capture_output=True, text=True)
     lines = []
     if os.path.exists(out):
         with open(out, encoding="utf-8") as fh:
             lines = [json.loads(line) for line in fh]
-    proposals = [x for x in lines if "fact" in x or "new" in x]
+    proposals = [x for x in lines if "fact" in x or "new" in x or "replace" in x or "gone" in x]
     done = {x["finished"] for x in lines if "finished" in x}
     run = {"model": model, "problems": []}
     if not any("started" in x for x in lines):
@@ -403,6 +460,25 @@ def further(repo, model, facts, budget, hide=None):
     back = lambda p: "fact" in p and p["fact"] in hide and same_place(hide[p["fact"]], p["place"]["at"], repo)
     run["controls"] = {name: {"at": at, "found": any(back(p) and p["fact"] == name for p in proposals)} for name, at in hide.items()}
     return [p for p in proposals if not back(p)], run
+
+
+def repair(repo, model, facts, broken, budget):
+    """Look for where declared places that can no longer be read have gone.
+
+    `broken` is [(fact name, place, why it cannot be read)]. Only the facts concerned are shown.
+    """
+    why = {(name, at): reason for name, at, reason in broken}
+    shown = [f for f in facts if any(name == f["name"] for name, _, _ in broken)]
+    text = ""
+    for f in shown:
+        text += f'\n- "{f["name"]}" (type {f["type"]}): {f.get("gloss") or f["name"]}\n'
+        for p in f["places"]:
+            at = _at(p)
+            read = f'   pattern: {json.dumps(p["read"], ensure_ascii=False)}' if isinstance(p, dict) and p.get("read") else ""
+            part = "   (states only some entries)" if isinstance(p, dict) and p.get("some") else ""
+            mark = f'    CANNOT BE READ: {why[(f["name"], at)]}\n      listed as: {at}{read}{part}\n' if (f["name"], at) in why else f"    place: {at}{part}\n"
+            text += mark
+    return session(repo, model, HOW + REPAIR + text, shown, budget, [f["name"] for f in shown])
 
 
 def new(repo, model, facts, budget):
@@ -453,8 +529,9 @@ def confirm(repo, lean_dir, facts, proposals, model, budget, record):
                 "" if agree else f", but the pattern computes {computed[:80]}: the pattern is not reading what the place says"))
         verdicts.append(v)
     kept = {(v["fact"], v["at"]) for v in verdicts if v["kept"]}
+    name = lambda p: p["replace"]["fact"] if "replace" in p else p.get("fact")
     final, _ = merge(facts, [{**p, "places": [q for q in p["places"] if (p["new"]["name"], q["at"]) in kept]} if "new" in p else p
-                             for p in proposals if "new" in p or (p["fact"], p["place"]["at"]) in kept])
+                             for p in proposals if "new" in p or ("place" in p and (name(p), p["place"]["at"]) in kept)])
     declared = {f["name"] for f in facts}
     partial = lambda p: isinstance(p, dict) and p.get("some")
     for f in [f for f in final if f["name"] not in declared and (len(f["places"]) < 2 or all(partial(p) for p in f["places"]))]:
@@ -486,7 +563,16 @@ def merge(facts, proposals):
         added.append((f["name"], place))
 
     for p in proposals:
-        if "fact" in p:
+        if "gone" in p:
+            continue                               # taking a declared place away is for a person
+        if "replace" in p:
+            f, place = by_name[p["replace"]["fact"]], p["place"]
+            at = [q if isinstance(q, str) else q["at"] for q in f["places"]]
+            entry = {"at": place["at"], **({"read": place["read"]} if place["read"] else {}), **({"some": True} if place.get("some") else {})}
+            if p["replace"]["old"] in at and (place["at"] == p["replace"]["old"] or place["at"] not in at):
+                f["places"][at.index(p["replace"]["old"])] = entry if len(entry) > 1 else place["at"]
+                added.append((f["name"], place))
+        elif "fact" in p:
             put(by_name[p["fact"]], p["place"])
         elif p["new"]["name"] not in by_name:
             f = by_name[p["new"]["name"]] = {**p["new"], "places": []}
@@ -494,6 +580,21 @@ def merge(facts, proposals):
             for place in p["places"]:
                 put(f, place)
     return facts, added
+
+
+def broken_places(repo, lean_dir, facts):
+    """The declared places that can no longer be read as declared: [(fact name, place, why)].
+    Found by holding the facts against the files, on a copy of the record."""
+    from .lean_gate import LeanGate
+    work = tempfile.mkdtemp(prefix="pw-discover-")
+    record = os.path.join(work, LOG)
+    if os.path.exists(os.path.join(repo, LOG)):
+        shutil.copy(os.path.join(repo, LOG), record)
+    with open(os.path.join(work, FACTS), "w", encoding="utf-8") as fh:
+        json.dump(facts, fh, ensure_ascii=False)
+    kernel = Kernel(record, gate=LeanGate(lean_dir), actor="discover")
+    kernel.sync_facts(os.path.join(work, FACTS))
+    return [(d["fact"], u["at"], u["why"]) for d in kernel.recheck(repo)["decisions"] for u in d.get("unread", []) if u.get("broken")]
 
 
 def main():
@@ -504,7 +605,10 @@ def main():
     ap.add_argument("--confirm-model", default="claude-sonnet-5-5",
                     help="the model that is shown each proposed place alone; it should be a measured reader")
     ap.add_argument("--budget", type=float, default=5.0)
-    ap.add_argument("--only", choices=("further", "new"), help="look only for further places of declared facts, or only for new facts")
+    ap.add_argument("--new", action="store_true",
+                    help="also have the agent propose things that are not declared yet. Without this, only what is declared is looked after")
+    ap.add_argument("--only", choices=("repair", "further", "new"),
+                    help="do one thing only: repair declared places that cannot be read, look for further places of declared facts, or propose new facts")
     ap.add_argument("--no-controls", action="store_true", help="tell the agent every known place, hiding none as a control")
     ap.add_argument("--seed", type=int, help="which known places are hidden as controls")
     ap.add_argument("--apply", action="store_true", help="write the places a blind reader confirmed into pw-facts.json")
@@ -513,15 +617,35 @@ def main():
     if args.serve:
         return serve()
     from .lean_gate import LEAN_DIR
+    lean_dir = args.lean_dir or LEAN_DIR
     repo = os.path.abspath(args.repo)
     path = os.path.join(repo, FACTS)
     facts = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else []
+    want_new = args.new or args.only == "new"
+    if not facts and not want_new:
+        print(f"No facts are declared in {FACTS}, so there is nothing to look after. With --new the agent proposes some.")
+        return
+    broken = broken_places(repo, lean_dir, facts) if facts and args.only in (None, "repair") else []
+    for name, at, why in broken:
+        print(f"cannot be read as declared: {name} at {at}: {why[:160]}")
+    lost = {(name, at) for name, at, _ in broken}
     rng = random.Random(args.seed)
-    hide = {} if args.no_controls else {f["name"]: _at(rng.choice(f["places"])) for f in facts if len(f["places"]) > 1}
-    jobs = [j for j in (("further", lambda: further(repo, args.model, facts, args.budget, hide)) if facts else None,
-                        ("new", lambda: new(repo, args.model, facts, args.budget))) if j and args.only in (None, j[0])]
-    print(f"looking for {' and '.join('further places' if n == 'further' else 'new facts' for n, _ in jobs)} with {args.model}", flush=True)
-    with ThreadPoolExecutor(2) as pool:
+    hide = {}
+    if not args.no_controls:                                # a known place that can be read, left out as a control
+        for f in facts:
+            good = [_at(p) for p in f["places"] if (f["name"], _at(p)) not in lost]
+            if len(good) > 1:
+                hide[f["name"]] = rng.choice(good)
+    jobs = [j for j in (
+        ("repair", lambda: repair(repo, args.model, facts, broken, args.budget)) if broken else None,
+        ("further", lambda: further(repo, args.model, facts, args.budget, hide)) if facts and args.only in (None, "further") else None,
+        ("new", lambda: new(repo, args.model, facts, args.budget)) if want_new and args.only in (None, "new") else None) if j]
+    if not jobs:
+        print("nothing to do: every declared place can be read")
+        return
+    what = {"repair": "where unreadable places went", "further": "further places of declared facts", "new": "new facts"}
+    print(f"looking for {', '.join(what[n] for n, _ in jobs)} with {args.model}", flush=True)
+    with ThreadPoolExecutor(3) as pool:
         ran = list(pool.map(lambda j: j[1](), jobs))
     proposals = [p for ps, _ in ran for p in ps]
     failed = False
@@ -537,47 +661,59 @@ def main():
             for m in missed:
                 print(f"   {name}: the search did not come back with {m}: it may have missed other places of that fact too")
 
+    was = {(p["replace"]["fact"], p["place"]["at"]): p["replace"]["old"] for p in proposals if "replace" in p}
+    for p in proposals:
+        if "gone" in p:
+            g = p["gone"]
+            print(f"\nthe agent says the project no longer states {g['fact']} at {g['old']}: {g['why'][:300]}\n"
+                  f"   taking a declared place away is for a person: remove it from {FACTS} if that is so")
     _, added = merge(facts, proposals)
-    if not added:
+    verdicts, kept, unanswered, runs, final = [], [], [], [], facts
+    if added:
+        record = os.path.join(repo, LOG)
+        if not args.apply:                                  # look, but leave the project's record alone
+            record = os.path.join(tempfile.mkdtemp(prefix="pw-discover-"), LOG)
+            if os.path.exists(os.path.join(repo, LOG)):
+                shutil.copy(os.path.join(repo, LOG), record)
+        final, verdicts, runs = confirm(repo, lean_dir, facts, proposals, args.confirm_model, args.budget, record)
+        by = {(v["fact"], v["at"]): v for v in verdicts}
+        declared = {f["name"] for f in facts}
+        for name in dict.fromkeys(n for n, _ in added):
+            places = [p for n, p in added if n == name]
+            print(f"\n{'place(s) of' if name in declared else 'new fact'}: {name}")
+            for p in places:
+                v = by[(name, p["at"])]
+                mark = "keep" if v["kept"] else "drop" if v["answered"] else "????"
+                moved = f"  (instead of {was[(name, p['at'])]})" if (name, p["at"]) in was else ""
+                print(f"   {mark} {p['at']}{moved}  {'lists in part' if p.get('some') else 'says'} {json.dumps(p['value'], ensure_ascii=False)[:100]}"
+                      + ("  (pattern)" if p["read"] else ""))
+                print(f"        {p['quote'][:160]}")
+                print(f"        {v['why'][:300]}")
+            if name not in declared and not _agree([p for p in places if by[(name, p['at'])]['kept'] and not p.get("some")]):
+                print("   the kept places do not state the same value")
+        unanswered = [v for v in verdicts if not v["answered"]]
+        kept = [v for v in verdicts if v["kept"]]
+        failed = failed or bool(unanswered) or any(r.get("error") for r in runs)
+        print(f"\n{len(kept)} of {len(verdicts)} proposed place(s) kept, {len(verdicts) - len(kept) - len(unanswered)} dropped, "
+              f"{len(unanswered)} not checked")
+        if args.apply and kept:
+            with open(path, "w", encoding="utf-8") as fh:
+                json.dump(final, fh, ensure_ascii=False, indent=1)
+                fh.write("\n")
+            from .lean_gate import LeanGate
+            Kernel(record, gate=LeanGate(lean_dir), actor="discover").sync_facts(path)
+            print(f"written to {FACTS}; their blind readings are in the record. Then: python -m pw.maintain")
+        elif not args.apply:
+            print(f"nothing was written (--apply writes the kept places to {FACTS})")
+    else:
         print("\nnothing proposed" + (" (but the search was incomplete: this does not mean there is nothing)" if failed else ""))
-        sys.exit(1 if failed else 0)
-    record = os.path.join(repo, LOG)
-    if not args.apply:                                      # look, but leave the project's record alone
-        record = os.path.join(tempfile.mkdtemp(prefix="pw-discover-"), LOG)
-        if os.path.exists(os.path.join(repo, LOG)):
-            shutil.copy(os.path.join(repo, LOG), record)
-    final, verdicts, runs = confirm(repo, args.lean_dir or LEAN_DIR, facts, proposals, args.confirm_model, args.budget, record)
-    by = {(v["fact"], v["at"]): v for v in verdicts}
-    declared = {f["name"] for f in facts}
-    for name in dict.fromkeys(n for n, _ in added):
-        places = [p for n, p in added if n == name]
-        print(f"\n{'further place(s) of' if name in declared else 'new fact'}: {name}")
-        for p in places:
-            v = by[(name, p["at"])]
-            mark = "keep" if v["kept"] else "drop" if v["answered"] else "????"
-            print(f"   {mark} {p['at']}  {'lists in part' if p.get('some') else 'says'} {json.dumps(p['value'], ensure_ascii=False)[:100]}"
-                  + ("  (pattern)" if p["read"] else ""))
-            print(f"        {p['quote'][:160]}")
-            print(f"        {v['why'][:300]}")
-        if name not in declared and not _agree([p for p in places if by[(name, p['at'])]['kept'] and not p.get("some")]):
-            print("   the kept places do not state the same value")
-    unanswered = [v for v in verdicts if not v["answered"]]
-    kept = [v for v in verdicts if v["kept"]]
-    failed = failed or bool(unanswered) or any(r.get("error") for r in runs)
-    print(f"\n{len(kept)} of {len(verdicts)} proposed place(s) kept, {len(verdicts) - len(kept) - len(unanswered)} dropped, "
-          f"{len(unanswered)} not checked")
-    if args.apply and kept:
-        with open(path, "w", encoding="utf-8") as fh:
-            json.dump(final, fh, ensure_ascii=False, indent=1)
-            fh.write("\n")
-        from .lean_gate import LeanGate
-        Kernel(record, gate=LeanGate(args.lean_dir or LEAN_DIR), actor="discover").sync_facts(path)
-        print(f"written to {FACTS}; their blind readings are in the record. Then: python -m pw.maintain")
-    elif not args.apply:
-        print(f"nothing was written (--apply writes the kept places to {FACTS})")
+    repaired = {(v["fact"], was[(v["fact"], v["at"])]) for v in kept if (v["fact"], v["at"]) in was}
+    still = [(name, at) for name, at, _ in broken if (name, at) not in repaired]
+    for name, at in still:
+        print(f"still cannot be read as declared: {name} at {at}")
     if failed:
         print("part of this run failed (marked INCOMPLETE or ???? above): that is not a finding, run it again")
-    sys.exit(1 if failed else 0)
+    sys.exit(1 if failed or still else 0)
 
 
 if __name__ == "__main__":
