@@ -1,0 +1,81 @@
+WARN current         H:40ca2a8373 fact: package version
+       .bumpversion.cfg reads as "1.2.4"   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5, claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       src/dotenv/version.py::__version__ reads as "1.2.4"   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5, claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       the places agree, but a reading does not stand by the rules (pw-rules.json):
+       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)
+WARN current         H:921aef6c22 fact: supported CPython minor versions
+       pyproject.toml reads as ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5, claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       tox.ini reads as ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5, claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       the places agree, but a reading does not stand by the rules (pw-rules.json):
+       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)
+WARN current         H:a92d76a7e7 fact: actions/checkout pin
+       .github/workflows/test.yml reads as "3d3c42e5aac5ba805825da76410c181273ba90b1"   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5, claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       .github/workflows/release.yml reads as "3d3c42e5aac5ba805825da76410c181273ba90b1"   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5, claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       the places agree, but a reading does not stand by the rules (pw-rules.json):
+       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)
+WARN current         H:45da051e03 fact: IPython magic flags
+       src/dotenv/ipython.py reads as ["-o", "-v"]   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5, claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       README.md::Load .env files in IPython reads as ["-o", "-v"]   (does not stand)
+          confirmed by a person: no, blind: no, words occur in the place: yes, agrees with a computed place: yes, agrees with another place read blind: no, read the same by a second model: no
+          read blind by claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       the places agree, but a reading does not stand by the rules (pw-rules.json):
+       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)
+WARN current         H:5af224f855 fact: load_dotenv override default
+       src/dotenv/main.py::load_dotenv reads as "False"   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5, claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       README.md::Getting Started reads as "False"   (does not stand)
+          confirmed by a person: no, blind: no, words occur in the place: yes, agrees with a computed place: yes, agrees with another place read blind: no, read the same by a second model: no
+          read blind by claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       the places agree, but a reading does not stand by the rules (pw-rules.json):
+       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)
+WARN current         H:69c25f87f9 fact: disable env var name
+       src/dotenv/main.py reads as "PYTHON_DOTENV_DISABLED"   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5, claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       README.md::Disable load_dotenv reads as "PYTHON_DOTENV_DISABLED"   (does not stand)
+          confirmed by a person: no, blind: no, words occur in the place: yes, agrees with a computed place: yes, agrees with another place read blind: no, read the same by a second model: no
+          read blind by claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       the places agree, but a reading does not stand by the rules (pw-rules.json):
+       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)
+WARN current         H:68b3a1d41e fact: minimum Python version
+       pyproject.toml reads as "3.10"   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5, claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       .github/workflows/test.yml reads as "3.10"   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5, claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       the places agree, but a reading does not stand by the rules (pw-rules.json):
+       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)
+WARN current         H:a73de5fff0 fact: CLI subcommands
+       src/dotenv/cli.py reads as ["get", "list", "run", "set", "unset"]   (does not stand)
+          confirmed by a person: no, blind: no, words occur in the place: yes, agrees with a computed place: no, agrees with another place read blind: no, read the same by a second model: no
+          read blind by claude-opus-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       README.md::Command-line Interface lists (in part) ["list", "run", "set"]   (does not stand)
+          confirmed by a person: no, blind: no, words occur in the place: yes, read the same by a second model: no, contained in a computed place: no
+          read blind by claude-opus-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       the places agree, but a reading does not stand by the rules (pw-rules.json):
+       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)
+WARN current         H:88443bff16 fact: list formats
+       src/dotenv/cli.py reads as ["export", "json", "shell", "simple"]   (does not stand)
+          confirmed by a person: no, blind: no, words occur in the place: yes, agrees with a computed place: no, agrees with another place read blind: no, read the same by a second model: no
+          read blind by claude-opus-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       README.md::Command-line Interface lists (in part) ["json"]   (does not stand)
+          confirmed by a person: no, blind: no, words occur in the place: yes, read the same by a second model: no, contained in a computed place: no
+          read blind by claude-opus-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       the places agree, but a reading does not stand by the rules (pw-rules.json):
+       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)

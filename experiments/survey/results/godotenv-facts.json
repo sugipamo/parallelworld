@@ -1,0 +1,103 @@
+[
+ {
+  "name": "actions/checkout version",
+  "type": "String",
+  "gloss": "The major version tag of actions/checkout used by the GitHub workflows, e.g. \"v6\".",
+  "places": [
+   {
+    "at": ".github/workflows/ci.yml",
+    "read": {
+     "as": "string",
+     "find": "actions/checkout@(v\\d+)"
+    }
+   },
+   {
+    "at": ".github/workflows/release.yml",
+    "read": {
+     "as": "string",
+     "find": "actions/checkout@(v\\d+)"
+    }
+   },
+   {
+    "at": ".github/workflows/codeql-analysis.yml",
+    "read": {
+     "as": "string",
+     "find": "actions/checkout@(v\\d+)"
+    }
+   }
+  ]
+ },
+ {
+  "name": "godotenv command flags",
+  "type": "List String",
+  "gloss": "The single-letter command-line flags accepted by the godotenv command (without the leading dash), sorted alphabetically.",
+  "places": [
+   {
+    "at": "cmd/godotenv/cmd.go",
+    "read": {
+     "as": "string",
+     "find_all": "flag\\.\\w+Var\\(&\\w+, \"(\\w+)\"",
+     "sort": true
+    }
+   },
+   {
+    "at": "README.md::Command Mode",
+    "some": true
+   }
+  ]
+ },
+ {
+  "name": "default env filename",
+  "type": "String",
+  "gloss": "The filename loaded when Load/Overload/Read are called without arguments.",
+  "places": [
+   {
+    "at": "godotenv.go",
+    "read": {
+     "as": "string",
+     "find": "return \\[\\]string\\{\"([^\"]+)\"\\}"
+    }
+   },
+   "README.md::Usage",
+   "README.md::Command Mode"
+  ]
+ },
+ {
+  "name": "exported functions",
+  "type": "List String",
+  "gloss": "the names of the exported functions of the godotenv package, sorted alphabetically",
+  "places": [
+   {
+    "at": "godotenv.go",
+    "read": {
+     "find_all": "^func ([A-Z]\\w*)\\(",
+     "as": "string",
+     "sort": true
+    }
+   },
+   {
+    "at": "README.md::Usage",
+    "some": true
+   },
+   {
+    "at": "README.md::Writing Env Files",
+    "some": true
+   }
+  ]
+ },
+ {
+  "name": "module path",
+  "type": "String",
+  "gloss": "the Go module path of the library",
+  "places": [
+   {
+    "at": "go.mod",
+    "read": {
+     "find": "^module (\\S+)",
+     "as": "string"
+    }
+   },
+   "README.md::Installation"
+  ]
+ }
+]

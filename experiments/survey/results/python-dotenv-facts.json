@@ -1,0 +1,158 @@
+[
+ {
+  "name": "package version",
+  "type": "String",
+  "gloss": "The current released version of python-dotenv, as a dotted version string.",
+  "places": [
+   {
+    "at": ".bumpversion.cfg",
+    "read": {
+     "as": "string",
+     "find": "current_version = (\\S+)"
+    }
+   },
+   {
+    "at": "src/dotenv/version.py::__version__",
+    "read": {
+     "as": "string",
+     "find": "__version__ = \"([^\"]+)\""
+    }
+   }
+  ]
+ },
+ {
+  "name": "supported CPython minor versions",
+  "type": "List String",
+  "gloss": "The CPython minor versions (e.g. \"3.10\") the project declares support for and checks against, sorted ascending.",
+  "places": [
+   {
+    "at": "pyproject.toml",
+    "read": {
+     "as": "string",
+     "find_all": "Python :: (3\\.\\d+)\"",
+     "sort": true
+    }
+   },
+   {
+    "at": "tox.ini",
+    "read": {
+     "as": "string",
+     "find_all": "mypy --python-version=(\\S+)",
+     "sort": true
+    }
+   }
+  ]
+ },
+ {
+  "name": "actions/checkout pin",
+  "type": "String",
+  "gloss": "The commit SHA that GitHub workflows pin actions/checkout to.",
+  "places": [
+   {
+    "at": ".github/workflows/test.yml",
+    "read": {
+     "as": "string",
+     "find": "actions/checkout@([0-9a-f]+)"
+    }
+   },
+   {
+    "at": ".github/workflows/release.yml",
+    "read": {
+     "as": "string",
+     "find": "actions/checkout@([0-9a-f]+)"
+    }
+   }
+  ]
+ },
+ {
+  "name": "IPython magic flags",
+  "type": "List String",
+  "gloss": "The short flags accepted by the %dotenv IPython magic, sorted alphabetically.",
+  "places": [
+   {
+    "at": "src/dotenv/ipython.py",
+    "read": {
+     "as": "string",
+     "find_all": "\"(-[a-z])\",",
+     "sort": true
+    }
+   },
+   "README.md::Load .env files in IPython"
+  ]
+ },
+ {
+  "name": "load_dotenv override default",
+  "type": "String",
+  "gloss": "The default value of the `override` parameter of load_dotenv(), written as a Python literal (\"True\" or \"False\").",
+  "places": [
+   {
+    "at": "src/dotenv/main.py::load_dotenv",
+    "read": {
+     "as": "string",
+     "find": "override: bool = (\\w+)"
+    }
+   },
+   "README.md::Getting Started"
+  ]
+ },
+ {
+  "name": "disable env var name",
+  "type": "String",
+  "gloss": "The name of the environment variable that, when set truthy, disables load_dotenv().",
+  "places": [
+   {
+    "at": "src/dotenv/main.py",
+    "read": {
+     "as": "string",
+     "find": "if \"(\\w+)\" not in os.environ"
+    }
+   },
+   "README.md::Disable load_dotenv"
+  ]
+ },
+ {
+  "name": "minimum Python version",
+  "type": "String",
+  "gloss": "The lowest Python version the project supports, as a minor version string such as \"3.10\".",
+  "places": [
+   {
+    "at": "pyproject.toml",
+    "read": {
+     "as": "string",
+     "find": "requires-python = \">=([^\"]+)\""
+    }
+   },
+   {
+    "at": ".github/workflows/test.yml",
+    "read": {
+     "as": "string",
+     "find": "python-version:\\s+\\[\"([^\"]+)\""
+    }
+   }
+  ]
+ },
+ {
+  "name": "CLI subcommands",
+  "type": "List String",
+  "gloss": "the names of the subcommands of the `dotenv` command-line interface, sorted alphabetically",
+  "places": [
+   "src/dotenv/cli.py",
+   {
+    "at": "README.md::Command-line Interface",
+    "some": true
+   }
+  ]
+ },
+ {
+  "name": "list formats",
+  "type": "List String",
+  "gloss": "the values the `--format` option of `dotenv list` accepts, sorted alphabetically",
+  "places": [
+   "src/dotenv/cli.py",
+   {
+    "at": "README.md::Command-line Interface",
+    "some": true
+   }
+  ]
+ }
+]

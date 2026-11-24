@@ -1,0 +1,54 @@
+WARN current         H:b6210d3973 fact: actions/checkout version
+       .github/workflows/ci.yml reads as "v6"   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5, claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       .github/workflows/release.yml reads as "v6"   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5, claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       .github/workflows/codeql-analysis.yml reads as "v6"   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5, claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       the places agree, but a reading does not stand by the rules (pw-rules.json):
+       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)
+WARN current         H:713d59b933 fact: godotenv command flags
+       cmd/godotenv/cmd.go reads as ["f", "h", "o"]   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5, claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       README.md::Command Mode lists (in part) ["f", "o"]   (does not stand)
+          confirmed by a person: no, blind: no, words occur in the place: yes, read the same by a second model: no, contained in a computed place: yes
+          read blind by claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       the places agree, but a reading does not stand by the rules (pw-rules.json):
+       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)
+WARN current         H:7538267ce5 fact: default env filename
+       godotenv.go reads as ".env"   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5, claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       README.md::Usage reads as ".env"   (does not stand)
+          confirmed by a person: no, blind: no, words occur in the place: yes, agrees with a computed place: yes, agrees with another place read blind: no, read the same by a second model: no
+          read blind by claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       README.md::Command Mode reads as ".env"   (does not stand)
+          confirmed by a person: no, blind: no, words occur in the place: yes, agrees with a computed place: yes, agrees with another place read blind: no, read the same by a second model: no
+          read blind by claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       the places agree, but a reading does not stand by the rules (pw-rules.json):
+       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)
+WARN current         H:d963e35072 fact: exported functions
+       godotenv.go reads as ["Exec", "Load", "Marshal", "Overload", "Parse", "Read", "Unmarshal", "UnmarshalBytes", "Write"]   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       README.md::Usage lists (in part) ["Load", "Marshal", "Overload", "Parse", "Read", "Unmarshal", "Write"]   (does not stand)
+          confirmed by a person: no, blind: no, words occur in the place: yes, read the same by a second model: no, contained in a computed place: yes
+          read blind by claude-opus-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       README.md::Writing Env Files lists (in part) ["Marshal", "Unmarshal", "Write"]   (does not stand)
+          confirmed by a person: no, blind: no, words occur in the place: yes, read the same by a second model: no, contained in a computed place: yes
+          read blind by claude-opus-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       the places agree, but a reading does not stand by the rules (pw-rules.json):
+       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)
+WARN current         H:b8a2379878 fact: module path
+       go.mod reads as "github.com/joho/godotenv"   (does not stand)
+          read the same blind: no
+          read blind by claude-opus-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       README.md::Installation reads as "github.com/joho/godotenv"   (does not stand)
+          confirmed by a person: no, blind: no, words occur in the place: yes, agrees with a computed place: yes, agrees with another place read blind: no, read the same by a second model: no
+          read blind by claude-opus-5-5: not a measured reader here (python -m pw.calibrate --model ...)
+       the places agree, but a reading does not stand by the rules (pw-rules.json):
+       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)
