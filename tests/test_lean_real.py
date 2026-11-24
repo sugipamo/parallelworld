@@ -399,6 +399,32 @@ def test_a_reading_answers_the_question_as_it_was_asked(tmp_path):
     assert [p["stands"] for p in b.recheck(cwd)["decisions"][0]["places"]] == [True, True]
 
 
+def test_a_place_that_writes_the_value_another_way_is_still_read_by_a_declaration(tmp_path):
+    """A list scoped inside a place and rewritten into the other places' spelling; and a reading
+    made before these keys existed is the same reading."""
+    import json
+    from pw.kernel import pattern
+    (tmp_path / "pyproject.toml").write_text('classifiers = ["Python :: 3.10", "Python :: 3.11"]\n')
+    (tmp_path / "tox.ini").write_text("[tox]\nenvlist = lint,py{310,311}\n\n[testenv:lint]\ncommands = check --target=312\n")
+    cwd = str(tmp_path)
+    assert pattern(find="(a)") == {"language": "pattern", "as": "string", "find": "(a)"}       # nothing new unless used
+    with pytest.raises(KernelError):                                                            # one place, one way of reading it
+        Kernel(str(tmp_path / "x.jsonl"), gate=LeanGate()).claim_fact("versions", "List String", [
+            {"at": "tox.ini", "reader": pattern(find_all=r"py(\d+)")}, {"at": "tox.ini", "reader": pattern(find_all=r"target=(\d+)")}])
+    (tmp_path / "pw-facts.json").write_text(json.dumps([{"name": "versions", "type": "List String", "places": [
+        {"at": "pyproject.toml", "read": {"find_all": "Python :: ([0-9.]+)", "sort": True}},
+        {"at": "tox.ini", "read": {"within": "^envlist = .*py\\{([^}]+)\\}", "find_all": "(\\d+)", "rewrite": ["(\\d)(\\d+)", "\\1.\\2"], "sort": True}}]}]))
+    k = Kernel(str(tmp_path / "pw-log.jsonl"), gate=LeanGate())
+    k.sync_facts(str(tmp_path / "pw-facts.json"))
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "current" and [p["reads as"] for p in r["places"]] == ['["3.10", "3.11"]'] * 2, r
+    (tmp_path / "tox.ini").write_text("[tox]\nenvlist = lint,py{310,311,312}\n\n[testenv:lint]\ncommands = check --target=312\n")
+    assert k.recheck(cwd)["decisions"][0]["state"] == "violated"                           # tox now tries a version the metadata does not list
+    (tmp_path / "tox.ini").write_text("[tox]\nenvs = lint\n")
+    r = k.recheck(cwd)["decisions"][0]
+    assert r["state"] == "stale" and "`within` matches 0 times" in r["unread"][0]["why"], r   # the part it was confined to is gone: said, not guessed
+
+
 def test_a_small_place_is_shown_with_what_surrounds_it(tmp_path):
     from pw.kernel import context
     (tmp_path / "rules.json").write_text('{"note": "readers", "bar": {"read at least": 0.85, "stuck at most": 0.15}, "rows": [["a"]]}')

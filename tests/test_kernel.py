@@ -184,6 +184,22 @@ def test_a_proposed_place_is_checked_against_the_file(tmp_path):
     assert "not the value you gave" in refused("Nat", "app.py::LIMIT", 15, "LIMIT = 14", find=r"LIMIT = (\d+)")
     assert "does not work" in refused("Nat", "app.py", 14, "LIMIT = 14", find=r"(\d+)")                      # matches more than once
     assert "inline flags" in refused("Nat", "app.py::LIMIT", 14, "LIMIT = 14", find=r"(?m)^LIMIT = (\d+)")   # not common to all engines
+    # a pattern can be confined to one part of the place, and a piece can be rewritten into the other places' spelling
+    (tmp_path / "tox.ini").write_text("[tox]\nenvlist = lint,py{310,311,315t},docs\n\n[gh]\npython =\n    3.10 = py310\n")
+    (tmp_path / "cli.py").write_text('quote = Choice(["always", "never"])\nfmt = option("--format", Choice(["simple", "json"]))\n')
+    p = screen(repo, "List String", "tox.ini", ["3.10", "3.11"], "envlist = lint,py{310,311,315t},docs",
+               find_all=r"(\d+)(?:,|$)", within=r"^envlist = .*py\{([^}]+)\}", rewrite=[r"(\d)(\d+)", r"\1.\2"])
+    assert p["read"] == {"find_all": r"(\d+)(?:,|$)", "as": "string", "sort": True,
+                         "within": [r"^envlist = .*py\{([^}]+)\}"], "rewrite": [r"(\d)(\d+)", r"\1.\2"]}
+    p = screen(repo, "List String", "cli.py", ["json", "simple"], 'fmt = option("--format", Choice(["simple", "json"]))',
+               find_all=r'"(\w+)"', within=r'"--format", Choice\(\[([^\]]+)\]')
+    assert p["read"]["within"] == [r'"--format", Choice\(\[([^\]]+)\]']
+    assert "`within` matches 2 times" in refused("List String", "cli.py", ["json"], 'quote = Choice(["always", "never"])',
+                                                 find_all=r'"(\w+)"', within=r"Choice\(\[([^\]]+)\]")
+    assert "does not match '315t' as a whole" in refused("List String", "tox.ini", ["3.10"], "envlist = lint,py{310,311,315t},docs",
+                                                        find_all=r"(\w+)(?:,|$)", within=r"py\{([^}]+)\}", rewrite=[r"(\d)(\d+)", r"\1.\2"])
+    for bad in ([r"(\d)", r"\2"], [r"(\d)", r"\n"], [r"(?=x)(\d)", r"\1"]):
+        assert "does not work" in refused("List String", "tox.ini", ["3.10"], "envlist = lint,py{310,311,315t},docs", find_all=r"(\d+),", rewrite=bad)
     assert screen(repo, "Nat", "app.py::LIMIT", 14, "LIMIT = 14", find=r"^(?:LIMIT) = (\d+)")["read"]         # (?: ) is fine
     p = screen(repo, "List String", "app.py::NAMES", ["a", "b"], 'NAMES = ["b", "a"]', find_all=r'"(\w)"')
     assert p["read"] == {"find_all": r'"(\w)"', "as": "string", "sort": True}

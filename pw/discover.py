@@ -86,7 +86,17 @@ What to report for a place
               the group is the value
     find_all  the same, where every match is one entry of a list
     kind      "string", "nat", "int", or "permille" (a decimal such as 0.9, read as 900)
+    within    optional: a regular expression with one group that matches exactly once; `find` or
+              `find_all` then looks only inside that group. Use it when the place holds several
+              things of the same shape and you mean one of them (the choices next to "--format",
+              the fields of one struct, the entries of one list).
+    rewrite   optional: [pattern, replacement], applied to each piece found. The pattern has to
+              match the piece as a whole; the replacement may use \\1 ... \\9. Use it when the
+              place writes the value another way than the other places (["py(\\d)(\\d+)", "\\1.\\2"]
+              turns py310 into 3.10).
   No look-around, back-references or named groups. Leave the pattern out for prose.
+  Read the place that really determines the thing, even if it writes the value differently:
+  do not settle for another line that merely happens to spell it the same way.
 
 Each report is checked against the file, and you are told what is wrong: fix it and report again.
 Ignore pw-facts.json, pw-log.jsonl, pw-calibration.json and anything under .git.
@@ -188,7 +198,7 @@ def _json_value(typ, value):
     return value
 
 
-def screen(repo, typ, at, value, quote, find=None, find_all=None, kind=None):
+def screen(repo, typ, at, value, quote, find=None, find_all=None, kind=None, within=None, rewrite=None):
     """Check one reported place against the files. Returns the place as pw-facts.json lists it,
     with the value and quote kept alongside for whoever looks at the proposal."""
     text = _part(at, repo)
@@ -199,7 +209,7 @@ def screen(repo, typ, at, value, quote, find=None, find_all=None, kind=None):
     if find or find_all:
         try:
             read = pattern(find or None, find_all or None, kind or ("nat" if typ.endswith("Nat") else "int" if typ == "Int" else "string"),
-                           sort=bool(find_all), unique=False)
+                           sort=bool(find_all), unique=False, within=within or None, rewrite=rewrite or None)
             term = _read_pattern(read, text)
             computed = json.loads(term.replace("(", "").replace(")", "") if read["as"] == "int" else term)
         except KernelError as e:
@@ -207,7 +217,7 @@ def screen(repo, typ, at, value, quote, find=None, find_all=None, kind=None):
         same = sorted(computed) == sorted(value) if isinstance(value, list) else computed == value
         if not same:
             raise Refused(f"the pattern reads {json.dumps(computed, ensure_ascii=False)[:200]} off the place, not the value you gave")
-        read = {k: v for k, v in read.items() if k in ("find", "find_all", "as") or (k == "sort" and v)}
+        read = {k: v for k, v in read.items() if k in ("find", "find_all", "as", "within", "rewrite") or (k == "sort" and v)}
     else:
         where = text if isinstance(value, list) else quote
         missing = [x for x in (value if isinstance(value, list) else [value]) if str(x) not in where]
@@ -255,13 +265,14 @@ def serve():
 
     @mcp.tool()
     def add_place(fact: str, at: str, value: str | int | list, quote: str, find: str = "", find_all: str = "", kind: str = "",
-                  some: bool = False) -> dict:
+                  some: bool = False, within: str = "", rewrite: list[str] | None = None) -> dict:
         """Report a further place that states a declared fact. `fact` is the fact's name exactly
         as listed, `at` the place ("path" or "path::part"), `value` what the place says as JSON
         text ("\\"fast\\"", "14", "[\\"a\\", \\"b\\"]"), `quote` the line of the place that says it,
         copied character for character. For code and configuration give `find` (or `find_all`
-        for a list) and `kind` as well. Set `some` for a place that lists only some entries of a
-        list (an example, an excerpt): `value` is then the entries it mentions."""
+        for a list) and `kind` as well, and `within` or `rewrite` where needed. Set `some` for a
+        place that lists only some entries of a list (an example, an excerpt): `value` is then
+        the entries it mentions."""
         if fact not in facts:
             return {"error": f"no declared fact is named {fact!r}; the names are {sorted(facts)}"}
         known = [p if isinstance(p, str) else p["at"] for p in facts[fact]["places"]]
@@ -270,7 +281,7 @@ def serve():
         if some and not facts[fact]["type"].startswith("List "):
             return {"error": "only a list can be stated in part"}
         try:
-            place = {**screen(repo, facts[fact]["type"], at, value, quote, find, find_all, kind), "some": bool(some)}
+            place = {**screen(repo, facts[fact]["type"], at, value, quote, find, find_all, kind, within, rewrite), "some": bool(some)}
         except Refused as e:
             return {"error": str(e)}
         keep({"fact": fact, "place": place})
@@ -281,8 +292,8 @@ def serve():
     def new_fact(name: str, type: str, gloss: str, places: list[dict]) -> dict:
         """Report a thing stated in two or more places that is not declared yet. Each place is
         {"at": ..., "value": ..., "quote": ...} plus, for code and configuration, "find" or
-        "find_all" and "kind", and "some": true for a place that lists only some entries of a
-        list. `value` is what that place says, as JSON; places that state different values are
+        "find_all" and "kind" (and "within", "rewrite" where needed), and "some": true for a place
+        that lists only some entries of a list. `value` is what that place says, as JSON; places that state different values are
         reported as they are. At least one place has to state the whole of it."""
         if name in facts:
             return {"error": f"{name!r} is already declared; use add_place for further places"}
@@ -291,12 +302,13 @@ def serve():
         kept, wrong = [], {}
         for p in places:
             try:
-                extra = set(p) - {"at", "value", "quote", "find", "find_all", "kind", "some"}
+                extra = set(p) - {"at", "value", "quote", "find", "find_all", "kind", "some", "within", "rewrite"}
                 if extra or not {"at", "value", "quote"} <= set(p):
-                    raise Refused(f"a place has at, value, quote and optionally find, find_all, kind, some; not {sorted(extra)}")
+                    raise Refused(f"a place has at, value, quote and optionally find, find_all, kind, within, rewrite, some; not {sorted(extra)}")
                 if p.get("some") and not type.startswith("List "):
                     raise Refused("only a list can be stated in part")
-                kept.append({**screen(repo, type, p["at"], p["value"], p["quote"], p.get("find"), p.get("find_all"), p.get("kind")),
+                kept.append({**screen(repo, type, p["at"], p["value"], p["quote"], p.get("find"), p.get("find_all"), p.get("kind"),
+                                      p.get("within"), p.get("rewrite")),
                              "some": bool(p.get("some"))})
             except Refused as e:
                 wrong[str(p.get("at"))] = str(e)

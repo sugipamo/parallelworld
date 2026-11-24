@@ -36,8 +36,13 @@
    {
     "at": "tox.ini",
     "read": {
+     "within": "^envlist = .*py\\{([^}]+)\\}",
+     "find_all": "(\\d+)(?:,|$)",
+     "rewrite": [
+      "(\\d)(\\d+)",
+      "\\1.\\2"
+     ],
      "as": "string",
-     "find_all": "mypy --python-version=(\\S+)",
      "sort": true
     }
    }
@@ -148,7 +153,15 @@
   "type": "List String",
   "gloss": "the values the `--format` option of `dotenv list` accepts, sorted alphabetically",
   "places": [
-   "src/dotenv/cli.py",
+   {
+    "at": "src/dotenv/cli.py",
+    "read": {
+     "within": "\"--format\",[\\s\\S]*?click\\.Choice\\(\\[([^\\]]+)\\]",
+     "find_all": "\"(\\w+)\"",
+     "as": "string",
+     "sort": true
+    }
+   },
    {
     "at": "README.md::Command-line Interface",
     "some": true

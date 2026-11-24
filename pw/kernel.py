@@ -43,12 +43,34 @@ def _term(kind, text):
     raise KernelError(f"{text!r} is not a {kind}")
 
 
-def pattern(find=None, find_all=None, kind="string", sort=False, unique=False):
+def _plain(rx, what, groups=None):
+    """Refuse what regular-expression engines do not agree on; return the number of groups."""
+    if re.search(r"\(\?[=!<P]|\\[1-9]", rx):
+        raise KernelError(f"look-around, back-references and named groups are not accepted in {what}")
+    if re.search(r"\(\?[a-zA-Z-]+[:)]", rx):
+        raise KernelError(f"inline flags such as (?m) are not accepted in {what}; ^ and $ already match at line ends")
+    try:
+        n = re.compile(rx).groups
+    except re.error as e:
+        raise KernelError(f"{what} is not a regular expression: {e}")
+    if groups is not None and n != groups:
+        raise KernelError(f"{what} needs exactly {groups} group: the part in ( ) is what is taken")
+    return n
+
+
+def pattern(find=None, find_all=None, kind="string", sort=False, unique=False, within=None, rewrite=None):
     """A declarative way to read a place: what to look for, and what kind of value it is.
 
+      within    a regular expression with one group that must match exactly once: the search
+                is confined to that group. A list of them narrows step by step. Use it to say
+                "the list next to --format", when the place holds other lists too.
       find      a regular expression with one group; it must match exactly once, and the
                 group is the value
       find_all  the same, but every match counts and the result is a list
+      rewrite   [pattern, replacement]: each piece found has to match the pattern as a whole
+                and is replaced; the replacement may use \\1 ... \\9 for the pattern's groups
+                and nothing else. Use it where a place writes the value another way
+                ("py310" for "3.10").
       kind      "string", "nat", "int", or "permille" (a decimal number, as thousandths)
       sort      order the list (strings by code point, numbers by size)
       unique    drop repeated entries
@@ -62,24 +84,43 @@ def pattern(find=None, find_all=None, kind="string", sort=False, unique=False):
     rx = find if find is not None else find_all
     if kind not in _KINDS:
         raise KernelError(f"a value is one of {sorted(_KINDS)}, not {kind!r}")
-    if re.search(r"\(\?[=!<P]|\\[1-9]", rx):
-        raise KernelError("look-around, back-references and named groups are not accepted in a pattern")
-    if re.search(r"\(\?[a-zA-Z-]+[:)]", rx):
-        raise KernelError("inline flags such as (?m) are not accepted in a pattern; ^ and $ already match at line ends")
-    try:
-        if re.compile(rx).groups != 1:
-            raise KernelError("the pattern needs exactly one group: the part in ( ) is the value")
-    except re.error as e:
-        raise KernelError(f"not a regular expression: {e}")
+    _plain(rx, "a pattern", groups=1)
     out = {"language": "pattern", "as": kind}
     out["find" if find is not None else "find_all"] = rx
     if find_all is not None:
         out.update(sort=bool(sort), unique=bool(unique))
+    if within:                                   # (keys are added only when used: a reading made before they existed is the same reading)
+        steps = [within] if isinstance(within, str) else list(within)
+        for step in steps:
+            if not isinstance(step, str):
+                raise KernelError("`within` is a pattern, or a list of patterns")
+            _plain(step, "`within`", groups=1)
+        out["within"] = steps
+    if rewrite:
+        if not (isinstance(rewrite, (list, tuple)) and len(rewrite) == 2 and all(isinstance(x, str) for x in rewrite)):
+            raise KernelError("`rewrite` is [pattern, replacement]")
+        groups = _plain(rewrite[0], "the pattern of `rewrite`")
+        used = [int(d) for d in re.findall(r"\\(.)", rewrite[1]) if d.isdigit()]
+        if re.search(r"\\[^1-9\\]|\\$", rewrite[1]) or any(d > groups for d in used):
+            raise KernelError("a replacement may use \\1 ... \\9 for groups the pattern has, and \\\\ for a backslash; nothing else")
+        out["rewrite"] = [rewrite[0], rewrite[1]]
     return out
 
 
 def _read_pattern(rd, text):
+    for step in rd.get("within", []):
+        found = re.findall(step, text, re.M)
+        if len(found) != 1:
+            raise KernelError(f"`within` matches {len(found)} times here; it has to match exactly once")
+        text = found[0]
     found = re.findall(rd.get("find") or rd["find_all"], text, re.M)
+    if "rewrite" in rd:
+        rx, to = rd["rewrite"]
+        for i, piece in enumerate(found):
+            m = re.fullmatch(rx, piece)
+            if m is None:
+                raise KernelError(f"`rewrite` does not match {piece!r} as a whole")
+            found[i] = re.sub(r"\\(.)", lambda e: m.group(int(e.group(1))) if e.group(1).isdigit() else e.group(1), to)
     if "find" in rd:
         if len(found) != 1:
             raise KernelError(f"the pattern matches {len(found)} times here; it has to match exactly once")
@@ -91,6 +132,17 @@ def _read_pattern(rd, text):
         values.sort(key=lambda v: v[0])
     return "[" + ", ".join(v[1] for v in values) + "]"
 
+
+# How a computed place is read, by the kind of description it carries. One kind so far; a kind
+# that looks at syntax rather than text would be added here, and nowhere else.
+READERS = {"pattern": _read_pattern}
+
+
+def compute(rd, text):
+    how = READERS.get(rd.get("language"))
+    if how is None:
+        raise KernelError(f"no way to read a place by {rd.get('language')!r}; the record may come from another version")
+    return how(rd, text)
 
 
 class KernelError(Exception):
@@ -447,6 +499,9 @@ class Kernel:
                   {"at": p["at"], "reader": p.get("reader"), **({"some": True} if p.get("some") else {})} for p in places]
         if not [p for p in places if not p.get("some")]:
             raise KernelError("a fact needs at least one place that states the whole of it")
+        twice = sorted({p["at"] for p in places if [q["at"] for q in places].count(p["at"]) > 1})
+        if twice:
+            raise KernelError(f"{name}: {', '.join(twice)} is listed more than once; a place is read one way per fact")
         if any(p.get("some") for p in places) and not typ.startswith("List "):
             raise KernelError("only a list can be stated in part: a place that states some entries needs a List type")
         if value is not None:
@@ -492,7 +547,7 @@ class Kernel:
         if obj is None:
             if how is None:
                 raise KernelError(f"{place} has no reader; state what it says")
-            obj = _read_pattern(how, locate(place, cwd).decode("utf-8", "replace"))
+            obj = compute(how, locate(place, cwd).decode("utf-8", "replace"))
         if quote is not None and not _anchored(quote, place, cwd):
             raise KernelError("the quote is not in the place word for word")
         obj = _norm(obj)
@@ -714,12 +769,12 @@ class Kernel:
                     places.append({"at": p["at"], "some": True})
                 elif "read" in p and set(p) in ({"at", "read"}, {"at", "read", "some"}) and p.get("some", True) is True:
                     r = p["read"]
-                    extra = set(r) - {"find", "find_all", "as", "sort", "unique"}
+                    extra = set(r) - {"find", "find_all", "as", "sort", "unique", "within", "rewrite"}
                     if extra:
                         raise KernelError(f"{d['name']}, {p['at']}: unknown keys in \"read\": {sorted(extra)}")
                     places.append({"at": p["at"], "some": p.get("some", False),
                                    "reader": pattern(r.get("find"), r.get("find_all"), r.get("as", "string"),
-                                                     r.get("sort", False), r.get("unique", False))})
+                                                     r.get("sort", False), r.get("unique", False), r.get("within"), r.get("rewrite"))})
                 else:
                     raise KernelError(f"{d['name']}: a place is a string, or {{\"at\": ..., \"read\": {{...}}}}, "
                                       "either with \"some\": true if it states only some entries of a list")
