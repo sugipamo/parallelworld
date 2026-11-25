@@ -377,5 +377,40 @@
   "asked": "the port the server listens on by default",
   "text": "## Network\n\nThe server listens on port 8080 by default.\n\n```\n$ tool serve\nlistening on 0.0.0.0:8443 (default)\n```\n",
   "expect": "?"
+ },
+ {
+  "group": "the passage contradicts itself",
+  "type": "String",
+  "asked": "the license the project is released under, as an SPDX identifier",
+  "text": "## License\n\nThis project is released under the MIT license.\n\n## Contributing\n\nBy contributing you agree that your work is released under the project's license, Apache-2.0.\n",
+  "expect": "?"
+ },
+ {
+  "group": "the passage contradicts itself",
+  "type": "List String",
+  "asked": "the commands the server currently accepts, sorted alphabetically",
+  "text": "## Commands\n\nThe server accepts three commands: `status`, `stop` and `subscribe`.\n\n| command | meaning |\n|---|---|\n| `status` | report the state of every task |\n| `stop` | stop a task |\n| `subscribe` | follow a topic |\n| `unsubscribe` | stop following a topic |\n",
+  "expect": "?"
+ },
+ {
+  "group": "the passage contradicts itself",
+  "type": "Nat",
+  "asked": "the default number of retries",
+  "text": "```python\nDEFAULT_RETRIES = 3   # a failed request is retried five times by default\n```\n",
+  "expect": "?"
+ },
+ {
+  "group": "the passage contradicts itself",
+  "type": "String",
+  "asked": "the version of Lean the project is pinned to, as a bare version number without a leading v",
+  "text": "## Toolchain\n\nThe proofs are checked with Lean 4.14.0. Install it with `elan toolchain install leanprover/lean4:v4.12.0`, the version the project is pinned to.\n",
+  "expect": "?"
+ },
+ {
+  "group": "the passage contradicts itself",
+  "type": "Nat",
+  "asked": "the default timeout of a request, in seconds",
+  "text": "## Timeouts\n\n| setting | default |\n|---|---|\n| `timeout` | 30 |\n\nA request that takes longer than the default of 60 seconds is cut off.\n",
+  "expect": "?"
  }
 ]

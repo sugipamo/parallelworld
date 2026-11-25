@@ -1,0 +1,200 @@
+{
+ "model": "claude-opus-5-5",
+ "rounds": 3,
+ "cost_usd": 0.35,
+ "errors": [],
+ "trials": [
+  {
+   "trial": 49,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. The prose says there are three commands (status, stop, subscribe), but the table lists four, adding unsubscribe. It does not settle which set the server currently accep",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 46,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. The table marks `fast` as the default, but the prose says the tool runs in `safe` mode unless told otherwise.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 50,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 3,
+   "declined": null,
+   "outcome": "read 3 (no right answer)"
+  },
+  {
+   "trial": 47,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. The prose says the default port is 8080, but the sample output shows it listening on 8443 by default.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 45,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. The Limits section says at most 14 atoms are solved exactly, but the Details section says up to 16 atoms are solved exactly.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 48,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. The License section says the project uses MIT, but the Contributing section calls the project's license Apache-2.0.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 52,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 30,
+   "declined": null,
+   "outcome": "read 30 (no right answer)"
+  },
+  {
+   "trial": 51,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "4.12.0",
+   "declined": null,
+   "outcome": "read \"4.12.0\" (no right answer)"
+  },
+  {
+   "trial": 46,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. Its table marks `fast` as the default, but the sentence below it says the tool runs in `safe` mode unless told otherwise. No single default can be read from it.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 45,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. Limits says at most 14 atoms are solved exactly, but Details says components of up to 16 atoms are solved exactly. No single maximum can be read from it.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 49,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. The sentence lists three commands (status, stop, subscribe), but the table also lists `unsubscribe`. It is unclear which set the server currently accepts.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 50,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. The code sets DEFAULT_RETRIES = 3, but the comment on the same line says a failed request is retried five times by default.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 48,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. The License section says MIT, but the Contributing section says the project's license is Apache-2.0.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 47,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. The prose says the default port is 8080, but the example output shows it listening on 8443 by default.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 52,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 60,
+   "declined": null,
+   "outcome": "read 60 (no right answer)"
+  },
+  {
+   "trial": 51,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "4.12.0",
+   "declined": null,
+   "outcome": "read \"4.12.0\" (no right answer)"
+  },
+  {
+   "trial": 50,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 3,
+   "declined": null,
+   "outcome": "read 3 (no right answer)"
+  },
+  {
+   "trial": 49,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself: the prose says the server accepts three commands (status, stop, subscribe), but the command table also lists `unsubscribe`. It does not settle which set is current.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 48,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself: the License section says MIT, but the Contributing section says the project's license is Apache-2.0.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 51,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "4.12.0",
+   "declined": null,
+   "outcome": "read \"4.12.0\" (no right answer)"
+  },
+  {
+   "trial": 45,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself: Limits says at most 14 atoms are solved exactly, while Details says components of up to 16 atoms are solved exactly.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 46,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself: the table marks `fast` as the default, but the prose says the tool runs in `safe` mode unless told otherwise.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 52,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage gives two different defaults for the request timeout. The table row \"| `timeout` | 30 |\" says 30, but the sentence \"A request that takes longer than the default of 60 seconds is cut off.\" ",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 47,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage gives two different default ports. The prose \"The server listens on port 8080 by default.\" says 8080, but the sample output \"listening on 0.0.0.0:8443 (default)\" says 8443. No single value",
+   "outcome": "declined (no right answer)"
+  }
+ ]
+}

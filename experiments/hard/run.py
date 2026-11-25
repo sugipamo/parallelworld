@@ -37,7 +37,7 @@ sys.path.insert(0, ROOT)
 
 from pw.kernel import LOG, Kernel                    # noqa: E402
 from pw.lean_gate import LEAN_DIR, LeanGate          # noqa: E402
-from pw.maintain import blind_read                   # noqa: E402
+from pw import maintain                              # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -53,7 +53,7 @@ def session(model, tag, batch, budget):
                 fh.write(t["text"])
             h = kernel.claim_fact(f"trial {i}", t["type"], [name], gloss=t["asked"])["h"]
             items.append((h, name, t["type"], t["asked"], t.get("around")))
-        run = blind_read(work, LEAN_DIR, model, tag, items, budget)
+        run = maintain.blind_read(work, LEAN_DIR, model, tag, items, budget)
         st = kernel.state()
         out = []
         for (i, t), (h, *_rest) in zip(batch, items):
@@ -84,32 +84,49 @@ def main():
     ap.add_argument("--per-session", type=int, default=6)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--budget", type=float, default=2.0)
+    ap.add_argument("--instructions", metavar="FILE", help="instructions to give the reader instead of pw/reader.txt (to try a wording before adopting it)")
+    ap.add_argument("--among", type=int, metavar="N", help="with --groups: show each of their passages in a session of its own, "
+                    "together with N passages drawn from the other groups (0: alone). What else is in a session changes how a passage is read")
     ap.add_argument("--groups", nargs="*", help="only the trials of these groups")
     ap.add_argument("--out")
     args = ap.parse_args()
     with open(os.path.join(HERE, "trials.json"), encoding="utf-8") as fh:
-        trials = [(i, t) for i, t in enumerate(json.load(fh)) if not args.groups or t["group"] in args.groups]
-    by_number = dict(trials)
+        everything = list(enumerate(json.load(fh)))
+    trials = [(i, t) for i, t in everything if not args.groups or t["group"] in args.groups]
+    others = [(i, t) for i, t in everything if t["group"] not in (args.groups or []) and t["expect"] != "?"]
+    by_number = dict(everything)
+    if args.instructions:
+        with open(args.instructions, encoding="utf-8") as fh:
+            maintain.READER = fh.read()
     rng = random.Random(args.seed)
     jobs = []
     for r in range(args.rounds):
         order = trials[:]
         rng.shuffle(order)
-        jobs += [(f"hard-{r}-{k}", order[k:k + args.per_session]) for k in range(0, len(order), args.per_session)]
+        if args.among is not None:
+            for k, one in enumerate(order):
+                batch = [one] + rng.sample(others, args.among)
+                rng.shuffle(batch)
+                jobs.append((f"hard-{r}-{k}", batch))
+        else:
+            jobs += [(f"hard-{r}-{k}", order[k:k + args.per_session]) for k in range(0, len(order), args.per_session)]
     with ThreadPoolExecutor(4) as pool:
         done = list(pool.map(lambda j: session(args.model, j[0], j[1], args.budget), jobs))
     rows = [x for out, _, _ in done for x in out]
     cost = sum(c for _, c, _ in done)
     errors = [e for _, _, e in done if e]
-    print(f"{args.model}: {len(trials)} passages x {args.rounds} rounds in {len(jobs)} sessions, ${cost:.2f}" + (f"; {len(errors)} session(s) ended in an error" if errors else ""))
+    print(f"{args.model}: {len(rows)} readings in {len(jobs)} sessions, ${cost:.2f}" + (f"; {len(errors)} session(s) ended in an error" if errors else ""))
     print(f"  {'group':<42}{'right':>7}{'wrong':>7}{'declined':>10}{'no answer':>11}")
-    groups = list(dict.fromkeys(t["group"] for _, t in trials))
+    groups = list(dict.fromkeys(by_number[x["trial"]]["group"] for x in rows))
     for g in groups + [None]:
         c = Counter(x["outcome"] for x in rows if g is None or x["group"] == g)
         print(f"  {(g or 'all'):<42}{c['right']:>7}{c['wrong']:>7}{c['declined']:>10}{c['no answer']:>11}")
     open_ended = Counter((by_number[x["trial"]]["asked"][:50], x["outcome"]) for x in rows if "no right answer" in x["outcome"])
     for (asked, outcome), n in sorted(open_ended.items()):
         print(f"  no right answer: {asked!r}: {outcome} x{n}")
+    two = [x for x in rows if "no right answer" in x["outcome"]]
+    if two:
+        print(f"  passages that say two things: declined {sum(1 for x in two if x['outcome'].startswith('declined'))} of {len(two)}, read one of the values {sum(1 for x in two if x['outcome'].startswith('read'))}")
     for x in rows:
         if x["outcome"] in ("wrong", "declined"):
             t = by_number[x["trial"]]

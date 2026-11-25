@@ -1,0 +1,200 @@
+{
+ "model": "claude-opus-5-5",
+ "rounds": 3,
+ "cost_usd": 0.43,
+ "errors": [],
+ "trials": [
+  {
+   "trial": 49,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage disagrees with itself. The sentence names three commands, [\"status\", \"stop\", \"subscribe\"], but the table lists four, [\"status\", \"stop\", \"subscribe\", \"unsubscribe\"].",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 46,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself about the default mode: the table marks `fast` as the default, but the sentence below it says the tool runs in `safe` mode unless told otherwise.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 50,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself: the code sets DEFAULT_RETRIES = 3, but the comment beside it says a failed request is retried five times by default (5).",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 47,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself about the default port: the prose says 8080 by default, but the example output shows \"listening on 0.0.0.0:8443 (default)\".",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 45,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself: the Limits section says at most 14 atoms are solved exactly, while the Details section says components of up to 16 atoms are solved exactly.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 48,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. The License section says the project is released under MIT, but the Contributing section calls the project's license Apache-2.0. Both are stated as current.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 52,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself about the default request timeout: the table gives `timeout` a default of 30, but the sentence below it says the default is 60 seconds.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 51,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The Toolchain section contradicts itself: it says the proofs are checked with Lean 4.14.0, but the install command uses v4.12.0 and calls that \"the version the project is pinned to\".",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 46,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself about the default mode. Its table marks `fast` as the default (\"yes\"), but the sentence below says that unless told otherwise the tool runs in `safe` mode. Both are writ",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 45,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself about the exact-solve limit. The Limits section says at most 14 atoms are solved exactly. The Details section says components of up to 16 atoms are solved exactly and on",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 49,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage disagrees with itself. The sentence lists three commands, [\"status\", \"stop\", \"subscribe\"]. The table lists four, [\"status\", \"stop\", \"subscribe\", \"unsubscribe\"].",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 50,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The code and its comment disagree: the code sets DEFAULT_RETRIES = 3, but the comment says a failed request is retried five times by default (5).",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 48,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself: the License section says the project is released under MIT, but the Contributing section says the project's license is Apache-2.0.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 47,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself about the default port: the sentence says it is 8080, but the example output next to it shows \"listening on 0.0.0.0:8443 (default)\".",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 52,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself about the request timeout: its table gives the `timeout` default as 30, but the sentence below says the default is 60 seconds.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 51,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The Toolchain section contradicts itself: it says proofs are checked with Lean 4.14.0, but the install command, described as the pinned version, uses v4.12.0.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 50,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself: the code sets DEFAULT_RETRIES = 3, but the comment next to it says a failed request is retried five times by default (5).",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 49,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. The sentence says the server accepts three commands, [\"status\", \"stop\", \"subscribe\"]. The table lists four as current, [\"status\", \"stop\", \"subscribe\", \"unsubscribe\"].",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 48,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. The License section says the project is under MIT, and the Contributing section says the project's license is Apache-2.0.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 51,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. It says the proofs are checked with Lean 4.14.0, but the install command it gives, described as \"the version the project is pinned to\", is v4.12.0.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 45,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. The Limits section says at most 14 atoms are solved exactly. The Details section says components of up to 16 atoms are solved exactly. Both are given as current values.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 46,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself: the table marks `fast` as the default (default: yes), but the sentence below it says the tool runs in `safe` mode unless told otherwise.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 52,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself about the default request timeout. Its table gives `timeout` a default of 30, but the sentence below says the default is 60 seconds.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 47,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself: the prose says the server listens on port 8080 by default, but the example output shows \"listening on 0.0.0.0:8443 (default)\".",
+   "outcome": "declined (no right answer)"
+  }
+ ]
+}

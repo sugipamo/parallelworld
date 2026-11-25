@@ -1,0 +1,212 @@
+{
+ "model": "claude-opus-5-5",
+ "rounds": 3,
+ "cost_usd": 0.58,
+ "errors": [],
+ "trials": [
+  {
+   "trial": 49,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": [
+    "status",
+    "stop",
+    "subscribe"
+   ],
+   "declined": null,
+   "outcome": "read [\"status\", \"stop\", \"subscribe\"] (no right answer)"
+  },
+  {
+   "trial": 46,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "fast",
+   "declined": null,
+   "outcome": "read \"fast\" (no right answer)"
+  },
+  {
+   "trial": 50,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 3,
+   "declined": null,
+   "outcome": "read 3 (no right answer)"
+  },
+  {
+   "trial": 47,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 8080,
+   "declined": null,
+   "outcome": "read 8080 (no right answer)"
+  },
+  {
+   "trial": 45,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 14,
+   "declined": null,
+   "outcome": "read 14 (no right answer)"
+  },
+  {
+   "trial": 48,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "MIT",
+   "declined": null,
+   "outcome": "read \"MIT\" (no right answer)"
+  },
+  {
+   "trial": 52,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 30,
+   "declined": null,
+   "outcome": "read 30 (no right answer)"
+  },
+  {
+   "trial": 51,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "4.12.0",
+   "declined": null,
+   "outcome": "read \"4.12.0\" (no right answer)"
+  },
+  {
+   "trial": 46,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "fast",
+   "declined": null,
+   "outcome": "read \"fast\" (no right answer)"
+  },
+  {
+   "trial": 45,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 14,
+   "declined": null,
+   "outcome": "read 14 (no right answer)"
+  },
+  {
+   "trial": 49,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": [
+    "status",
+    "stop",
+    "subscribe"
+   ],
+   "declined": null,
+   "outcome": "read [\"status\", \"stop\", \"subscribe\"] (no right answer)"
+  },
+  {
+   "trial": 50,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 3,
+   "declined": null,
+   "outcome": "read 3 (no right answer)"
+  },
+  {
+   "trial": 48,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "MIT",
+   "declined": null,
+   "outcome": "read \"MIT\" (no right answer)"
+  },
+  {
+   "trial": 47,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 8080,
+   "declined": null,
+   "outcome": "read 8080 (no right answer)"
+  },
+  {
+   "trial": 52,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 30,
+   "declined": null,
+   "outcome": "read 30 (no right answer)"
+  },
+  {
+   "trial": 51,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "4.12.0",
+   "declined": null,
+   "outcome": "read \"4.12.0\" (no right answer)"
+  },
+  {
+   "trial": 50,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 3,
+   "declined": null,
+   "outcome": "read 3 (no right answer)"
+  },
+  {
+   "trial": 49,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": [
+    "status",
+    "stop",
+    "subscribe"
+   ],
+   "declined": null,
+   "outcome": "read [\"status\", \"stop\", \"subscribe\"] (no right answer)"
+  },
+  {
+   "trial": 48,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "MIT",
+   "declined": null,
+   "outcome": "read \"MIT\" (no right answer)"
+  },
+  {
+   "trial": 51,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "4.12.0",
+   "declined": null,
+   "outcome": "read \"4.12.0\" (no right answer)"
+  },
+  {
+   "trial": 45,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 14,
+   "declined": null,
+   "outcome": "read 14 (no right answer)"
+  },
+  {
+   "trial": 46,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "fast",
+   "declined": null,
+   "outcome": "read \"fast\" (no right answer)"
+  },
+  {
+   "trial": 52,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 60,
+   "declined": null,
+   "outcome": "read 60 (no right answer)"
+  },
+  {
+   "trial": 47,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 8080,
+   "declined": null,
+   "outcome": "read 8080 (no right answer)"
+  }
+ ]
+}

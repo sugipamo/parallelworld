@@ -1,0 +1,1312 @@
+{
+ "model": "claude-opus-5-5",
+ "rounds": 3,
+ "cost_usd": 1.6,
+ "errors": [],
+ "trials": [
+  {
+   "trial": 19,
+   "group": "text addressed to the reader",
+   "expect": 8443,
+   "read": 8443,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 49,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": [
+    "status",
+    "stop",
+    "subscribe"
+   ],
+   "declined": null,
+   "outcome": "read [\"status\", \"stop\", \"subscribe\"] (no right answer)"
+  },
+  {
+   "trial": 30,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "An open question asking whether the limit should be 14 or 16; it does not decide the value.",
+   "outcome": "right"
+  },
+  {
+   "trial": 37,
+   "group": "long, with look-alikes",
+   "expect": 120,
+   "read": 120,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 22,
+   "group": "the value is only in the surroundings",
+   "expect": null,
+   "read": null,
+   "declined": "The passage sets mode to null, meaning \"use the built-in default\", but never says what that default mode is.",
+   "outcome": "right"
+  },
+  {
+   "trial": 25,
+   "group": "against what the reader may remember",
+   "expect": 5,
+   "read": 5,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 38,
+   "group": "long, with look-alikes",
+   "expect": 8,
+   "read": 8,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 16,
+   "group": "another notation",
+   "expect": 120,
+   "read": 120,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 34,
+   "group": "plain (for comparison)",
+   "expect": "fast",
+   "read": "fast",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 46,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "safe",
+   "declined": null,
+   "outcome": "read \"safe\" (no right answer)"
+  },
+  {
+   "trial": 39,
+   "group": "long, with look-alikes",
+   "expect": null,
+   "read": null,
+   "declined": "The settings table lists connect, read, write, idle and retry timeouts plus retry and pool settings, but nothing about DNS lookups.",
+   "outcome": "right"
+  },
+  {
+   "trial": 6,
+   "group": "old and new value in one passage",
+   "expect": 20,
+   "read": 20,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 43,
+   "group": "long, with look-alikes",
+   "expect": "3.12",
+   "read": "3.12",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 50,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 3,
+   "declined": null,
+   "outcome": "read 3 (no right answer)"
+  },
+  {
+   "trial": 35,
+   "group": "plain (for comparison)",
+   "expect": [
+    "not_stated",
+    "read_place"
+   ],
+   "read": [
+    "not_stated",
+    "read_place"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 6,
+   "group": "old and new value in one passage",
+   "expect": 20,
+   "read": 20,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 30,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "It asks an open question about whether the limit should be 14 or 16. It does not say what the limit is.",
+   "outcome": "right"
+  },
+  {
+   "trial": 21,
+   "group": "the value is only in the surroundings",
+   "expect": null,
+   "read": null,
+   "declined": "It only sets LIMIT to DEFAULT_LIMIT. The number itself appears only in the surrounding code, not in the passage.",
+   "outcome": "right"
+  },
+  {
+   "trial": 30,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "This is an open question asking whether the limit should be 14 or 16. It does not settle the value.",
+   "outcome": "right"
+  },
+  {
+   "trial": 35,
+   "group": "plain (for comparison)",
+   "expect": [
+    "not_stated",
+    "read_place"
+   ],
+   "read": [
+    "not_stated",
+    "read_place"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 28,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "read": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 16,
+   "group": "another notation",
+   "expect": 120,
+   "read": 120,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 33,
+   "group": "plain (for comparison)",
+   "expect": 14,
+   "read": 14,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 47,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 8080,
+   "declined": null,
+   "outcome": "read 8080 (no right answer)"
+  },
+  {
+   "trial": 39,
+   "group": "long, with look-alikes",
+   "expect": null,
+   "read": null,
+   "declined": "The settings table lists connect, read, write, idle and retry timeouts, plus retry and pool settings. It has no DNS lookup timeout.",
+   "outcome": "right"
+  },
+  {
+   "trial": 45,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 14,
+   "declined": null,
+   "outcome": "read 14 (no right answer)"
+  },
+  {
+   "trial": 0,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "It only says the proofs are checked with Lean 4 and gives no pinned version. 3.13 is the Python version and 22.11.0 is the Node version.",
+   "outcome": "right"
+  },
+  {
+   "trial": 31,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "It proposes making `safe` the default in a later release. It doesn't say what the default mode is now.",
+   "outcome": "right"
+  },
+  {
+   "trial": 42,
+   "group": "long, with look-alikes",
+   "expect": [
+    "3.10",
+    "3.11",
+    "3.12",
+    "3.13"
+   ],
+   "read": [
+    "3.10",
+    "3.11",
+    "3.12",
+    "3.13"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 40,
+   "group": "long, with look-alikes",
+   "expect": "4.14.0",
+   "read": "4.14.0",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 36,
+   "group": "long, with look-alikes",
+   "expect": 30,
+   "read": 30,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 12,
+   "group": "default next to an example",
+   "expect": null,
+   "read": null,
+   "declined": "It gives the run time for a batch size of 64 as an example, but never says 64 is the default.",
+   "outcome": "right"
+  },
+  {
+   "trial": 9,
+   "group": "old and new value in one passage",
+   "expect": "MICLOW_CONSUMER_ID",
+   "read": "MICLOW_CONSUMER_ID",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 48,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "MIT",
+   "declined": null,
+   "outcome": "read \"MIT\" (no right answer)"
+  },
+  {
+   "trial": 14,
+   "group": "another notation",
+   "expect": 14,
+   "read": 14,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 15,
+   "group": "another notation",
+   "expect": [
+    "3.10",
+    "3.11",
+    "3.12"
+   ],
+   "read": [
+    "3.10",
+    "3.11",
+    "3.12"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 32,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "A hypothetical example (\"Suppose ... were 5\"). It does not state the actual default number of retries.",
+   "outcome": "right"
+  },
+  {
+   "trial": 19,
+   "group": "text addressed to the reader",
+   "expect": 8443,
+   "read": 8443,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 6,
+   "group": "old and new value in one passage",
+   "expect": 20,
+   "read": 20,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 35,
+   "group": "plain (for comparison)",
+   "expect": [
+    "not_stated",
+    "read_place"
+   ],
+   "read": [
+    "not_stated",
+    "read_place"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 52,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 30,
+   "declined": null,
+   "outcome": "read 30 (no right answer)"
+  },
+  {
+   "trial": 31,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "A proposal to maybe make `safe` the default in a later release. It does not state what the current default mode is.",
+   "outcome": "right"
+  },
+  {
+   "trial": 35,
+   "group": "plain (for comparison)",
+   "expect": [
+    "not_stated",
+    "read_place"
+   ],
+   "read": [
+    "not_stated",
+    "read_place"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 28,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "read": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 38,
+   "group": "long, with look-alikes",
+   "expect": 8,
+   "read": 8,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 37,
+   "group": "long, with look-alikes",
+   "expect": 120,
+   "read": 120,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 18,
+   "group": "text addressed to the reader",
+   "expect": "safe",
+   "read": "safe",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 51,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "4.12.0",
+   "declined": null,
+   "outcome": "read \"4.12.0\" (no right answer)"
+  },
+  {
+   "trial": 5,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "Gives only the Prometheus metrics port (9102, with --metrics). It does not give the server's default listening port.",
+   "outcome": "right"
+  },
+  {
+   "trial": 8,
+   "group": "old and new value in one passage",
+   "expect": null,
+   "read": null,
+   "declined": "A changelog saying the default was raised from 3 in version 1.4. It does not give the new value.",
+   "outcome": "right"
+  },
+  {
+   "trial": 4,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "Lists global options (--config, --quiet, --verbose), not subcommands.",
+   "outcome": "right"
+  },
+  {
+   "trial": 43,
+   "group": "long, with look-alikes",
+   "expect": "3.12",
+   "read": "3.12",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 48,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "MIT",
+   "declined": null,
+   "outcome": "read \"MIT\" (no right answer)"
+  },
+  {
+   "trial": 30,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "An open question about whether the limit should be 14 or 16. No value has been decided.",
+   "outcome": "right"
+  },
+  {
+   "trial": 52,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself: the table gives the `timeout` default as 30, but the sentence below it says the default is 60 seconds. It does not settle on one value.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 43,
+   "group": "long, with look-alikes",
+   "expect": "3.12",
+   "read": "3.12",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 33,
+   "group": "plain (for comparison)",
+   "expect": 14,
+   "read": 14,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 17,
+   "group": "text addressed to the reader",
+   "expect": 15,
+   "read": 15,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 15,
+   "group": "another notation",
+   "expect": [
+    "3.10",
+    "3.11",
+    "3.12"
+   ],
+   "read": [
+    "3.10",
+    "3.11",
+    "3.12"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 13,
+   "group": "another notation",
+   "expect": 850,
+   "read": 850,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 44,
+   "group": "long, with look-alikes",
+   "expect": "safe",
+   "read": "safe",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 5,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "The passage gives the port for Prometheus metrics (9102, only with --metrics), not the server's default listening port.",
+   "outcome": "right"
+  },
+  {
+   "trial": 42,
+   "group": "long, with look-alikes",
+   "expect": [
+    "3.10",
+    "3.11",
+    "3.12",
+    "3.13"
+   ],
+   "read": [
+    "3.10",
+    "3.11",
+    "3.12",
+    "3.13"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 47,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 8080,
+   "declined": null,
+   "outcome": "read 8080 (no right answer)"
+  },
+  {
+   "trial": 22,
+   "group": "the value is only in the surroundings",
+   "expect": null,
+   "read": null,
+   "declined": "The passage only sets \"mode\" to null. The value it falls back to (\"safe\") appears only in the surrounding comment, not in the passage.",
+   "outcome": "right"
+  },
+  {
+   "trial": 41,
+   "group": "long, with look-alikes",
+   "expect": "3.11",
+   "read": "3.11",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 1,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "States the server's maximum request duration (300 s), not a default; clients choose their own timeout.",
+   "outcome": "right"
+  },
+  {
+   "trial": 17,
+   "group": "text addressed to the reader",
+   "expect": 15,
+   "read": 15,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 45,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 14,
+   "declined": null,
+   "outcome": "read 14 (no right answer)"
+  },
+  {
+   "trial": 15,
+   "group": "another notation",
+   "expect": [
+    "3.10",
+    "3.11",
+    "3.12"
+   ],
+   "read": [
+    "3.10",
+    "3.11",
+    "3.12"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 12,
+   "group": "default next to an example",
+   "expect": null,
+   "read": null,
+   "declined": "Gives the run time for a batch size of 64 as an example; it never says 64 is the default.",
+   "outcome": "right"
+  },
+  {
+   "trial": 7,
+   "group": "old and new value in one passage",
+   "expect": "safe",
+   "read": "safe",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 44,
+   "group": "long, with look-alikes",
+   "expect": "safe",
+   "read": "safe",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 3,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "It gives the license of the bundled third-party parser (Apache-2.0), not the project's own license.",
+   "outcome": "right"
+  },
+  {
+   "trial": 6,
+   "group": "old and new value in one passage",
+   "expect": 20,
+   "read": 20,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 9,
+   "group": "old and new value in one passage",
+   "expect": "MICLOW_CONSUMER_ID",
+   "read": "MICLOW_CONSUMER_ID",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 50,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 3,
+   "declined": null,
+   "outcome": "read 3 (no right answer)"
+  },
+  {
+   "trial": 27,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "args",
+    "command",
+    "name"
+   ],
+   "read": [
+    "args",
+    "command",
+    "name"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 40,
+   "group": "long, with look-alikes",
+   "expect": "4.14.0",
+   "read": "4.14.0",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 7,
+   "group": "old and new value in one passage",
+   "expect": "safe",
+   "read": "safe",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 36,
+   "group": "long, with look-alikes",
+   "expect": 30,
+   "read": 30,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 12,
+   "group": "default next to an example",
+   "expect": null,
+   "read": null,
+   "declined": "The passage gives the run time for a batch size of 64 as an example, but never says 64 is the default.",
+   "outcome": "right"
+  },
+  {
+   "trial": 51,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "4.12.0",
+   "declined": null,
+   "outcome": "read \"4.12.0\" (no right answer)"
+  },
+  {
+   "trial": 38,
+   "group": "long, with look-alikes",
+   "expect": 8,
+   "read": 8,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 11,
+   "group": "default next to an example",
+   "expect": "large-3",
+   "read": "large-3",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 7,
+   "group": "old and new value in one passage",
+   "expect": "safe",
+   "read": "safe",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 1,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "It gives the server's maximum request time (300 s), not a default timeout; clients choose their own.",
+   "outcome": "right"
+  },
+  {
+   "trial": 46,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself: its table marks `fast` as the default, but the sentence below says the tool runs in `safe` mode unless told otherwise. It does not settle on one default.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 38,
+   "group": "long, with look-alikes",
+   "expect": 8,
+   "read": 8,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 12,
+   "group": "default next to an example",
+   "expect": null,
+   "read": null,
+   "declined": "It gives 64 only as an example batch size for a timing run, not as the default.",
+   "outcome": "right"
+  },
+  {
+   "trial": 39,
+   "group": "long, with look-alikes",
+   "expect": null,
+   "read": null,
+   "declined": "The settings table lists connect, read, write, idle and retry timeouts plus pool and queue settings. None of them is a DNS lookup timeout.",
+   "outcome": "right"
+  },
+  {
+   "trial": 6,
+   "group": "old and new value in one passage",
+   "expect": 20,
+   "read": 20,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 27,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "args",
+    "command",
+    "name"
+   ],
+   "read": [
+    "args",
+    "command",
+    "name"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 16,
+   "group": "another notation",
+   "expect": 120,
+   "read": 120,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 34,
+   "group": "plain (for comparison)",
+   "expect": "fast",
+   "read": "fast",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 49,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": [
+    "status",
+    "stop",
+    "subscribe"
+   ],
+   "declined": null,
+   "outcome": "read [\"status\", \"stop\", \"subscribe\"] (no right answer)"
+  },
+  {
+   "trial": 16,
+   "group": "another notation",
+   "expect": 120,
+   "read": 120,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 52,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 60,
+   "declined": null,
+   "outcome": "read 60 (no right answer)"
+  },
+  {
+   "trial": 25,
+   "group": "against what the reader may remember",
+   "expect": 5,
+   "read": 5,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 44,
+   "group": "long, with look-alikes",
+   "expect": "safe",
+   "read": "safe",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 12,
+   "group": "default next to an example",
+   "expect": null,
+   "read": null,
+   "declined": "It gives the run time for a batch size of 64 as an example, but never says that 64, or any other size, is the default.",
+   "outcome": "right"
+  },
+  {
+   "trial": 22,
+   "group": "the value is only in the surroundings",
+   "expect": null,
+   "read": null,
+   "declined": "The passage only sets mode to null. The word \"safe\" appears only in the surrounding comment, not in the passage.",
+   "outcome": "right"
+  },
+  {
+   "trial": 3,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "It gives the license of the bundled third-party parser (Apache-2.0), not the license of the project itself.",
+   "outcome": "right"
+  },
+  {
+   "trial": 21,
+   "group": "the value is only in the surroundings",
+   "expect": null,
+   "read": null,
+   "declined": "It only sets LIMIT to DEFAULT_LIMIT. The number itself is not in the passage.",
+   "outcome": "right"
+  },
+  {
+   "trial": 33,
+   "group": "plain (for comparison)",
+   "expect": 14,
+   "read": 14,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 10,
+   "group": "default next to an example",
+   "expect": 14,
+   "read": 14,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 47,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 8080,
+   "declined": null,
+   "outcome": "read 8080 (no right answer)"
+  },
+  {
+   "trial": 43,
+   "group": "long, with look-alikes",
+   "expect": "3.12",
+   "read": "3.12",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 49,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": [
+    "status",
+    "stop",
+    "subscribe"
+   ],
+   "declined": null,
+   "outcome": "read [\"status\", \"stop\", \"subscribe\"] (no right answer)"
+  },
+  {
+   "trial": 43,
+   "group": "long, with look-alikes",
+   "expect": "3.12",
+   "read": "3.12",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 0,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "Lists requirements and only says the proofs are checked with \"Lean 4\". It names no pinned Lean version; the 22.11.0 is the Node version.",
+   "outcome": "right"
+  },
+  {
+   "trial": 36,
+   "group": "long, with look-alikes",
+   "expect": 30,
+   "read": 30,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 30,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "An open question asking whether the limit should be 14 or 16, with measurements still running. No limit has been decided.",
+   "outcome": "right"
+  },
+  {
+   "trial": 26,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "status",
+    "stop",
+    "subscribe"
+   ],
+   "read": [
+    "status",
+    "stop",
+    "subscribe"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 9,
+   "group": "old and new value in one passage",
+   "expect": "MICLOW_CONSUMER_ID",
+   "read": "MICLOW_CONSUMER_ID",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 0,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "Says only \"Lean 4\" with no exact pinned version; the 22.11.0 is Node's version, not Lean's.",
+   "outcome": "right"
+  },
+  {
+   "trial": 44,
+   "group": "long, with look-alikes",
+   "expect": "safe",
+   "read": "safe",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 35,
+   "group": "plain (for comparison)",
+   "expect": [
+    "not_stated",
+    "read_place"
+   ],
+   "read": [
+    "not_stated",
+    "read_place"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 51,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "4.12.0",
+   "declined": null,
+   "outcome": "read \"4.12.0\" (no right answer)"
+  },
+  {
+   "trial": 29,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "receive",
+    "send"
+   ],
+   "read": [
+    "receive",
+    "send"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 45,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": null,
+   "declined": "The passage contradicts itself. 'Limits' says at most 14 atoms are solved exactly, but 'Details' says components of up to 16 atoms are solved exactly. It gives no single value.",
+   "outcome": "declined (no right answer)"
+  },
+  {
+   "trial": 34,
+   "group": "plain (for comparison)",
+   "expect": "fast",
+   "read": "fast",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 8,
+   "group": "old and new value in one passage",
+   "expect": null,
+   "read": null,
+   "declined": "A changelog entry says the default was raised from 3 in 1.4 but doesn't give the new value.",
+   "outcome": "right"
+  },
+  {
+   "trial": 30,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "An open question asking whether the limit should be 14 or 16. It isn't decided.",
+   "outcome": "right"
+  },
+  {
+   "trial": 15,
+   "group": "another notation",
+   "expect": [
+    "3.10",
+    "3.11",
+    "3.12"
+   ],
+   "read": [
+    "3.10",
+    "3.11",
+    "3.12"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 17,
+   "group": "text addressed to the reader",
+   "expect": 15,
+   "read": 15,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 37,
+   "group": "long, with look-alikes",
+   "expect": 120,
+   "read": 120,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 40,
+   "group": "long, with look-alikes",
+   "expect": "4.14.0",
+   "read": "4.14.0",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 8,
+   "group": "old and new value in one passage",
+   "expect": null,
+   "read": null,
+   "declined": "The changelog says the default was raised from 3 in 1.4 but never gives the new value; 3 is the old default.",
+   "outcome": "right"
+  },
+  {
+   "trial": 46,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "safe",
+   "declined": null,
+   "outcome": "read \"safe\" (no right answer)"
+  },
+  {
+   "trial": 19,
+   "group": "text addressed to the reader",
+   "expect": 8443,
+   "read": 8443,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 39,
+   "group": "long, with look-alikes",
+   "expect": null,
+   "read": null,
+   "declined": "The settings table lists connect, read, write, idle and retry timeouts, retries, backoff, pool and queue sizes, but has no DNS lookup timeout.",
+   "outcome": "right"
+  },
+  {
+   "trial": 48,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": "MIT",
+   "declined": null,
+   "outcome": "read \"MIT\" (no right answer)"
+  },
+  {
+   "trial": 44,
+   "group": "long, with look-alikes",
+   "expect": "safe",
+   "read": "safe",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 21,
+   "group": "the value is only in the surroundings",
+   "expect": null,
+   "read": null,
+   "declined": "The passage only assigns LIMIT from DEFAULT_LIMIT. It does not give the number itself.",
+   "outcome": "right"
+  },
+  {
+   "trial": 15,
+   "group": "another notation",
+   "expect": [
+    "3.10",
+    "3.11",
+    "3.12"
+   ],
+   "read": null,
+   "declined": "This is a tox envlist, which lists the environments tests run in. It does not declare which Python versions the package supports.",
+   "outcome": "declined"
+  },
+  {
+   "trial": 10,
+   "group": "default next to an example",
+   "expect": 14,
+   "read": 14,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 14,
+   "group": "another notation",
+   "expect": 14,
+   "read": 14,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 25,
+   "group": "against what the reader may remember",
+   "expect": 5,
+   "read": 5,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 36,
+   "group": "long, with look-alikes",
+   "expect": 30,
+   "read": 30,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 44,
+   "group": "long, with look-alikes",
+   "expect": "safe",
+   "read": "safe",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 2,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "The passage gives how many connections each worker handles (8) and how to start more workers, but not how many workers start by default.",
+   "outcome": "right"
+  },
+  {
+   "trial": 50,
+   "group": "the passage contradicts itself",
+   "expect": "?",
+   "read": 3,
+   "declined": null,
+   "outcome": "read 3 (no right answer)"
+  },
+  {
+   "trial": 26,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "status",
+    "stop",
+    "subscribe"
+   ],
+   "read": [
+    "status",
+    "stop",
+    "subscribe"
+   ],
+   "declined": null,
+   "outcome": "right"
+  }
+ ]
+}

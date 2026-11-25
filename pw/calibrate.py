@@ -77,7 +77,8 @@ def mutants(text, value, rng, n):
     """Up to n changed versions of `text`, each with the value it now states.
 
     A single value is replaced everywhere it occurs as a whole word, so the changed text is
-    consistent. A list has one entry renamed, or the one table row holding an entry removed.
+    consistent. A list has one entry renamed, or the one table row holding an entry removed
+    (not where the text states the number of entries: the change must not make it contradict itself).
     Returns [(kind, changed text, planted value)]; a value that does not occur literally in the
     text cannot be planted and yields nothing.
     """
@@ -90,6 +91,9 @@ def mutants(text, value, rng, n):
                 break
             lines = [ln for ln in text.splitlines(keepends=True) if _whole(e).search(ln)]
             alone = len(lines) == 1 and lines[0].lstrip().startswith("|") and not any(_whole(o).search(lines[0]) for o in value if o != e)
+            # Where the passage also says how many entries there are, taking a row out leaves it
+            # at odds with itself, and a reader is right to decline that: no row is removed there.
+            alone = alone and not _whole(len(value)).search(text)
             if alone and len(out) % 2 == 1:
                 out.append(("row removed", text.replace(lines[0], "", 1), sorted(x for x in value if x != e)))
             else:

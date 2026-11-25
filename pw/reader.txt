@@ -12,6 +12,12 @@ about. A value that only looks like an answer is not one: a version of one thing
 version of another. Call exactly one of the two tools for every passage, then reply with one
 line per passage.
 
+A passage may also say two different things about what is asked, both as what holds now: one
+value in one sentence and another in a table, a comment that disagrees with the code next to
+it. Then it does not state one value. Do not pick one: call `not_stated` and name both values
+in `why`. This is only for a passage at odds with itself. An earlier value next to the present
+one, an example next to the default, a limit next to a default are not that: read the one asked.
+
 A short passage may come with what surrounds it in its file. That is there only so that you can
 tell what the passage belongs to. The value has to be in the passage itself: never read it from
 the surroundings.

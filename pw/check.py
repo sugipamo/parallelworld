@@ -37,7 +37,7 @@ def show(report, unconfirmed="fail"):
     def declined(by):
         for x in by:
             print(f"          a blind reader ({x['model'] or x['actor']}) says the place does not state this: {x['why'][:200]}")
-            print("          if it is about something else, take the place out of pw-facts.json")
+            print("          if it is about something else, take the place out of pw-facts.json; if it says two things, make it say one")
 
     mark = lambda ok, soft=False: "ok  " if ok else ("WARN" if soft and unconfirmed == "warn" else "FAIL")
     for d in report["decisions"]:
