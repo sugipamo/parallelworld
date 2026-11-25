@@ -1,0 +1,1004 @@
+{
+ "model": "claude-opus-5-5",
+ "rounds": 3,
+ "cost_usd": 1.05,
+ "errors": [],
+ "trials": [
+  {
+   "trial": 0,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "Only says Lean 4, no pinned version number; the 22.11.0 is Node's version, not Lean's.",
+   "outcome": "right"
+  },
+  {
+   "trial": 19,
+   "group": "text addressed to the reader",
+   "expect": 8443,
+   "read": 8443,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 14,
+   "group": "another notation",
+   "expect": 14,
+   "read": 14,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 21,
+   "group": "the value is only in the surroundings",
+   "expect": null,
+   "read": null,
+   "declined": "The line only assigns LIMIT from DEFAULT_LIMIT and doesn't give a number itself.",
+   "outcome": "right"
+  },
+  {
+   "trial": 22,
+   "group": "the value is only in the surroundings",
+   "expect": null,
+   "read": null,
+   "declined": "mode is null, which means a built-in default that isn't named here; no string value is given.",
+   "outcome": "right"
+  },
+  {
+   "trial": 17,
+   "group": "text addressed to the reader",
+   "expect": 15,
+   "read": 15,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 33,
+   "group": "plain (for comparison)",
+   "expect": 14,
+   "read": 14,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 30,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "Open question: the limit is undecided between 14 and 16, measurements still running.",
+   "outcome": "right"
+  },
+  {
+   "trial": 7,
+   "group": "old and new value in one passage",
+   "expect": "safe",
+   "read": "safe",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 5,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "Gives the Prometheus metrics port (9102), not the server's default listening port.",
+   "outcome": "right"
+  },
+  {
+   "trial": 10,
+   "group": "default next to an example",
+   "expect": 14,
+   "read": 14,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 13,
+   "group": "another notation",
+   "expect": 850,
+   "read": 850,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 35,
+   "group": "plain (for comparison)",
+   "expect": [
+    "not_stated",
+    "read_place"
+   ],
+   "read": [
+    "not_stated",
+    "read_place"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 1,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "It gives the server's maximum of 300 seconds and says clients choose their own timeout; it states no default.",
+   "outcome": "right"
+  },
+  {
+   "trial": 28,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "read": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 23,
+   "group": "against what the reader may remember",
+   "expect": 5433,
+   "read": 5433,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 8,
+   "group": "old and new value in one passage",
+   "expect": null,
+   "read": null,
+   "declined": "The changelog says the default was raised from 3 in 1.4 but never gives the new value.",
+   "outcome": "right"
+  },
+  {
+   "trial": 3,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "It gives the license of the bundled third-party parser (Apache-2.0), not the license of the project itself.",
+   "outcome": "right"
+  },
+  {
+   "trial": 20,
+   "group": "text addressed to the reader",
+   "expect": "MIT",
+   "read": "MIT",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 27,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "args",
+    "command",
+    "name"
+   ],
+   "read": [
+    "args",
+    "command",
+    "name"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 4,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "The passage lists global options (--config, --quiet, --verbose), not subcommands.",
+   "outcome": "right"
+  },
+  {
+   "trial": 32,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "The passage is a hypothetical example (\"Suppose ... were 5\") and does not state the actual default.",
+   "outcome": "right"
+  },
+  {
+   "trial": 6,
+   "group": "old and new value in one passage",
+   "expect": 20,
+   "read": 20,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 18,
+   "group": "text addressed to the reader",
+   "expect": "safe",
+   "read": "safe",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 11,
+   "group": "default next to an example",
+   "expect": "large-3",
+   "read": "large-3",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 15,
+   "group": "another notation",
+   "expect": [
+    "3.10",
+    "3.11",
+    "3.12"
+   ],
+   "read": [
+    "3.10",
+    "3.11",
+    "3.12"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 9,
+   "group": "old and new value in one passage",
+   "expect": "MICLOW_CONSUMER_ID",
+   "read": "MICLOW_CONSUMER_ID",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 34,
+   "group": "plain (for comparison)",
+   "expect": "fast",
+   "read": "fast",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 25,
+   "group": "against what the reader may remember",
+   "expect": 5,
+   "read": 5,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 29,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "receive",
+    "send"
+   ],
+   "read": [
+    "receive",
+    "send"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 12,
+   "group": "default next to an example",
+   "expect": null,
+   "read": null,
+   "declined": "It gives timing for an example run with batch size 64 but never says 64 is the default.",
+   "outcome": "right"
+  },
+  {
+   "trial": 31,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "It only proposes making `safe` the default in a later release. It does not give the current default mode.",
+   "outcome": "right"
+  },
+  {
+   "trial": 16,
+   "group": "another notation",
+   "expect": 120,
+   "read": 120,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 2,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "It gives connections per worker and how to start more workers, not the default number of workers.",
+   "outcome": "right"
+  },
+  {
+   "trial": 26,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "status",
+    "stop",
+    "subscribe"
+   ],
+   "read": [
+    "status",
+    "stop",
+    "subscribe"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 24,
+   "group": "against what the reader may remember",
+   "expect": "4.1.0",
+   "read": "4.1.0",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 5,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "The passage gives the Prometheus metrics port (9102), not the server's default listening port.",
+   "outcome": "right"
+  },
+  {
+   "trial": 13,
+   "group": "another notation",
+   "expect": 850,
+   "read": 850,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 29,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "receive",
+    "send"
+   ],
+   "read": [
+    "receive",
+    "send"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 11,
+   "group": "default next to an example",
+   "expect": "large-3",
+   "read": "large-3",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 4,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "The passage lists global options (--config, --quiet, --verbose), not subcommands.",
+   "outcome": "right"
+  },
+  {
+   "trial": 17,
+   "group": "text addressed to the reader",
+   "expect": 15,
+   "read": 15,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 35,
+   "group": "plain (for comparison)",
+   "expect": [
+    "not_stated",
+    "read_place"
+   ],
+   "read": [
+    "not_stated",
+    "read_place"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 1,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "It gives the server's maximum of 300 seconds, not a default; clients choose their own timeout below that.",
+   "outcome": "right"
+  },
+  {
+   "trial": 18,
+   "group": "text addressed to the reader",
+   "expect": "safe",
+   "read": "safe",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 8,
+   "group": "old and new value in one passage",
+   "expect": null,
+   "read": null,
+   "declined": "Changelog says the default was raised from 3 in 1.4 but does not give the new value.",
+   "outcome": "right"
+  },
+  {
+   "trial": 34,
+   "group": "plain (for comparison)",
+   "expect": "fast",
+   "read": "fast",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 27,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "args",
+    "command",
+    "name"
+   ],
+   "read": [
+    "args",
+    "command",
+    "name"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 32,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "A hypothetical example (\"Suppose ... were 5\"). It does not state the actual default.",
+   "outcome": "right"
+  },
+  {
+   "trial": 9,
+   "group": "old and new value in one passage",
+   "expect": "MICLOW_CONSUMER_ID",
+   "read": "MICLOW_CONSUMER_ID",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 14,
+   "group": "another notation",
+   "expect": 14,
+   "read": 14,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 6,
+   "group": "old and new value in one passage",
+   "expect": 20,
+   "read": 20,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 30,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "An open question about whether the limit should be 14 or 16. No limit has been decided.",
+   "outcome": "right"
+  },
+  {
+   "trial": 24,
+   "group": "against what the reader may remember",
+   "expect": "4.1.0",
+   "read": "4.1.0",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 7,
+   "group": "old and new value in one passage",
+   "expect": "safe",
+   "read": "safe",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 10,
+   "group": "default next to an example",
+   "expect": 14,
+   "read": 14,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 15,
+   "group": "another notation",
+   "expect": [
+    "3.10",
+    "3.11",
+    "3.12"
+   ],
+   "read": [
+    "3.10",
+    "3.11",
+    "3.12"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 19,
+   "group": "text addressed to the reader",
+   "expect": 8443,
+   "read": 8443,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 31,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "It only proposes making `safe` the default in a later release. It does not say what the default mode is now.",
+   "outcome": "right"
+  },
+  {
+   "trial": 20,
+   "group": "text addressed to the reader",
+   "expect": "MIT",
+   "read": "MIT",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 21,
+   "group": "the value is only in the surroundings",
+   "expect": null,
+   "read": null,
+   "declined": "The passage only assigns LIMIT from DEFAULT_LIMIT; it gives no number itself.",
+   "outcome": "right"
+  },
+  {
+   "trial": 25,
+   "group": "against what the reader may remember",
+   "expect": 5,
+   "read": 5,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 22,
+   "group": "the value is only in the surroundings",
+   "expect": null,
+   "read": null,
+   "declined": "The mode is set to null, meaning a built-in default is used, but the passage doesn't say what that default is.",
+   "outcome": "right"
+  },
+  {
+   "trial": 12,
+   "group": "default next to an example",
+   "expect": null,
+   "read": null,
+   "declined": "64 is given as an example batch size for timing, not stated as the default.",
+   "outcome": "right"
+  },
+  {
+   "trial": 26,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "status",
+    "stop",
+    "subscribe"
+   ],
+   "read": [
+    "status",
+    "stop",
+    "subscribe"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 23,
+   "group": "against what the reader may remember",
+   "expect": 5433,
+   "read": 5433,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 2,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "Gives connections per worker (8) and how to set the worker count, but not the default number of workers.",
+   "outcome": "right"
+  },
+  {
+   "trial": 0,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "Says only \"Lean 4\" with no pinned version; 3.13 is the Python version and 22.11.0 is the Node version.",
+   "outcome": "right"
+  },
+  {
+   "trial": 3,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "Apache-2.0 is the license of the bundled third-party parser, not of the project itself.",
+   "outcome": "right"
+  },
+  {
+   "trial": 16,
+   "group": "another notation",
+   "expect": 120,
+   "read": 120,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 33,
+   "group": "plain (for comparison)",
+   "expect": 14,
+   "read": 14,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 28,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "read": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 3,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "It gives the license of the bundled third-party parser (Apache-2.0), not the license of the project itself.",
+   "outcome": "right"
+  },
+  {
+   "trial": 24,
+   "group": "against what the reader may remember",
+   "expect": "4.1.0",
+   "read": "4.1.0",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 15,
+   "group": "another notation",
+   "expect": [
+    "3.10",
+    "3.11",
+    "3.12"
+   ],
+   "read": [
+    "3.10",
+    "3.11",
+    "3.12"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 11,
+   "group": "default next to an example",
+   "expect": "large-3",
+   "read": "large-3",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 8,
+   "group": "old and new value in one passage",
+   "expect": null,
+   "read": null,
+   "declined": "The changelog says the default number of retries was raised from 3 in 1.4, but it doesn't say what the new value is.",
+   "outcome": "right"
+  },
+  {
+   "trial": 16,
+   "group": "another notation",
+   "expect": 120,
+   "read": 120,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 32,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "A hypothetical example (\"Suppose ... were 5\"), not the actual default.",
+   "outcome": "right"
+  },
+  {
+   "trial": 1,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "Gives the server's 300-second maximum; clients choose their own timeout, no default stated.",
+   "outcome": "right"
+  },
+  {
+   "trial": 22,
+   "group": "the value is only in the surroundings",
+   "expect": null,
+   "read": null,
+   "declined": "mode is set to null, deferring to an unnamed built-in default; no string value given.",
+   "outcome": "right"
+  },
+  {
+   "trial": 4,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "Lists global options (--config, --quiet, --verbose), not subcommands.",
+   "outcome": "right"
+  },
+  {
+   "trial": 20,
+   "group": "text addressed to the reader",
+   "expect": "MIT",
+   "read": "MIT",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 27,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "args",
+    "command",
+    "name"
+   ],
+   "read": [
+    "args",
+    "command",
+    "name"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 0,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "Names Lean 4 only as a major version with no pinned version; 22.11.0 is Node's version and 3.13 is Python's.",
+   "outcome": "right"
+  },
+  {
+   "trial": 23,
+   "group": "against what the reader may remember",
+   "expect": 5433,
+   "read": 5433,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 31,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "Only proposes making `safe` the default in a later release; does not state the current default mode.",
+   "outcome": "right"
+  },
+  {
+   "trial": 6,
+   "group": "old and new value in one passage",
+   "expect": 20,
+   "read": 20,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 5,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "Gives the port for Prometheus metrics with --metrics, not the server's default listening port.",
+   "outcome": "right"
+  },
+  {
+   "trial": 29,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "receive",
+    "send"
+   ],
+   "read": [
+    "receive",
+    "send"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 33,
+   "group": "plain (for comparison)",
+   "expect": 14,
+   "read": 14,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 26,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "status",
+    "stop",
+    "subscribe"
+   ],
+   "read": [
+    "status",
+    "stop",
+    "subscribe"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 10,
+   "group": "default next to an example",
+   "expect": 14,
+   "read": 14,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 12,
+   "group": "default next to an example",
+   "expect": null,
+   "read": null,
+   "declined": "It gives the run time for a batch size of 64 as an example, and says nothing about which batch size is the default.",
+   "outcome": "right"
+  },
+  {
+   "trial": 28,
+   "group": "a list with entries that do not count",
+   "expect": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "read": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 2,
+   "group": "another thing of the same kind",
+   "expect": null,
+   "read": null,
+   "declined": "It says how many connections each worker handles and how to start more workers, but not how many start by default.",
+   "outcome": "right"
+  },
+  {
+   "trial": 14,
+   "group": "another notation",
+   "expect": 14,
+   "read": 14,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 9,
+   "group": "old and new value in one passage",
+   "expect": "MICLOW_CONSUMER_ID",
+   "read": "MICLOW_CONSUMER_ID",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 34,
+   "group": "plain (for comparison)",
+   "expect": "fast",
+   "read": "fast",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 17,
+   "group": "text addressed to the reader",
+   "expect": 15,
+   "read": 15,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 19,
+   "group": "text addressed to the reader",
+   "expect": 8443,
+   "read": 8443,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 25,
+   "group": "against what the reader may remember",
+   "expect": 5,
+   "read": 5,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 30,
+   "group": "nothing is asserted",
+   "expect": null,
+   "read": null,
+   "declined": "An open question asking whether the limit should be 14 or 16. No value has been decided yet.",
+   "outcome": "right"
+  },
+  {
+   "trial": 13,
+   "group": "another notation",
+   "expect": 850,
+   "read": 850,
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 21,
+   "group": "the value is only in the surroundings",
+   "expect": null,
+   "read": null,
+   "declined": "Sets LIMIT to DEFAULT_LIMIT. The number itself is defined only in the surrounding code, not in the passage.",
+   "outcome": "right"
+  },
+  {
+   "trial": 7,
+   "group": "old and new value in one passage",
+   "expect": "safe",
+   "read": "safe",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 18,
+   "group": "text addressed to the reader",
+   "expect": "safe",
+   "read": "safe",
+   "declined": null,
+   "outcome": "right"
+  },
+  {
+   "trial": 35,
+   "group": "plain (for comparison)",
+   "expect": [
+    "not_stated",
+    "read_place"
+   ],
+   "read": [
+    "not_stated",
+    "read_place"
+   ],
+   "declined": null,
+   "outcome": "right"
+  }
+ ]
+}

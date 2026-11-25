@@ -1,0 +1,4289 @@
+[
+ {
+  "sha": "0d5035e0c7",
+  "parents": [],
+  "date": "2026-11-23",
+  "subject": "Initial commit",
+  "changed": [
+   "README.md"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "d4b1baa122",
+  "parents": [
+   "0d5035e0c7"
+  ],
+  "date": "2026-11-23",
+  "subject": "Add probabilistic knowledge kernel, Lean gate, MCP server and orchestrator",
+  "changed": [
+   ".gitignore",
+   "README.md",
+   "docs/spec.md",
+   "lean/Gamma.lean",
+   "lean/lakefile.toml",
+   "lean/lean-toolchain",
+   "pw/__init__.py",
+   "pw/catalog.json",
+   "pw/formula.py",
+   "pw/kernel.py",
+   "pw/lean_gate.py",
+   "pw/mcp_server.py",
+   "pw/orchestrator.py",
+   "tests/test_kernel.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "d9cb9eb987",
+  "parents": [
+   "d4b1baa122"
+  ],
+  "date": "2026-11-23",
+  "subject": "Verify proofs with real Lean; audit axioms in a separate run",
+  "changed": [
+   "README.md",
+   "docs/spec.md",
+   "lean/lake-manifest.json",
+   "pw/lean_gate.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "36ad1cbbfd",
+  "parents": [
+   "d9cb9eb987"
+  ],
+  "date": "2026-11-23",
+  "subject": "Let workers edit and commit; keep each worker's transcript",
+  "changed": [
+   "pw/orchestrator.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "711dbb1491",
+  "parents": [
+   "36ad1cbbfd"
+  ],
+  "date": "2026-11-23",
+  "subject": "Do not let Lean-decided propositions link unrelated claims",
+  "changed": [
+   "docs/spec.md",
+   "pw/kernel.py",
+   "tests/test_kernel.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "4d835abc7e",
+  "parents": [
+   "711dbb1491"
+  ],
+  "date": "2026-11-23",
+  "subject": "Write the semantics in symbols and map it to existing mathematics",
+  "changed": [
+   "docs/spec.md",
+   "docs/symbols.md",
+   "tests/test_kernel.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "c411accf0e",
+  "parents": [
+   "4d835abc7e"
+  ],
+  "date": "2026-11-23",
+  "subject": "Align implementation with the mathematics it corresponds to",
+  "changed": [
+   "README.md",
+   "docs/spec.md",
+   "docs/symbols.md",
+   "pw/credal.py",
+   "pw/kernel.py",
+   "pw/lean_gate.py",
+   "pw/lindenbaum.py",
+   "pw/mcp_server.py",
+   "pw/orchestrator.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "383ec96b25",
+  "parents": [
+   "c411accf0e"
+  ],
+  "date": "2026-11-23",
+  "subject": "Split the connection into a specification hypothesis and a shared model hypothesis",
+  "changed": [
+   "pw/catalog.json",
+   "pw/kernel.py",
+   "pw/lean_gate.py",
+   "pw/mcp_server.py",
+   "pw/orchestrator.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "90319c978b",
+  "parents": [
+   "383ec96b25"
+  ],
+  "date": "2026-11-23",
+  "subject": "Document the specification and model hypotheses",
+  "changed": [
+   "docs/spec.md",
+   "docs/symbols.md"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "521a2d6352",
+  "parents": [
+   "90319c978b"
+  ],
+  "date": "2026-11-23",
+  "subject": "Record the third two-worker run",
+  "changed": [
+   "docs/spec.md"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "4762d43efc",
+  "parents": [
+   "521a2d6352"
+  ],
+  "date": "2026-11-23",
+  "subject": "Make model checks deductive and let random checks raise the lower bound",
+  "changed": [
+   "pw/catalog.json",
+   "pw/credal.py",
+   "pw/kernel.py",
+   "pw/lean_gate.py",
+   "pw/mcp_server.py",
+   "pw/orchestrator.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "d438bd6843",
+  "parents": [
+   "4762d43efc"
+  ],
+  "date": "2026-11-23",
+  "subject": "Document deductive and exchangeable model checks; record the fourth run",
+  "changed": [
+   "docs/spec.md",
+   "docs/symbols.md"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "b9d689d4cf",
+  "parents": [
+   "d438bd6843"
+  ],
+  "date": "2026-11-23",
+  "subject": "Let required claims be stated as predicates; check specifications for vacuity",
+  "changed": [
+   "pw/catalog.json",
+   "pw/kernel.py",
+   "pw/lean_gate.py",
+   "pw/lindenbaum.py",
+   "pw/mcp_server.py",
+   "pw/orchestrator.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "94fe3a4d8c",
+  "parents": [
+   "b9d689d4cf"
+  ],
+  "date": "2026-11-23",
+  "subject": "Document formal claims and evidence for specification hypotheses",
+  "changed": [
+   "docs/spec.md",
+   "docs/symbols.md"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "7de0173267",
+  "parents": [
+   "94fe3a4d8c"
+  ],
+  "date": "2026-11-23",
+  "subject": "Record the fifth run; keep the event type from being shadowed by a payload field",
+  "changed": [
+   "docs/spec.md",
+   "pw/kernel.py",
+   "tests/test_kernel.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "2d7a788641",
+  "parents": [
+   "7de0173267"
+  ],
+  "date": "2026-11-23",
+  "subject": "Add a dependency experiment and dependency-aware merge decisions",
+  "changed": [
+   "experiments/__init__.py",
+   "experiments/dependency/__init__.py",
+   "experiments/dependency/run.py",
+   "pw/orchestrator.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "9e4bcffb57",
+  "parents": [
+   "2d7a788641"
+  ],
+  "date": "2026-11-23",
+  "subject": "Record the dependency experiment: same outcomes as shared notes, at higher cost",
+  "changed": [
+   "experiments/dependency/RESULTS.md",
+   "experiments/dependency/results/bug-kernel.json",
+   "experiments/dependency/results/bug-notes.json",
+   "experiments/dependency/results/ok-kernel.json",
+   "experiments/dependency/results/ok-notes.json"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "53b9c85a44",
+  "parents": [
+   "9e4bcffb57"
+  ],
+  "date": "2026-11-23",
+  "subject": "Prepare the self-check trial: mathlib-backed Gamma, rational and list inputs",
+  "changed": [
+   ".gitignore",
+   "experiments/selfcheck/lean/Gamma.lean",
+   "experiments/selfcheck/lean/lake-manifest.json",
+   "experiments/selfcheck/lean/lakefile.toml",
+   "experiments/selfcheck/lean/lean-toolchain",
+   "experiments/selfcheck/run.sh",
+   "experiments/selfcheck/tasks.json",
+   "pw/credal.py",
+   "pw/kernel.py",
+   "pw/lean_gate.py",
+   "pw/mcp_server.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "1e98e11a83",
+  "parents": [
+   "53b9c85a44"
+  ],
+  "date": "2026-11-23",
+  "subject": "Record the self-check trial; keep exact arithmetic exact in the Frechet bound",
+  "changed": [
+   "experiments/selfcheck/RESULTS.md",
+   "experiments/selfcheck/results/longest_proof.lean",
+   "experiments/selfcheck/results/workers.json",
+   "pw/credal.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "c46edf02c3",
+  "parents": [
+   "1e98e11a83"
+  ],
+  "date": "2026-11-23",
+  "subject": "Hold past decisions against later changes and later decisions",
+  "changed": [
+   "experiments/decisions/__init__.py",
+   "experiments/decisions/run.py",
+   "pw/check.py",
+   "pw/kernel.py",
+   "pw/lean_gate.py",
+   "pw/lindenbaum.py",
+   "pw/mcp_server.py",
+   "pw/orchestrator.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "3bdabe919b",
+  "parents": [
+   "c46edf02c3"
+  ],
+  "date": "2026-11-23",
+  "subject": "Record the past-decisions run; let a contradictory proposal fail alone",
+  "changed": [
+   "README.md",
+   "docs/spec.md",
+   "docs/symbols.md",
+   "experiments/decisions/RESULTS.md",
+   "experiments/decisions/results/result.json",
+   "experiments/decisions/run.py",
+   "pw/kernel.py",
+   "pw/orchestrator.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "a52bb82db2",
+  "parents": [
+   "3bdabe919b"
+  ],
+  "date": "2026-11-23",
+  "subject": "Check formalizations when stated; hold natural-language claims by their recorded checks",
+  "changed": [
+   "pw/check.py",
+   "pw/kernel.py",
+   "pw/lean_gate.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "f896ac265b",
+  "parents": [
+   "a52bb82db2"
+  ],
+  "date": "2026-11-23",
+  "subject": "Add a study of how natural-language decisions fit into the kernel",
+  "changed": [
+   "experiments/nl/__init__.py",
+   "experiments/nl/run.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "6523657f4d",
+  "parents": [
+   "f896ac265b"
+  ],
+  "date": "2026-11-23",
+  "subject": "Call a decision 'uncovered', not 'broken', when its proof no longer applies to the code",
+  "changed": [
+   "pw/check.py",
+   "pw/kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "b5782bd773",
+  "parents": [
+   "6523657f4d"
+  ],
+  "date": "2026-11-23",
+  "subject": "Record what was learnt about natural-language decisions",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "experiments/decisions/RESULTS.md",
+   "experiments/nl/RESULTS.md",
+   "experiments/nl/results/comparisons.json",
+   "experiments/nl/results/formalizations.json",
+   "experiments/selfcheck/RESULTS.md",
+   "experiments/selfcheck/results/recheck.json",
+   "pw/kernel.py",
+   "pw/mcp_server.py",
+   "tests/test_kernel.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "8d5a83dae0",
+  "parents": [
+   "b5782bd773"
+  ],
+  "date": "2026-11-23",
+  "subject": "Record what a model hypothesis claims: code, term, domains and the way the code is called",
+  "changed": [
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "docs/symbols.md",
+   "experiments/selfcheck/tasks.json",
+   "pw/kernel.py",
+   "pw/mcp_server.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "b03ad4ce54",
+  "parents": [
+   "8d5a83dae0"
+  ],
+  "date": "2026-11-23",
+  "subject": "Judge every claim against the present version of the code, not only in pw.check",
+  "changed": [
+   "docs/spec.md",
+   "experiments/decisions/RESULTS.md",
+   "experiments/decisions/results/result-rerun.json",
+   "pw/kernel.py",
+   "pw/mcp_server.py",
+   "pw/orchestrator.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "1b0353ad2a",
+  "parents": [
+   "b03ad4ce54"
+  ],
+  "date": "2026-11-23",
+  "subject": "Fix a test expectation about version-scoped bounds",
+  "changed": [
+   "tests/test_lean_real.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "9c7c3a67d0",
+  "parents": [
+   "1b0353ad2a"
+  ],
+  "date": "2026-11-23",
+  "subject": "Let decisions be about any file, read by a reader or by an agent, and keep them true as files change",
+  "changed": [
+   "experiments/artifacts/__init__.py",
+   "experiments/artifacts/run.py",
+   "pw/catalog.json",
+   "pw/check.py",
+   "pw/kernel.py",
+   "pw/maintain.py",
+   "pw/mcp_server.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "a90ed938f2",
+  "parents": [
+   "9c7c3a67d0"
+  ],
+  "date": "2026-11-23",
+  "subject": "Record the trial on a file that is not code; report a refuted decision as violated",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "docs/symbols.md",
+   "experiments/artifacts/RESULTS.md",
+   "experiments/artifacts/results/result.json",
+   "experiments/artifacts/run.py",
+   "pw/kernel.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "734c1f51d1",
+  "parents": [
+   "a90ed938f2"
+  ],
+  "date": "2026-11-23",
+  "subject": "Make a subject a file or a named part of one; add a study of decisions about prose",
+  "changed": [
+   "experiments/prose/__init__.py",
+   "experiments/prose/run.py",
+   "pw/kernel.py",
+   "tests/test_kernel.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "972502d549",
+  "parents": [
+   "734c1f51d1"
+  ],
+  "date": "2026-11-23",
+  "subject": "Gate: treat string literals as data, accept statements that unfolding already settles",
+  "changed": [
+   "pw/lean_gate.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "99e91818ed",
+  "parents": [
+   "972502d549"
+  ],
+  "date": "2026-11-23",
+  "subject": "Record the study of decisions about prose; describe the semantics for any file",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "docs/symbols.md",
+   "experiments/prose/RESULTS.md",
+   "experiments/prose/results/maintain.json",
+   "experiments/prose/results/read.json"
+  ],
+  "facts": null
+ },
+ {
+  "sha": "55b0c2873b",
+  "parents": [
+   "99e91818ed"
+  ],
+  "date": "2026-11-23",
+  "subject": "Facts: one thing, the places that state it, and the decision that they agree",
+  "changed": [
+   "docs/spec.md",
+   "experiments/facts/__init__.py",
+   "experiments/facts/run.py",
+   "pw-facts.json",
+   "pw/check.py",
+   "pw/confirm.py",
+   "pw/kernel.py",
+   "pw/maintain.py",
+   "pw/mcp_server.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"",
+     "docs/spec.md::3. モデル: nobody has read it yet",
+     "docs/spec.md::2. v0.1 からの変更: nobody has read it yet",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+     "docs/spec.md::5. Lean Gate: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as 14",
+     "docs/spec.md::7. 未解決: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",",
+     "docs/spec.md::4. 操作（MCPツール）: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "3f8c55a6c9",
+  "parents": [
+   "55b0c2873b"
+  ],
+  "date": "2026-11-23",
+  "subject": "Anchor stated readings to a verbatim quote; hold each reading to the threshold by itself",
+  "changed": [
+   "pw/check.py",
+   "pw/confirm.py",
+   "pw/kernel.py",
+   "pw/maintain.py",
+   "pw/mcp_server.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"",
+     "docs/spec.md::3. モデル: nobody has read it yet",
+     "docs/spec.md::2. v0.1 からの変更: nobody has read it yet",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+     "docs/spec.md::5. Lean Gate: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as 14",
+     "docs/spec.md::7. 未解決: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",",
+     "docs/spec.md::4. 操作（MCPツール）: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "076b6f9e0b",
+  "parents": [
+   "3f8c55a6c9"
+  ],
+  "date": "2026-11-23",
+  "subject": "Record the run of the loop on this repository's own facts; read lists off the whole place",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "experiments/facts/RESULTS.md",
+   "experiments/facts/results/result-first-run.json",
+   "experiments/facts/results/result.json",
+   "pw/confirm.py",
+   "pw/kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"",
+     "docs/spec.md::3. モデル: nobody has read it yet",
+     "docs/spec.md::2. v0.1 からの変更: nobody has read it yet",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+     "docs/spec.md::5. Lean Gate: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as 14",
+     "docs/spec.md::7. 未解決: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",",
+     "docs/spec.md::4. 操作（MCPツール）: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "9349906440",
+  "parents": [
+   "076b6f9e0b"
+  ],
+  "date": "2026-11-23",
+  "subject": "Keep the record in the repository as append-only text",
+  "changed": [
+   ".gitattributes",
+   "README.md",
+   "docs/spec.md",
+   "experiments/artifacts/run.py",
+   "experiments/facts/RESULTS.md",
+   "experiments/nl/run.py",
+   "experiments/prose/run.py",
+   "pw/check.py",
+   "pw/confirm.py",
+   "pw/kernel.py",
+   "pw/maintain.py",
+   "pw/mcp_server.py",
+   "pw/orchestrator.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"",
+     "docs/spec.md::3. モデル: nobody has read it yet",
+     "docs/spec.md::2. v0.1 からの変更: nobody has read it yet",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+     "docs/spec.md::5. Lean Gate: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as 14",
+     "docs/spec.md::7. 未解決: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",",
+     "docs/spec.md::4. 操作（MCPツール）: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "44accbfdf2",
+  "parents": [
+   "9349906440"
+  ],
+  "date": "2026-11-23",
+  "subject": "pw.maintain: create its working directory",
+  "changed": [
+   "pw/maintain.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"",
+     "docs/spec.md::3. モデル: nobody has read it yet",
+     "docs/spec.md::2. v0.1 からの変更: nobody has read it yet",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+     "docs/spec.md::5. Lean Gate: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as 14",
+     "docs/spec.md::7. 未解決: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",",
+     "docs/spec.md::4. 操作（MCPツール）: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "f906c90f6f",
+  "parents": [
+   "44accbfdf2"
+  ],
+  "date": "2026-11-23",
+  "subject": "Record the readings of this repository's facts",
+  "changed": [
+   "pw-log.jsonl"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::3. モデル reads as \"pqd\"   (stated, M:71b76f8540, not confirmed)",
+     "docs/spec.md::2. v0.1 からの変更 reads as \"pqd\"   (stated, M:c9d3d7e7ad, not confirmed)",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則 reads as \"pqd\"   (stated, M:068aa887f0, not confirmed)",
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"",
+     "the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::5. Lean Gate reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]   (stated, M:2d2f501f9e, not confirmed)",
+     "pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+     "the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::7. 未解決 reads as 14   (stated, M:ef99b187a9, not confirmed)",
+     "pw/kernel.py::Kernel.__init__ reads as 14",
+     "the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::4. 操作（MCPツール） reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",   (stated, M:0f02df5e30, not confirmed)",
+     "pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",",
+     "the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "c459b78c64",
+  "parents": [
+   "f906c90f6f"
+  ],
+  "date": "2026-11-23",
+  "subject": "Read places by a declaration, not by code; identify a fact by its name and type",
+  "changed": [
+   "pw-facts.json",
+   "pw/kernel.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"",
+     "docs/spec.md::3. モデル: nobody has read it yet",
+     "docs/spec.md::2. v0.1 からの変更: nobody has read it yet",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+     "docs/spec.md::5. Lean Gate: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as 14",
+     "docs/spec.md::7. 未解決: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",",
+     "docs/spec.md::4. 操作（MCPツール）: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "9b9bf435d7",
+  "parents": [
+   "c459b78c64"
+  ],
+  "date": "2026-11-23",
+  "subject": "Fix a test expectation; document reading places by a declaration",
+  "changed": [
+   "docs/spec.md",
+   "docs/symbols.md",
+   "tests/test_kernel.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"",
+     "docs/spec.md::3. モデル: nobody has read it yet",
+     "docs/spec.md::2. v0.1 からの変更: nobody has read it yet",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+     "docs/spec.md::5. Lean Gate: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as 14",
+     "docs/spec.md::7. 未解決: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",",
+     "docs/spec.md::4. 操作（MCPツール）: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "3c8373ee10",
+  "parents": [
+   "9b9bf435d7"
+  ],
+  "date": "2026-11-23",
+  "subject": "Start the record afresh for the redeclared facts",
+  "changed": [
+   "pw-log.jsonl"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"",
+     "docs/spec.md::3. モデル: nobody has read it yet",
+     "docs/spec.md::2. v0.1 からの変更: nobody has read it yet",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+     "docs/spec.md::5. Lean Gate: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as 14",
+     "docs/spec.md::7. 未解決: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",",
+     "docs/spec.md::4. 操作（MCPツール）: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "ad267534b9",
+  "parents": [
+   "3c8373ee10"
+  ],
+  "date": "2026-11-23",
+  "subject": "Record the readings of this repository's facts",
+  "changed": [
+   "pw-log.jsonl"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::3. モデル reads as \"pqd\"   (stated, M:71b76f8540, not confirmed)",
+     "docs/spec.md::2. v0.1 からの変更 reads as \"pqd\"   (stated, M:c9d3d7e7ad, not confirmed)",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則 reads as \"pqd\"   (stated, M:068aa887f0, not confirmed)",
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"",
+     "the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::5. Lean Gate reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]   (stated, M:2d2f501f9e, not confirmed)",
+     "pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+     "the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::7. 未解決 reads as 14   (stated, M:ef99b187a9, not confirmed)",
+     "pw/kernel.py::Kernel.__init__ reads as 14",
+     "the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::4. 操作（MCPツール） reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",   (stated, M:0f02df5e30, not confirmed)",
+     "pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",",
+     "the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "d3aa0e6be1",
+  "parents": [
+   "ad267534b9"
+  ],
+  "date": "2026-11-23",
+  "subject": "Run the check in CI on every push and pull request",
+  "changed": [
+   ".github/workflows/decisions.yml",
+   "README.md",
+   "docs/spec.md",
+   "pw-facts.json",
+   "pw-log.jsonl",
+   "pw/check.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::3. モデル reads as \"pqd\"   (stated, M:71b76f8540, not confirmed)",
+     "docs/spec.md::2. v0.1 からの変更 reads as \"pqd\"   (stated, M:c9d3d7e7ad, not confirmed)",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則 reads as \"pqd\"   (stated, M:068aa887f0, not confirmed)",
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"",
+     "the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::5. Lean Gate reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]   (stated, M:2d2f501f9e, not confirmed)",
+     "pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+     "the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::7. 未解決 reads as 14   (stated, M:ef99b187a9, not confirmed)",
+     "pw/kernel.py::Kernel.__init__ reads as 14",
+     "the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::4. 操作（MCPツール） reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",   (stated, M:0f02df5e30, not confirmed)",
+     "pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",",
+     "the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "d252c6870e",
+  "parents": [
+   "d3aa0e6be1"
+  ],
+  "date": "2026-11-23",
+  "subject": "CI: pin everything it fetches to content and give the job read access only",
+  "changed": [
+   ".github/workflows/decisions.yml",
+   "README.md",
+   "docs/spec.md",
+   "pw-log.jsonl",
+   "requirements-ci.txt"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::3. モデル reads as \"pqd\"   (stated, M:71b76f8540, not confirmed)",
+     "docs/spec.md::2. v0.1 からの変更 reads as \"pqd\"   (stated, M:c9d3d7e7ad, not confirmed)",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則 reads as \"pqd\"   (stated, M:068aa887f0, not confirmed)",
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"",
+     "the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::5. Lean Gate reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]   (stated, M:2d2f501f9e, not confirmed)",
+     "pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+     "the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::7. 未解決 reads as 14   (stated, M:ef99b187a9, not confirmed)",
+     "pw/kernel.py::Kernel.__init__ reads as 14",
+     "the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::4. 操作（MCPツール） reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",   (stated, M:0f02df5e30, not confirmed)",
+     "pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",",
+     "the places agree, but nobody has confirmed what an agent said some of them say: python -m pw.confirm"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "f0028dacf3",
+  "parents": [
+   "d252c6870e"
+  ],
+  "date": "2026-11-23",
+  "subject": "Support an agent's reading without a person: blind readers, computed places, a second model",
+  "changed": [
+   "pw-log.jsonl",
+   "pw/catalog.json",
+   "pw/check.py",
+   "pw/kernel.py",
+   "pw/maintain.py",
+   "pw/mcp_server.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"",
+     "docs/spec.md::3. モデル: nobody has read it yet",
+     "docs/spec.md::2. v0.1 からの変更: nobody has read it yet",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+     "docs/spec.md::5. Lean Gate: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::Kernel.__init__ reads as 14",
+     "docs/spec.md::7. 未解決: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",",
+     "docs/spec.md::4. 操作（MCPツール）: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "f4cff19948",
+  "parents": [
+   "f0028dacf3"
+  ],
+  "date": "2026-11-23",
+  "subject": "Record blind readings of this repository's facts; document what supports a reading",
+  "changed": [
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "pw-log.jsonl"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "25c2b63dfb",
+  "parents": [
+   "f4cff19948"
+  ],
+  "date": "2026-11-23",
+  "subject": "Measure a blind reader by planting changes whose answer is known",
+  "changed": [
+   "pw/calibrate.py",
+   "tests/test_kernel.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "d2cba9d820",
+  "parents": [
+   "25c2b63dfb"
+  ],
+  "date": "2026-11-23",
+  "subject": "Keep measurement and checking from writing to the record",
+  "changed": [
+   "pw/calibrate.py",
+   "pw/kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "0f597630b0",
+  "parents": [
+   "d2cba9d820"
+  ],
+  "date": "2026-11-23",
+  "subject": "Record the measurement of blind readers and use it",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "experiments/calibration/RESULTS.md",
+   "pw-calibration.json",
+   "pw/catalog.json",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::3. モデル reads as \"pqd\"   (stated, M:b6c2ba205e, on one agent's word)",
+     "docs/spec.md::2. v0.1 からの変更 reads as \"pqd\"   (stated, M:e24453eb12, on one agent's word)",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則 reads as \"pqd\"   (stated, M:f909d87276, on one agent's word)",
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"",
+     "the places agree, but a reading has nothing behind it except the agent that made it:",
+     "python -m pw.maintain (a second, blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "f141eb3a5e",
+  "parents": [
+   "0f597630b0"
+  ],
+  "date": "2026-11-23",
+  "subject": "Judge each reading on what was learnt about it alone",
+  "changed": [
+   "experiments/calibration/RESULTS.md",
+   "pw/kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "fe9f5f228c",
+  "parents": [
+   "f141eb3a5e"
+  ],
+  "date": "2026-11-23",
+  "subject": "Decide whether a reading stands by a table of rules, not a number",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "experiments/calibration/RESULTS.md",
+   "pw-log.jsonl",
+   "pw-rules.json",
+   "pw/catalog.json",
+   "pw/check.py",
+   "pw/kernel.py",
+   "pw/maintain.py",
+   "pw/mcp_server.py",
+   "pw/rules.json",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "2ce25a55a0",
+  "parents": [
+   "fe9f5f228c"
+  ],
+  "date": "2026-11-23",
+  "subject": "Have an agent look for the places nobody listed",
+  "changed": [
+   "experiments/discovery/run.py",
+   "pw/discover.py",
+   "tests/test_kernel.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "ca0a20719b",
+  "parents": [
+   "2ce25a55a0"
+  ],
+  "date": "2026-11-23",
+  "subject": "Declare the places the search proposed (not yet read)",
+  "changed": [
+   "docs/spec.md",
+   "experiments/discovery/results/A-claude-opus-5-5.json",
+   "experiments/discovery/results/A-claude-sonnet-5-5.json",
+   "experiments/discovery/results/B-claude-opus-5-5.json",
+   "experiments/discovery/results/B-claude-sonnet-5-5.json",
+   "experiments/discovery/results/C-claude-opus-5-5.json",
+   "experiments/discovery/results/C-claude-sonnet-5-5.json",
+   "pw-facts.json",
+   "pw-log.jsonl",
+   "pw/discover.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "docs/spec.md::3. モデル reads as \"pqd\"   (blind + words occur in the place + agrees with a computed place)",
+     "docs/spec.md::2. v0.1 からの変更 reads as \"pqd\"   (blind + words occur in the place + agrees with a computed place)",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則 reads as \"pqd\"   (blind + words occur in the place + agrees with a computed place)",
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"   (computed)",
+     "docs/symbols.md::9. 置いている仮定: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default worker model",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/orchestrator.py::main reads as \"claude-opus-5-5\"   (computed)",
+     "README.md::動かす: nobody has read it yet",
+     "docs/spec.md::1. 構成: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "range of random test inputs",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::binding reads as 15   (computed)",
+     "docs/spec.md::7. 未解決: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "dependence classes",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/credal.py::COPULAS reads as [\"comonotone\", \"frechet\", \"independent\", \"pqd\"]   (computed)",
+     "docs/spec.md::2. v0.1 からの変更: nobody has read it yet",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::CONDITIONS reads as [\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confi   (computed)",
+     "docs/spec.md::読みが成り立つ条件: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "proof relations",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/lindenbaum.py::RELATIONS reads as [\"contradiction\", \"holds\", \"iff\", \"implies\", \"not\", \"obj_eq\", \"pred_disjoint\", \"pred_iff\", \"pred_imp   (computed)",
+     "pw/mcp_server.py::prove reads as [\"contradiction\", \"holds\", \"iff\", \"implies\", \"not\", \"obj_eq\", \"pred_disjoint\", \"pred_iff\", \"pred_imp   (computed)",
+     "docs/spec.md::4. 操作（MCPツール）: nobody has read it yet",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "d8c1136048",
+  "parents": [
+   "ca0a20719b"
+  ],
+  "date": "2026-11-23",
+  "subject": "List every relation prove accepts, in the tool's description and in the spec",
+  "changed": [
+   "docs/spec.md",
+   "pw-log.jsonl",
+   "pw/mcp_server.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",   (computed)",
+     "docs/spec.md::4. 操作（MCPツール）: it changed since it was read",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default worker model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "range of random test inputs",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "dependence classes",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "proof relations",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/lindenbaum.py::RELATIONS reads as [\"contradiction\", \"holds\", \"iff\", \"implies\", \"not\", \"obj_eq\", \"pred_disjoint\", \"pred_iff\", \"pred_imp   (computed)",
+     "pw/mcp_server.py::prove reads as [\"contradiction\", \"holds\", \"iff\", \"implies\", \"not\", \"obj_eq\", \"pred_disjoint\", \"pred_iff\", \"pred_imp   (computed)",
+     "docs/spec.md::4. 操作（MCPツール）: it changed since it was read",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "072d822945",
+  "parents": [
+   "d8c1136048"
+  ],
+  "date": "2026-11-23",
+  "subject": "Measure the search for undeclared places, and use it on this repository",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "docs/symbols.md",
+   "experiments/discovery/RESULTS.md",
+   "pw-log.jsonl",
+   "pw/discover.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default worker model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "range of random test inputs",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "dependence classes",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "proof relations",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "31041b9575",
+  "parents": [
+   "072d822945"
+  ],
+  "date": "2026-11-23",
+  "subject": "Ask a blind reader whether a place is about the thing; tell failures from empty results",
+  "changed": [
+   "docs/spec.md",
+   "experiments/discovery/RESULTS.md",
+   "experiments/discovery/membership.py",
+   "experiments/discovery/results/C-claude-opus-5-5.json",
+   "experiments/discovery/results/C-claude-sonnet-5-5.json",
+   "experiments/discovery/results/membership-claude-opus-5-5.json",
+   "experiments/discovery/results/membership-claude-sonnet-5-5.json",
+   "experiments/discovery/run.py",
+   "pw-calibration.json",
+   "pw-facts.json",
+   "pw-log.jsonl",
+   "pw-rules.json",
+   "pw/calibrate.py",
+   "pw/check.py",
+   "pw/discover.py",
+   "pw/kernel.py",
+   "pw/maintain.py",
+   "pw/mcp_server.py",
+   "pw/rules.json",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::3. モデル reads as \"pqd\"   (blind + words occur in the place + agrees with a computed place)",
+     "docs/spec.md::2. v0.1 からの変更 reads as \"pqd\"   (blind + words occur in the place + agrees with a computed place)",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則 reads as \"pqd\"   (blind + words occur in the place + agrees with a computed place)",
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"   (does not stand)",
+     "read the same blind: no",
+     "docs/symbols.md::9. 置いている仮定 reads as \"pqd\"   (blind + words occur in the place + agrees with a computed place)",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::5. Lean Gate reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]   (blind + words occur in the place + agrees with a computed place)",
+     "pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]   (does not stand)",
+     "read the same blind: no",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::7. 未解決 reads as 14   (blind + words occur in the place + agrees with a computed place)",
+     "pw/kernel.py::Kernel.__init__ reads as 14   (does not stand)",
+     "read the same blind: no",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/mcp_server.py reads as [\"check_model\", \"claim\", \"declare_independent\", \"distance\", \"ground\", \"ground_at\", \"infer\", \"model\",   (does not stand)",
+     "read the same blind: no",
+     "docs/spec.md::4. 操作（MCPツール）: it changed since it was read",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "re-established",
+    "needs": "unconfirmed",
+    "detail": [
+     "pw/orchestrator.py::main reads as 900   (does not stand)",
+     "read the same blind: no",
+     "pw/check.py::main reads as 900   (does not stand)",
+     "read the same blind: no",
+     "pw/maintain.py::main reads as 900   (does not stand)",
+     "read the same blind: no",
+     "pw/check.py reads as 900   (does not stand)",
+     "read the same blind: no",
+     "pw/maintain.py reads as 900   (does not stand)",
+     "read the same blind: no",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "lean/lean-toolchain reads as \"4.14.0\"   (does not stand)",
+     "read the same blind: no",
+     "experiments/selfcheck/lean/lean-toolchain reads as \"4.14.0\"   (does not stand)",
+     "read the same blind: no",
+     ".github/workflows/decisions.yml reads as \"4.14.0\"   (does not stand)",
+     "read the same blind: no",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "default worker model",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "pw/orchestrator.py::main reads as \"claude-opus-5-5\"   (does not stand)",
+     "read the same blind: no",
+     "README.md::動かす reads as \"claude-opus-5-5\"   (blind + words occur in the place + agrees with a computed place)",
+     "docs/spec.md::1. 構成 reads as \"claude-opus-5-5\"   (blind + words occur in the place + agrees with a computed place)",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "range of random test inputs",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "pw/kernel.py::binding reads as 15   (does not stand)",
+     "read the same blind: no",
+     "docs/spec.md::7. 未解決 reads as 15   (blind + words occur in the place + agrees with a computed place)",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "dependence classes",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "pw/credal.py::COPULAS reads as [\"comonotone\", \"frechet\", \"independent\", \"pqd\"]   (does not stand)",
+     "read the same blind: no",
+     "docs/spec.md::2. v0.1 からの変更 reads as [\"comonotone\", \"frechet\", \"independent\", \"pqd\"]   (blind + words occur in the place + agrees with a computed place)",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則 reads as [\"comonotone\", \"frechet\", \"independent\", \"pqd\"]   (blind + words occur in the place + agrees with a computed place)",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::CONDITIONS reads as [\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confi   (does not stand)",
+     "read the same blind: no",
+     "docs/spec.md::読みが成り立つ条件: it changed since it was read",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "proof relations",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/lindenbaum.py::RELATIONS reads as [\"contradiction\", \"holds\", \"iff\", \"implies\", \"not\", \"obj_eq\", \"pred_disjoint\", \"pred_iff\", \"pred_imp   (does not stand)",
+     "read the same blind: no",
+     "pw/mcp_server.py::prove reads as [\"contradiction\", \"holds\", \"iff\", \"implies\", \"not\", \"obj_eq\", \"pred_disjoint\", \"pred_iff\", \"pred_imp   (does not stand)",
+     "read the same blind: no",
+     "docs/spec.md::4. 操作（MCPツール）: it changed since it was read",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "re-established",
+    "needs": "unconfirmed",
+    "detail": [
+     "pw-rules.json::a blind reader counts if measured.read at least reads as 850   (does not stand)",
+     "read the same blind: no",
+     "docs/spec.md::読みが成り立つ条件 reads as 850   (does not stand)",
+     "read the same blind: no",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "re-established",
+    "needs": "unconfirmed",
+    "detail": [
+     "pw-rules.json::a blind reader counts if measured.stuck at most reads as 150   (does not stand)",
+     "read the same blind: no",
+     "docs/spec.md::読みが成り立つ条件 reads as 150   (does not stand)",
+     "read the same blind: no",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "default reader model",
+    "state": "re-established",
+    "needs": "unconfirmed",
+    "detail": [
+     "pw/maintain.py::main reads as \"claude-opus-5-5\"   (does not stand)",
+     "read the same blind: no",
+     "pw/calibrate.py::main reads as \"claude-opus-5-5\"   (does not stand)",
+     "read the same blind: no",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "pw-rules.json::a blind reader counts if measured.takes another thing for it at most reads as 150   (does not stand)",
+     "read the same blind: no",
+     "docs/spec.md::読みが成り立つ条件 reads as 150   (does not stand)",
+     "read the same blind: no",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "57d3a39866",
+  "parents": [
+   "31041b9575"
+  ],
+  "date": "2026-11-23",
+  "subject": "Say in the code what the limit is, and in the declaration what the Lean version covers",
+  "changed": [
+   "pw-facts.json",
+   "pw-log.jsonl",
+   "pw/kernel.py",
+   "pw/maintain.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "re-established",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "re-established",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::7. 未解決 reads as 14   (blind + words occur in the place + agrees with a computed place)",
+     "pw/kernel.py::Kernel.__init__ reads as 14   (does not stand)",
+     "read the same blind: no",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "re-established",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "lean/lean-toolchain reads as \"4.14.0\"   (does not stand)",
+     "read the same blind: no",
+     "a blind reader reads \"v4.14.0\" off it, not what the pattern computes",
+     "experiments/selfcheck/lean/lean-toolchain reads as \"4.14.0\"   (does not stand)",
+     "read the same blind: no",
+     "a blind reader (claude-opus-5-5) says the place does not state this: This is the toolchain file of the Lean project under experiments/selfcheck. Nothing in it says it is the version Gamma is pinned to, and the version of an experiment's project is not necessarily Gamma",
+     "if it is about something else, take the place out of pw-facts.json",
+     ".github/workflows/decisions.yml reads as \"4.14.0\"   (computed + read the same blind)",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "default worker model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "range of random test inputs",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "dependence classes",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "proof relations",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "re-established",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "04051772a1",
+  "parents": [
+   "57d3a39866"
+  ],
+  "date": "2026-11-23",
+  "subject": "Write up the decoy measurement and the blind check of declared places",
+  "changed": [
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "experiments/calibration/RESULTS.md",
+   "experiments/discovery/RESULTS.md",
+   "pw-log.jsonl"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default worker model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "range of random test inputs",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "dependence classes",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "proof relations",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "03beac29d0",
+  "parents": [
+   "04051772a1"
+  ],
+  "date": "2026-11-23",
+  "subject": "Record the end-to-end run of the reworked search",
+  "changed": [
+   "experiments/discovery/RESULTS.md"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default worker model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "range of random test inputs",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "dependence classes",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "proof relations",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "e07f3660db",
+  "parents": [
+   "03beac29d0"
+  ],
+  "date": "2026-11-23",
+  "subject": "Tie readings to the description they answered, add measurements up, show what surrounds a small place",
+  "changed": [
+   "experiments/discovery/RESULTS.md",
+   "experiments/discovery/results/membership-claude-sonnet-5-5.json",
+   "pw-calibration.json",
+   "pw-log.jsonl",
+   "pw/calibrate.py",
+   "pw/kernel.py",
+   "pw/maintain.py",
+   "pw/reader.txt",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::3. モデル reads as \"pqd\"   (does not stand)",
+     "confirmed by a person: no, blind: no, words occur in the place: yes, agrees with a computed place: yes, agrees with another place read blind: yes, read the same by a second model: no",
+     "read blind by claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)",
+     "docs/spec.md::2. v0.1 からの変更 reads as \"pqd\"   (does not stand)",
+     "confirmed by a person: no, blind: no, words occur in the place: yes, agrees with a computed place: yes, agrees with another place read blind: yes, read the same by a second model: no",
+     "read blind by claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)",
+     "docs/symbols.md::7. 証拠 ― 仮想証拠・コピュラ・一般化ベイズ則 reads as \"pqd\"   (does not stand)",
+     "confirmed by a person: no, blind: no, words occur in the place: yes, agrees with a computed place: yes, agrees with another place read blind: yes, read the same by a second model: no",
+     "read blind by claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)",
+     "pw/kernel.py::Kernel.__init__ reads as \"pqd\"   (computed + read the same blind)",
+     "docs/symbols.md::9. 置いている仮定 reads as \"pqd\"   (blind + words occur in the place + agrees with a computed place)",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::5. Lean Gate reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]   (does not stand)",
+     "confirmed by a person: no, blind: no, words occur in the place: yes, agrees with a computed place: yes, agrees with another place read blind: no, read the same by a second model: no",
+     "read blind by claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)",
+     "pw/lean_gate.py::ALLOWED_AXIOMS reads as [\"Classical.choice\", \"Quot.sound\", \"propext\"]   (computed + read the same blind)",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "docs/spec.md::7. 未解決 reads as 14   (does not stand)",
+     "confirmed by a person: no, blind: no, words occur in the place: yes, agrees with a computed place: yes, agrees with another place read blind: no, read the same by a second model: no",
+     "read blind by claude-sonnet-5-5: not a measured reader here (python -m pw.calibrate --model ...)",
+     "pw/kernel.py::Kernel.__init__ reads as 14   (computed + read the same blind)",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "lean/lean-toolchain reads as \"4.14.0\"   (computed + read the same blind)",
+     "experiments/selfcheck/lean/lean-toolchain reads as \"4.14.0\"   (computed + read the same blind)",
+     ".github/workflows/decisions.yml reads as \"4.14.0\"   (does not stand)",
+     "read the same blind: no",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "default worker model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "range of random test inputs",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "dependence classes",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "proof relations",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "6d2ccde7dc",
+  "parents": [
+   "e07f3660db"
+  ],
+  "date": "2026-11-23",
+  "subject": "Describe in the spec what a description change, a re-measurement and a small place mean",
+  "changed": [
+   "docs/spec.md",
+   "pw-calibration.json"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": "unconfirmed",
+    "detail": [
+     "lean/lean-toolchain reads as \"4.14.0\"   (computed + read the same blind)",
+     "experiments/selfcheck/lean/lean-toolchain reads as \"4.14.0\"   (computed + read the same blind)",
+     ".github/workflows/decisions.yml reads as \"4.14.0\"   (does not stand)",
+     "read the same blind: no",
+     "the places agree, but a reading does not stand by the rules (pw-rules.json):",
+     "python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)"
+    ]
+   },
+   {
+    "fact": "default worker model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "range of random test inputs",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "dependence classes",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "stale",
+    "needs": "stale",
+    "detail": [
+     "pw/kernel.py::CONDITIONS reads as [\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confi   (computed + read the same blind)",
+     "docs/spec.md::読みが成り立つ条件: it changed since it was read",
+     "read the place(s) again: python -m pw.maintain"
+    ]
+   },
+   {
+    "fact": "proof relations",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "re-established",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "re-established",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "re-established",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 1
+ },
+ {
+  "sha": "7be6fb6da3",
+  "parents": [
+   "6d2ccde7dc"
+  ],
+  "date": "2026-11-23",
+  "subject": "Measure the readers under the new instructions and record what was found",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "experiments/calibration/RESULTS.md",
+   "pw-log.jsonl"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default worker model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "range of random test inputs",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "dependence classes",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "proof relations",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "e11f8fe0a1",
+  "parents": [
+   "7be6fb6da3"
+  ],
+  "date": "2026-11-24",
+  "subject": "Try the whole loop on another repository, and record what did not fit",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "experiments/external/RESULTS.md",
+   "experiments/external/results/miclow-calibration-summary.json",
+   "experiments/external/results/miclow-check.txt",
+   "experiments/external/results/miclow-facts.json",
+   "pw-log.jsonl",
+   "pw/kernel.py",
+   "pw/maintain.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "default dependence class",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "largest component inference solves",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default threshold, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default worker model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "range of random test inputs",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "dependence classes",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "proof relations",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "af6a739e8f",
+  "parents": [
+   "e11f8fe0a1"
+  ],
+  "date": "2026-11-24",
+  "subject": "Remove the layer that was not used",
+  "changed": [
+   "README.md",
+   "docs/archive/spec-v0.4.md",
+   "docs/archive/symbols-v0.4.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "experiments/README.md",
+   "experiments/discovery/membership.py",
+   "experiments/discovery/run.py",
+   "pw-facts.json",
+   "pw-log.jsonl",
+   "pw/calibrate.py",
+   "pw/catalog.json",
+   "pw/check.py",
+   "pw/confirm.py",
+   "pw/credal.py",
+   "pw/discover.py",
+   "pw/formula.py",
+   "pw/kernel.py",
+   "pw/lean_gate.py",
+   "pw/lindenbaum.py",
+   "pw/maintain.py",
+   "pw/mcp_server.py",
+   "pw/orchestrator.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "540fb0b0dd",
+  "parents": [
+   "af6a739e8f"
+  ],
+  "date": "2026-11-24",
+  "subject": "Let a place state only some entries of a list",
+  "changed": [
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "experiments/external/RESULTS.md",
+   "pw-facts.json",
+   "pw-log.jsonl",
+   "pw-rules.json",
+   "pw/calibrate.py",
+   "pw/check.py",
+   "pw/discover.py",
+   "pw/kernel.py",
+   "pw/maintain.py",
+   "pw/rules.json",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "ad21f4c7b6",
+  "parents": [
+   "540fb0b0dd"
+  ],
+  "date": "2026-11-24",
+  "subject": "Survey two more repositories for what is stated in several places",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "experiments/README.md",
+   "experiments/survey/RESULTS.md",
+   "experiments/survey/results/godotenv-check.txt",
+   "experiments/survey/results/godotenv-facts.json",
+   "experiments/survey/results/python-dotenv-check.txt",
+   "experiments/survey/results/python-dotenv-facts.json"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "7013e65321",
+  "parents": [
+   "ad21f4c7b6"
+  ],
+  "date": "2026-11-24",
+  "subject": "Let a pattern be confined to part of a place and rewrite what it finds",
+  "changed": [
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "experiments/survey/RESULTS.md",
+   "experiments/survey/results/python-dotenv-facts.json",
+   "pw/discover.py",
+   "pw/kernel.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "b3293730f2",
+  "parents": [
+   "7013e65321"
+  ],
+  "date": "2026-11-24",
+  "subject": "Correct the survey: the subcommand names can be read by one pattern",
+  "changed": [
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "experiments/survey/RESULTS.md",
+   "experiments/survey/results/python-dotenv-facts.json"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "989f3c82d9",
+  "parents": [
+   "b3293730f2"
+  ],
+  "date": "2026-11-24",
+  "subject": "Look after what is declared, and nothing else; let the search repair it",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "pw-log.jsonl",
+   "pw/check.py",
+   "pw/discover.py",
+   "pw/kernel.py",
+   "pw/maintain.py",
+   "tests/test_kernel.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "cc01a86ebf",
+  "parents": [
+   "989f3c82d9"
+  ],
+  "date": "2026-11-24",
+  "subject": "Treat what a person laid down as an axiom, and set conflicting axioms aside",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "pw/check.py",
+   "pw/kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "80e6b7c17a",
+  "parents": [
+   "cc01a86ebf"
+  ],
+  "date": "2026-11-24",
+  "subject": "Write what was laid down into the places, and let a value be supposed",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "pw/kernel.py",
+   "pw/propagate.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "7e7fcf374b",
+  "parents": [
+   "80e6b7c17a"
+  ],
+  "date": "2026-11-24",
+  "subject": "Let a fact be defined from other facts",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "pw-facts.json",
+   "pw-log.jsonl",
+   "pw/check.py",
+   "pw/kernel.py",
+   "pw/lean_gate.py",
+   "pw/propagate.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "d14751b67c",
+  "parents": [
+   "7e7fcf374b"
+  ],
+  "date": "2026-11-24",
+  "subject": "Let an agent propose the new text of a place a pattern cannot write",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "pw/kernel.py",
+   "pw/propagate.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "9ec00d6568",
+  "parents": [
+   "d14751b67c"
+  ],
+  "date": "2026-11-25",
+  "subject": "Show the editing agent what the project already says; keep a passage's ending",
+  "changed": [
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "experiments/external/RESULTS.md",
+   "pw/propagate.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "7de93c824e",
+  "parents": [
+   "9ec00d6568"
+  ],
+  "date": "2026-11-25",
+  "subject": "Hand over the miclow work to a session that can push to sugipamo/miclow",
+  "changed": [
+   "experiments/external/handoff/README.md",
+   "experiments/external/handoff/miclow-pw.patch"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "43a11fffa7",
+  "parents": [
+   "7de93c824e"
+  ],
+  "date": "2026-11-25",
+  "subject": "Let checking only look, and give other repositories a way in",
+  "changed": [
+   ".github/workflows/decisions.yml",
+   ".gitignore",
+   "README.md",
+   "action.yml",
+   "ci/lean.sh",
+   "docs/spec.md",
+   "pw-facts.json",
+   "pw/__init__.py",
+   "pw/check.py",
+   "pw/kernel.py",
+   "pw/lean_gate.py",
+   "pyproject.toml",
+   "requirements-ci.txt",
+   "requirements-test.txt",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "re-established",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ },
+ {
+  "sha": "0706279981",
+  "parents": [
+   "43a11fffa7"
+  ],
+  "date": "2026-11-25",
+  "subject": "Clear away what is done or no longer points anywhere",
+  "changed": [
+   ".gitignore",
+   "README.md",
+   "docs/spec.md",
+   "experiments/external/RESULTS.md",
+   "experiments/external/handoff/README.md",
+   "experiments/external/handoff/miclow-pw.patch",
+   "pw/lean_gate.py",
+   "pw/propagate.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "re-established",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "detail": []
+   }
+  ],
+  "exit": 0
+ }
+]

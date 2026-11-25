@@ -1,0 +1,2849 @@
+[
+ {
+  "sha": "af6a739e8f",
+  "parents": [
+   "e11f8fe0a1"
+  ],
+  "date": "2026-11-24",
+  "subject": "Remove the layer that was not used",
+  "changed": [
+   "README.md",
+   "docs/archive/spec-v0.4.md",
+   "docs/archive/symbols-v0.4.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "experiments/README.md",
+   "experiments/discovery/membership.py",
+   "experiments/discovery/run.py",
+   "pw-facts.json",
+   "pw-log.jsonl",
+   "pw/calibrate.py",
+   "pw/catalog.json",
+   "pw/check.py",
+   "pw/confirm.py",
+   "pw/credal.py",
+   "pw/discover.py",
+   "pw/formula.py",
+   "pw/kernel.py",
+   "pw/lean_gate.py",
+   "pw/lindenbaum.py",
+   "pw/maintain.py",
+   "pw/mcp_server.py",
+   "pw/orchestrator.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::3. Lean Gate",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::4. 読み手の道具（MCP）",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/mcp_server.py",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": ".github/workflows/decisions.yml",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/kernel.py::CONDITIONS",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "stated",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.read at least",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.stuck at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/maintain.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/calibrate.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.takes another thing for it at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   }
+  ]
+ },
+ {
+  "sha": "540fb0b0dd",
+  "parents": [
+   "af6a739e8f"
+  ],
+  "date": "2026-11-24",
+  "subject": "Let a place state only some entries of a list",
+  "changed": [
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "experiments/external/RESULTS.md",
+   "pw-facts.json",
+   "pw-log.jsonl",
+   "pw-rules.json",
+   "pw/calibrate.py",
+   "pw/check.py",
+   "pw/discover.py",
+   "pw/kernel.py",
+   "pw/maintain.py",
+   "pw/rules.json",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::3. Lean Gate",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::4. 読み手の道具（MCP）",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/mcp_server.py",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": ".github/workflows/decisions.yml",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/kernel.py::CONDITIONS",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw-rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.read at least",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.stuck at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/maintain.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/calibrate.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.takes another thing for it at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   }
+  ]
+ },
+ {
+  "sha": "ad21f4c7b6",
+  "parents": [
+   "540fb0b0dd"
+  ],
+  "date": "2026-11-24",
+  "subject": "Survey two more repositories for what is stated in several places",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "experiments/README.md",
+   "experiments/survey/RESULTS.md",
+   "experiments/survey/results/godotenv-check.txt",
+   "experiments/survey/results/godotenv-facts.json",
+   "experiments/survey/results/python-dotenv-check.txt",
+   "experiments/survey/results/python-dotenv-facts.json"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::3. Lean Gate",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::4. 読み手の道具（MCP）",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/mcp_server.py",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": ".github/workflows/decisions.yml",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/kernel.py::CONDITIONS",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw-rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.read at least",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.stuck at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/maintain.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/calibrate.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.takes another thing for it at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   }
+  ]
+ },
+ {
+  "sha": "7013e65321",
+  "parents": [
+   "ad21f4c7b6"
+  ],
+  "date": "2026-11-24",
+  "subject": "Let a pattern be confined to part of a place and rewrite what it finds",
+  "changed": [
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "experiments/survey/RESULTS.md",
+   "experiments/survey/results/python-dotenv-facts.json",
+   "pw/discover.py",
+   "pw/kernel.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::3. Lean Gate",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::4. 読み手の道具（MCP）",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/mcp_server.py",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": ".github/workflows/decisions.yml",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/kernel.py::CONDITIONS",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw-rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.read at least",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.stuck at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/maintain.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/calibrate.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.takes another thing for it at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   }
+  ]
+ },
+ {
+  "sha": "b3293730f2",
+  "parents": [
+   "7013e65321"
+  ],
+  "date": "2026-11-24",
+  "subject": "Correct the survey: the subcommand names can be read by one pattern",
+  "changed": [
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "experiments/survey/RESULTS.md",
+   "experiments/survey/results/python-dotenv-facts.json"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::3. Lean Gate",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::4. 読み手の道具（MCP）",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/mcp_server.py",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": ".github/workflows/decisions.yml",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/kernel.py::CONDITIONS",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw-rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.read at least",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.stuck at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/maintain.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/calibrate.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.takes another thing for it at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   }
+  ]
+ },
+ {
+  "sha": "989f3c82d9",
+  "parents": [
+   "b3293730f2"
+  ],
+  "date": "2026-11-24",
+  "subject": "Look after what is declared, and nothing else; let the search repair it",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "pw-log.jsonl",
+   "pw/check.py",
+   "pw/discover.py",
+   "pw/kernel.py",
+   "pw/maintain.py",
+   "tests/test_kernel.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::3. Lean Gate",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::4. 読み手の道具（MCP）",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/mcp_server.py",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": ".github/workflows/decisions.yml",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/kernel.py::CONDITIONS",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw-rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.read at least",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.stuck at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/maintain.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/calibrate.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.takes another thing for it at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   }
+  ]
+ },
+ {
+  "sha": "cc01a86ebf",
+  "parents": [
+   "989f3c82d9"
+  ],
+  "date": "2026-11-24",
+  "subject": "Treat what a person laid down as an axiom, and set conflicting axioms aside",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "pw/check.py",
+   "pw/kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::3. Lean Gate",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::4. 読み手の道具（MCP）",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/mcp_server.py",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": ".github/workflows/decisions.yml",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/kernel.py::CONDITIONS",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw-rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.read at least",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.stuck at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/maintain.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/calibrate.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.takes another thing for it at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   }
+  ]
+ },
+ {
+  "sha": "80e6b7c17a",
+  "parents": [
+   "cc01a86ebf"
+  ],
+  "date": "2026-11-24",
+  "subject": "Write what was laid down into the places, and let a value be supposed",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "pw/kernel.py",
+   "pw/propagate.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::3. Lean Gate",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::4. 読み手の道具（MCP）",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/mcp_server.py",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": ".github/workflows/decisions.yml",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/kernel.py::CONDITIONS",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw-rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.read at least",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.stuck at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/maintain.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/calibrate.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.takes another thing for it at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   }
+  ]
+ },
+ {
+  "sha": "7e7fcf374b",
+  "parents": [
+   "80e6b7c17a"
+  ],
+  "date": "2026-11-24",
+  "subject": "Let a fact be defined from other facts",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "pw-facts.json",
+   "pw-log.jsonl",
+   "pw/check.py",
+   "pw/kernel.py",
+   "pw/lean_gate.py",
+   "pw/propagate.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::3. Lean Gate",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::4. 読み手の道具（MCP）",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/mcp_server.py",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": ".github/workflows/decisions.yml",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/kernel.py::CONDITIONS",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw-rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.read at least",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.stuck at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/maintain.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/calibrate.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.takes another thing for it at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "9",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   }
+  ]
+ },
+ {
+  "sha": "d14751b67c",
+  "parents": [
+   "7e7fcf374b"
+  ],
+  "date": "2026-11-24",
+  "subject": "Let an agent propose the new text of a place a pattern cannot write",
+  "changed": [
+   "README.md",
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "pw/kernel.py",
+   "pw/propagate.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::3. Lean Gate",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::4. 読み手の道具（MCP）",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/mcp_server.py",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": ".github/workflows/decisions.yml",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/kernel.py::CONDITIONS",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw-rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.read at least",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.stuck at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/maintain.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/calibrate.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.takes another thing for it at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "9",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   }
+  ]
+ },
+ {
+  "sha": "9ec00d6568",
+  "parents": [
+   "d14751b67c"
+  ],
+  "date": "2026-11-25",
+  "subject": "Show the editing agent what the project already says; keep a passage's ending",
+  "changed": [
+   "docs/natural-language.md",
+   "docs/spec.md",
+   "experiments/external/RESULTS.md",
+   "pw/propagate.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::3. Lean Gate",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::4. 読み手の道具（MCP）",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/mcp_server.py",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": ".github/workflows/decisions.yml",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/kernel.py::CONDITIONS",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw-rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.read at least",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.stuck at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/maintain.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/calibrate.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.takes another thing for it at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "9",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   }
+  ]
+ },
+ {
+  "sha": "7de93c824e",
+  "parents": [
+   "9ec00d6568"
+  ],
+  "date": "2026-11-25",
+  "subject": "Hand over the miclow work to a session that can push to sugipamo/miclow",
+  "changed": [
+   "experiments/external/handoff/README.md",
+   "experiments/external/handoff/miclow-pw.patch"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::3. Lean Gate",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::4. 読み手の道具（MCP）",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/mcp_server.py",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": ".github/workflows/decisions.yml",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/kernel.py::CONDITIONS",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw-rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.read at least",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.stuck at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/maintain.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/calibrate.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.takes another thing for it at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "9",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   }
+  ]
+ },
+ {
+  "sha": "43a11fffa7",
+  "parents": [
+   "7de93c824e"
+  ],
+  "date": "2026-11-25",
+  "subject": "Let checking only look, and give other repositories a way in",
+  "changed": [
+   ".github/workflows/decisions.yml",
+   ".gitignore",
+   "README.md",
+   "action.yml",
+   "ci/lean.sh",
+   "docs/spec.md",
+   "pw-facts.json",
+   "pw/__init__.py",
+   "pw/check.py",
+   "pw/kernel.py",
+   "pw/lean_gate.py",
+   "pyproject.toml",
+   "requirements-ci.txt",
+   "requirements-test.txt",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::3. Lean Gate",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::4. 読み手の道具（MCP）",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/mcp_server.py",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "re-established",
+    "needs": null,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/kernel.py::CONDITIONS",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw-rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.read at least",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.stuck at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/maintain.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/calibrate.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.takes another thing for it at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "9",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   }
+  ]
+ },
+ {
+  "sha": "0706279981",
+  "parents": [
+   "43a11fffa7"
+  ],
+  "date": "2026-11-25",
+  "subject": "Clear away what is done or no longer points anywhere",
+  "changed": [
+   ".gitignore",
+   "README.md",
+   "docs/spec.md",
+   "experiments/external/RESULTS.md",
+   "experiments/external/handoff/README.md",
+   "experiments/external/handoff/miclow-pw.patch",
+   "pw/lean_gate.py",
+   "pw/propagate.py",
+   "tests/test_kernel.py",
+   "tests/test_lean_real.py"
+  ],
+  "facts": [
+   {
+    "fact": "axioms a proof may depend on",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::3. Lean Gate",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+      "reads as": "[\"Classical.choice\", \"Quot.sound\", \"propext\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "names of the MCP tools",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::4. 読み手の道具（MCP）",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw/mcp_server.py",
+      "reads as": "[\"not_stated\", \"read_place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "Lean version",
+    "state": "re-established",
+    "needs": null,
+    "places": [
+     {
+      "at": "lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "experiments/selfcheck/lean/lean-toolchain",
+      "reads as": "\"4.14.0\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/kernel.py::CONDITIONS",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "[\"agrees with a computed place\", \"agrees with another place read blind\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "stated",
+      "stands": true
+     },
+     {
+      "at": "pw-rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/rules.json::a reading stands if any of",
+      "reads as": "[\"agrees with a computed place\", \"blind\", \"computed\", \"confirmed by a person\", \"contained in a computed place\", \"read the same blind\", \"read the same by a second model\", \"words occur in the place\"]",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.read at least",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "850",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.stuck at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "default reader model",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw/maintain.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "pw/calibrate.py::main",
+      "reads as": "\"claude-opus-5-5\"",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "pw-rules.json::a blind reader counts if measured.takes another thing for it at most",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     },
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "150",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "state": "current",
+    "needs": null,
+    "places": [
+     {
+      "at": "docs/spec.md::読みが成り立つ条件",
+      "reads as": "9",
+      "by": "reader",
+      "stands": true
+     }
+    ],
+    "unread": []
+   }
+  ]
+ }
+]

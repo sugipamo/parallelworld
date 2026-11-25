@@ -13,6 +13,12 @@
 | `discovery/` | 宣言に漏れた箇所を探させる | いまのコード：`python experiments/discovery/run.py`。探す対象は `e11f8fe` 時点のリポジトリ（正解の箇所の多くが、削除したコードの中にあるため） |
 | `external/` | 別のリポジトリで一連の流れを回す | いまのコード |
 | `survey/` | さらに 2 つのリポジトリで、複数箇所に書かれている事柄の種類と、宣言できないものを数える | いまのコード |
+| `history/` | 2 つのリポジトリの履歴を 1 コミットずつ再生し、使い続けると何が起きるかを数える | いまのコード：`python experiments/history/run.py`（miclow のクローンが要る。`--read` は課金あり） |
+| `patterns/` | 宣言済みのパターンに、値を変えない書き換えと値を変える編集を当て、読めなくなる・別の値を読む・見逃す頻度を測る | いまのコード：`python experiments/patterns/run.py <リポジトリ>...` |
+| `merge/` | 2 つのブランチが記録を足してからマージしたとき、判定が向きによらず同じで正しいか | いまのコード：`python experiments/merge/run.py` |
+| `scale/` | 事実の数と `pw.check` の所要時間 | いまのコード：`python experiments/scale/run.py` |
+| `gate/` | 読み手の値として Lean に渡る文字列で、偽の一致を作れるか、チェックを止められるか | いまのコード：`python experiments/gate/run.py` |
+| `hard/` | 手で書いた読み違えやすい文面で、目隠しの読み手を測る | いまのコード：`python experiments/hard/run.py`（課金あり） |
 
 上の 7 つは、主張・接続・確率の区間・並列ワーカーの層の上で行った。その層は削除した（`docs/spec.md` §7）。`RESULTS.md` と `results/` は当時のまま残してあり、`run.py` を動かすには削除前の最後のコミット `e11f8fe` のコードが要る。
 

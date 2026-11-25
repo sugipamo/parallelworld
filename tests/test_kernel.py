@@ -107,7 +107,8 @@ def test_a_place_is_read_by_a_description_not_by_code():
     assert _read_pattern(pattern(find_all=names), part) == '["propext", "Quot.sound", "propext", "Classical.choice"]'
     assert _read_pattern(pattern(find_all=names, sort=True, unique=True), part) == '["Classical.choice", "Quot.sound", "propext"]'
     assert _read_pattern(pattern(find_all=r"(\d+)", kind="nat", sort=True), "9 10 2") == "[2, 9, 10]"       # by size, not as text
-    assert _read_pattern(pattern(find_all=r"zzz(\d)", kind="nat"), text) == "[]"
+    with pytest.raises(KernelError):                 # nothing found is not "an empty list": the pattern may no longer fit the text
+        _read_pattern(pattern(find_all=r"zzz(\d)", kind="nat"), text)
     assert _read_pattern(pattern(find=r"^ALLOWED = (.)"), text) == '"{"'                                    # ^ is a line start
     for found, why in ((r'"(\w+)"', "matches 3 times"), (r"nothing (here)", "matches 0 times")):
         with pytest.raises(KernelError, match=why):
@@ -324,3 +325,31 @@ def test_a_declared_place_that_cannot_be_read_is_said_and_can_be_repaired(tmp_pa
     got, info = discover.repair(repo, "m", facts + [other], broken, 1.0)
     assert got == [proposals[0]] and info["problems"] == []
     assert "CANNOT BE READ: guide.md no longer has a part named 'Limits'" in seen["prompt"] and '"other"' not in seen["prompt"]
+
+
+def test_a_pattern_reads_the_same_whatever_the_line_ends():
+    from pw.kernel import _read_pattern, pattern
+    text = '@tool()\ndef read(x):\n    pass\n\n@tool()\ndef decline(x):\n    pass\n'
+    rd = pattern(find_all=r"@tool\(\)\ndef (\w+)\(", sort=True)
+    assert _read_pattern(rd, text) == _read_pattern(rd, text.replace("\n", "\r\n")) == '["decline", "read"]'
+
+
+def test_a_reader_states_a_value_not_a_computation(tmp_path):
+    """What a reader says a place states goes into a Lean file. For the types a value is written
+    out in (numbers, strings, lists of them) nothing but a written-out value is taken."""
+    (tmp_path / "doc.md").write_text("## Limits\n\nAt most 15 atoms.\n")
+    (tmp_path / "k.py").write_text("LIMIT = 14\n")
+    cwd = str(tmp_path)
+    k = Kernel(str(tmp_path / "pw-log.jsonl"), actor="reader")
+
+    def says(typ, value):
+        h = k.claim_fact(f"thing {typ}", typ, ["doc.md::Limits"])["h"]
+        return k.read_place(h, "doc.md::Limits", value, cwd=cwd, quote="At most 15 atoms.")["read as"]
+
+    assert says("Nat", "15") == "15" and says("Int", "-3") == "-3" and says("Int", "(-3)") == "(-3)"
+    assert says("String", '"fast"') == '"fast"' and says("List String", '["a", "b"]') == '["a", "b"]' and says("List Nat", "[]") == "[]"
+    for typ, value in [("Nat", "15 - 1"), ("Nat", "Nat.pred 15"), ("Nat", "by exact 14"), ("Nat", "14 /- x -/"), ("Nat", "-1"), ("Nat", "14.0"),
+                       ("Nat", "true"), ("Nat", '"14"'), ("String", '"fa" ++ "st"'), ("String", "fast"), ("List String", '["a" ++ "b"]'),
+                       ("List String", '"a"'), ("List Nat", '[1, "2"]'), ("Int", "(-3) + 1")]:
+        with pytest.raises(KernelError):
+            says(typ, value)

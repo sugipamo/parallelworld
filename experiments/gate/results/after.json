@@ -1,0 +1,322 @@
+[
+ {
+  "tried": "the value the place states",
+  "type": "Nat",
+  "value": "15",
+  "stated": "taken",
+  "fact": "violated",
+  "stands": false,
+  "seconds": 0.9,
+  "harm": null
+ },
+ {
+  "tried": "the other place's value (a plain lie)",
+  "type": "Nat",
+  "value": "14",
+  "stated": "taken",
+  "fact": "current",
+  "stands": false,
+  "seconds": 0.3,
+  "harm": "agrees (a reading does not stand)"
+ },
+ {
+  "tried": "arithmetic that comes to 14",
+  "type": "Nat",
+  "value": "15 - 1",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a function applied",
+  "type": "Nat",
+  "value": "Nat.pred 15",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a conditional",
+  "type": "Nat",
+  "value": "if 15 = 15 then 14 else 15",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a let",
+  "type": "Nat",
+  "value": "let x := 14; x",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a tactic block as a term",
+  "type": "Nat",
+  "value": "by exact 14",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "the length of a list",
+  "type": "Nat",
+  "value": "[1,2,3,4,5,6,7,8,9,10,11,12,13,14].length",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a string built by appending",
+  "type": "String",
+  "value": "\"fa\" ++ \"st\"",
+  "stated": "refused",
+  "why": "state the value itself, written out: a String such as \"fast\"",
+  "seconds": 0.0
+ },
+ {
+  "tried": "closing the parenthesis early",
+  "type": "Nat",
+  "value": "14) = (14 : Nat)) ∨ True ∨ ((15",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "balanced, with a disjunction inside",
+  "type": "Nat",
+  "value": "(14 : Nat)) = (14 : Nat) ∨ ((15",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a line comment that swallows the rest",
+  "type": "Nat",
+  "value": "14 --",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a block comment left open",
+  "type": "Nat",
+  "value": "14 /- ",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a block comment closed again",
+  "type": "Nat",
+  "value": "14 /- x -/",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a newline and a new command",
+  "type": "Nat",
+  "value": "14)\ntheorem x : True := trivial\n#eval (1",
+  "stated": "refused",
+  "why": "forbidden token 'theorem' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a type ascription that changes the statement",
+  "type": "Nat",
+  "value": "(14 : Nat) = 14 → 15",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "sorry",
+  "type": "Nat",
+  "value": "sorry",
+  "stated": "refused",
+  "why": "forbidden token 'sorry' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "sorryAx (not the keyword)",
+  "type": "Nat",
+  "value": "sorryAx Nat false",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "sorryAx, as a proof inside a term",
+  "type": "Nat",
+  "value": "(⟨14, sorryAx _ false⟩ : { n : Nat // n = 15 }).1",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "an identifier in « »",
+  "type": "Nat",
+  "value": "«sorry»",
+  "stated": "refused",
+  "why": "forbidden token 'sorry' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "native_decide inside a term",
+  "type": "Nat",
+  "value": "(⟨14, by native_decide⟩ : { n : Nat // n = 14 }).1",
+  "stated": "refused",
+  "why": "forbidden token 'native_decide' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "decide inside a term, proving a falsehood",
+  "type": "Nat",
+  "value": "(⟨14, by decide⟩ : { n : Nat // n = 15 }).1",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "the compiler's axiom",
+  "type": "Nat",
+  "value": "if Lean.reduceBool true then 14 else 15",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "Classical.choice (an allowed axiom)",
+  "type": "Nat",
+  "value": "Classical.choice ⟨14⟩",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a macro",
+  "type": "Nat",
+  "value": "macro \"x\" : term => `(14)\n14",
+  "stated": "refused",
+  "why": "forbidden token 'macro' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "an option",
+  "type": "Nat",
+  "value": "set_option maxRecDepth 100000 in 14",
+  "stated": "refused",
+  "why": "forbidden token 'set_option' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "running code while elaborating",
+  "type": "Nat",
+  "value": "by run_tac (IO.println \"hi\" : IO Unit); exact 14",
+  "stated": "refused",
+  "why": "forbidden token 'run_tac' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "elaboration-time evaluation",
+  "type": "Nat",
+  "value": "by_elab return Lean.mkNatLit 14",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a debug trace",
+  "type": "Nat",
+  "value": "dbgTraceIfShared \"x\" 14",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a declaration modifier",
+  "type": "Nat",
+  "value": "@[simp] 14",
+  "stated": "refused",
+  "why": "forbidden token '@[' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a # command",
+  "type": "Nat",
+  "value": "14\n#exit",
+  "stated": "refused",
+  "why": "forbidden token '#' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a huge power",
+  "type": "Nat",
+  "value": "2 ^ (2 ^ 40)",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a large power",
+  "type": "Nat",
+  "value": "2 ^ 100000000 % 3 + 13",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a deep recursion",
+  "type": "Nat",
+  "value": "(List.range 30000000).length",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a slow function, by rfl",
+  "type": "Nat",
+  "value": "(List.range 3000).foldl (fun a b => a + b * b % 7) 0 % 2 + 14",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "simp with a loop-prone term",
+  "type": "Nat",
+  "value": "(fun f : Nat → Nat => f (f (f (f (f (f (f (f (f (f 14)))))))))) (fun x => x * x * x * x % 1000003)",
+  "stated": "refused",
+  "why": "state the value itself, written out: a Nat such as 14",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a list with an entry built by computation",
+  "type": "List String",
+  "value": "[\"fa\" ++ \"st\", \"safe\"]",
+  "stated": "refused",
+  "why": "state the value itself, written out: a List String such as [\"a\", \"b\"] or [1, 2]",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a string with an escape",
+  "type": "String",
+  "value": "\"fa\\u0073t\"",
+  "stated": "taken",
+  "fact": "current",
+  "stands": false,
+  "seconds": 0.5,
+  "harm": "agrees (a reading does not stand)"
+ },
+ {
+  "tried": "a string containing code",
+  "type": "String",
+  "value": "\"x\\\" ++ sorryAx String false ++ \\\"\"",
+  "stated": "taken",
+  "fact": "violated",
+  "stands": false,
+  "seconds": 0.9,
+  "harm": null
+ }
+]

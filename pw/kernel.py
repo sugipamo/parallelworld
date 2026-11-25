@@ -66,7 +66,8 @@ def pattern(find=None, find_all=None, kind="string", sort=False, unique=False, w
                 "the list next to --format", when the place holds other lists too.
       find      a regular expression with one group; it must match exactly once, and the
                 group is the value
-      find_all  the same, but every match counts and the result is a list
+      find_all  the same, but every match counts and the result is a list; it must match at
+                least once
       rewrite   [pattern, replacement]: each piece found has to match the pattern as a whole
                 and is replaced; the replacement may use \\1 ... \\9 for the pattern's groups
                 and nothing else. Use it where a place writes the value another way
@@ -108,6 +109,7 @@ def pattern(find=None, find_all=None, kind="string", sort=False, unique=False, w
 
 
 def _read_pattern(rd, text):
+    text = text.replace("\r\n", "\n")              # a checkout with other line ends is the same text
     for step in rd.get("within", []):
         found = re.findall(step, text, re.M)
         if len(found) != 1:
@@ -125,6 +127,11 @@ def _read_pattern(rd, text):
         if len(found) != 1:
             raise KernelError(f"the pattern matches {len(found)} times here; it has to match exactly once")
         return _term(rd["as"], found[0])[1]
+    if not found:
+        # A list pattern that finds nothing cannot be told from one the text no longer fits
+        # (other quotes, other line ends). Reading that as "the place lists nothing" would be
+        # believed: an empty list is contained in every list.
+        raise KernelError("the pattern matches nothing here; it has to match at least once")
     values = [_term(rd["as"], x) for x in found]
     if rd.get("unique"):
         values = list({v[1]: v for v in values}.values())
@@ -341,6 +348,21 @@ def locate(subject, cwd):
 def _json_like(typ):
     """Is a value of this type written the same way in JSON and in Lean (a string, a number, a list of them)?"""
     return typ in ("String", "Nat", "Int", "List String", "List Nat", "List Int")
+
+
+def _literal(typ, text):
+    """Is `text` a plain value of a type that is written the same way in JSON and in Lean:
+    a number, a string, a list of them, and nothing that Lean would have to compute?"""
+    if typ.endswith("Int"):
+        text = re.sub(r"\((-\d+)\)", r"\1", text)       # Lean writes a negative number in parentheses
+    try:
+        value = json.loads(text)
+    except ValueError:
+        return False
+    one = {"String": lambda v: isinstance(v, str),
+           "Nat": lambda v: isinstance(v, int) and not isinstance(v, bool) and v >= 0,
+           "Int": lambda v: isinstance(v, int) and not isinstance(v, bool)}[typ.removeprefix("List ")]
+    return isinstance(value, list) and all(map(one, value)) if typ.startswith("List ") else one(value)
 
 
 def unreadable(subject, cwd):
@@ -648,9 +670,15 @@ class Kernel:
             raise KernelError("the quote is not in the place word for word")
         obj = _norm(obj)
         self._screen(obj)
-        self._well_typed((fact["type"], obj))
-        version = subject_id(place, cwd)
+        if how is None and _json_like(fact["type"]) and not _literal(fact["type"], obj):
+            # What a reader says a place states is a value, not a computation. Anything else would
+            # be text from outside handed to Lean to evaluate, with only a list of refused words in between.
+            raise KernelError(f"state the value itself, written out: a {fact['type']} such as "
+                              + {"S": '"fast"', "N": "14", "I": "-3", "L": '["a", "b"] or [1, 2]'}[fact["type"][0]])
         ob = {"id": "O:" + _sha(fact["type"], obj), "type": fact["type"], "text": obj}
+        if ob["id"] not in st.objs:                  # (a value read before was put to Lean then; what rests on it is settled by a proof either way)
+            self._well_typed((fact["type"], obj))
+        version = subject_id(place, cwd)
         # a reading answers a question: the same place read for another fact is another hypothesis
         m = "M:" + _sha(h, version, ob["id"], json.dumps(how, sort_keys=True, ensure_ascii=False) if how else "")
         literal = False

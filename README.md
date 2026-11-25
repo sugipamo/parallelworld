@@ -26,7 +26,7 @@
 - `pw-calibration.json` — 読み手の測定結果
 - `action.yml`、`ci/lean.sh` — ほかのリポジトリの CI から使うための入口と、Lean を取ってくる手順（下の「他のリポジトリから使う」）
 
-実験の記録: [依存のある並列タスク](experiments/dependency/RESULTS.md)、[自己適用](experiments/selfcheck/RESULTS.md)、[過去の決定との矛盾](experiments/decisions/RESULTS.md)、[自然言語の決定の形式化](experiments/nl/RESULTS.md)、[コードでないファイル](experiments/artifacts/RESULTS.md)、[散文](experiments/prose/RESULTS.md)、[事実と箇所](experiments/facts/RESULTS.md)、[読み手の測定](experiments/calibration/RESULTS.md)、[箇所の探索](experiments/discovery/RESULTS.md)、[別のリポジトリで使う](experiments/external/RESULTS.md)、[何が乗らないかの調査](experiments/survey/RESULTS.md)（最初の 7 つは削除した層の上で行ったもの。[experiments/README.md](experiments/README.md)）
+実験の記録: [依存のある並列タスク](experiments/dependency/RESULTS.md)、[自己適用](experiments/selfcheck/RESULTS.md)、[過去の決定との矛盾](experiments/decisions/RESULTS.md)、[自然言語の決定の形式化](experiments/nl/RESULTS.md)、[コードでないファイル](experiments/artifacts/RESULTS.md)、[散文](experiments/prose/RESULTS.md)、[事実と箇所](experiments/facts/RESULTS.md)、[読み手の測定](experiments/calibration/RESULTS.md)、[箇所の探索](experiments/discovery/RESULTS.md)、[別のリポジトリで使う](experiments/external/RESULTS.md)、[何が乗らないかの調査](experiments/survey/RESULTS.md)、[履歴の再生](experiments/history/RESULTS.md)、[パターンの壊れ方](experiments/patterns/RESULTS.md)、[記録のマージ](experiments/merge/RESULTS.md)、[規模と所要時間](experiments/scale/RESULTS.md)、[Gate のふるいへの攻撃](experiments/gate/RESULTS.md)、[読み違えやすい文面での測定](experiments/hard/RESULTS.md)（最初の 7 つは削除した層の上で行ったもの。[experiments/README.md](experiments/README.md)）
 
 ## 動かす
 

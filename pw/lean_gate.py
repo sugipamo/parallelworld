@@ -54,6 +54,9 @@ _PROJECT = ("lean-toolchain", "Gamma.lean", "lakefile.toml")    # what Gamma is 
 _COPIED = _PROJECT + ("lake-manifest.json",)
 
 
+_READY = {}     # (lake, directory) -> LEAN_PATH, once lake was seen to be the pinned version and Gamma was built there
+
+
 class LeanGate:
     def __init__(self, lean_dir=LEAN_DIR, timeout=300):
         self.lean_dir = os.path.abspath(lean_dir)
@@ -135,6 +138,8 @@ class LeanGate:
         if not os.path.exists(lake):
             raise GateError("Lean (lake) is not installed; no proof can be accepted")
         home = self._home()
+        if (lake, home) in _READY:                   # checked and built earlier in this process; the directory is named after its content
+            return lake, home
         with open(os.path.join(home, "lean-toolchain")) as fh:
             want = fh.read().strip().rsplit(":v", 1)[-1]
         r = subprocess.run([lake, "--version"], cwd=home, capture_output=True, text=True)
@@ -147,6 +152,8 @@ class LeanGate:
             raise GateError("Gamma did not build in time")
         if b.returncode != 0:
             raise GateError("Gamma failed to build: " + (b.stdout + b.stderr)[-500:])
+        p = subprocess.run([lake, "env", "printenv", "LEAN_PATH"], cwd=home, capture_output=True, text=True)
+        _READY[(lake, home)] = p.stdout.strip()
         return lake, home
 
     def check(self, relation, items, proof):
@@ -168,8 +175,7 @@ class LeanGate:
                 return subprocess.run(cmd, cwd=home, capture_output=True, text=True, timeout=self.timeout, **kw)
             try:
                 lean = os.path.join(os.path.dirname(lake), "lean")
-                path = run(lake, "env", "printenv", "LEAN_PATH").stdout.strip()
-                env = dict(os.environ, LEAN_PATH=f"{path}:{work}")
+                env = dict(os.environ, LEAN_PATH=f"{_READY[(lake, home)]}:{work}")
                 r = run(lean, "-o", os.path.join(work, mod + ".olean"), proof_file, env=env)
                 if r.returncode != 0:
                     return {"ok": False, "reason": (r.stdout + r.stderr)[-1500:]}

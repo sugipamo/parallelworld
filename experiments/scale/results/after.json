@@ -1,0 +1,23 @@
+[
+ {
+  "facts": 5,
+  "cold": 2.3,
+  "warm": 0.6,
+  "verify": 2.1,
+  "one": 1.6
+ },
+ {
+  "facts": 20,
+  "cold": 7.3,
+  "warm": 0.7,
+  "verify": 5.1,
+  "one": 1.7
+ },
+ {
+  "facts": 50,
+  "cold": 17.2,
+  "warm": 1.6,
+  "verify": 12.6,
+  "one": 2.6
+ }
+]

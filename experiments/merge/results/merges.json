@@ -1,0 +1,339 @@
+[
+ {
+  "scenario": "each branch changes another fact",
+  "expected": {
+   "limit": "current",
+   "mode": "current"
+  },
+  "note": "",
+  "merges": {
+   "a into b": {
+    "states": {
+     "limit": "re-established",
+     "mode": "re-established"
+    },
+    "conflicts": [],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   },
+   "b into a": {
+    "states": {
+     "limit": "re-established",
+     "mode": "re-established"
+    },
+    "conflicts": [],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   }
+  },
+  "same either way": true,
+  "as expected": true
+ },
+ {
+  "scenario": "both branches read the same places",
+  "expected": {
+   "limit": "current",
+   "mode": "current"
+  },
+  "note": "",
+  "merges": {
+   "a into b": {
+    "states": {
+     "limit": "current",
+     "mode": "current"
+    },
+    "conflicts": [],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   },
+   "b into a": {
+    "states": {
+     "limit": "current",
+     "mode": "current"
+    },
+    "conflicts": [],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   }
+  },
+  "same either way": true,
+  "as expected": true
+ },
+ {
+  "scenario": "one branch changes the value, the other adds a place stating the old one",
+  "expected": {
+   "limit": "violated",
+   "mode": "current"
+  },
+  "note": "no file conflicts: git merges cleanly, and the merged tree is inconsistent",
+  "merges": {
+   "a into b": {
+    "states": {
+     "limit": "violated",
+     "mode": "current"
+    },
+    "conflicts": [],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   },
+   "b into a": {
+    "states": {
+     "limit": "violated",
+     "mode": "current"
+    },
+    "conflicts": [],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   }
+  },
+  "same either way": true,
+  "as expected": true
+ },
+ {
+  "scenario": "both change the value; conflicts resolved one file from each side",
+  "expected": {
+   "limit": "violated",
+   "mode": "current"
+  },
+  "note": "",
+  "merges": {
+   "a into b": {
+    "states": {
+     "limit": "violated",
+     "mode": "current"
+    },
+    "conflicts": [
+     "doc.md",
+     "k.py"
+    ],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   },
+   "b into a": {
+    "states": {
+     "limit": "violated",
+     "mode": "current"
+    },
+    "conflicts": [
+     "doc.md",
+     "k.py"
+    ],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   }
+  },
+  "same either way": true,
+  "as expected": true
+ },
+ {
+  "scenario": "both change the value; conflicts resolved for one side throughout",
+  "expected": {
+   "limit": "current",
+   "mode": "current"
+  },
+  "note": "the other branch's readings are of text that is no longer there, and are simply not used",
+  "merges": {
+   "a into b": {
+    "states": {
+     "limit": "current",
+     "mode": "current"
+    },
+    "conflicts": [
+     "doc.md",
+     "k.py"
+    ],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   },
+   "b into a": {
+    "states": {
+     "limit": "current",
+     "mode": "current"
+    },
+    "conflicts": [
+     "doc.md",
+     "k.py"
+    ],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   }
+  },
+  "same either way": true,
+  "as expected": true
+ },
+ {
+  "scenario": "two readers read the same passage differently",
+  "expected": {
+   "limit": "disputed",
+   "mode": "current"
+  },
+  "note": "",
+  "merges": {
+   "a into b": {
+    "states": {
+     "limit": "disputed",
+     "mode": "current"
+    },
+    "conflicts": [],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   },
+   "b into a": {
+    "states": {
+     "limit": "disputed",
+     "mode": "current"
+    },
+    "conflicts": [],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   }
+  },
+  "same either way": true,
+  "as expected": true
+ },
+ {
+  "scenario": "one branch withdraws a fact, the other reads it again",
+  "expected": {
+   "mode": "current"
+  },
+  "note": "",
+  "merges": {
+   "a into b": {
+    "states": {
+     "mode": "current"
+    },
+    "conflicts": [],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   },
+   "b into a": {
+    "states": {
+     "mode": "current"
+    },
+    "conflicts": [],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   }
+  },
+  "same either way": true,
+  "as expected": true
+ },
+ {
+  "scenario": "... and the merge keeps the fact after all",
+  "expected": {
+   "limit": "current",
+   "mode": "current"
+  },
+  "note": "the record holds a withdrawal, and the fact is declared again",
+  "merges": {
+   "a into b": {
+    "states": {
+     "limit": "current",
+     "mode": "current"
+    },
+    "conflicts": [
+     "pw-facts.json"
+    ],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   },
+   "b into a": {
+    "states": {
+     "limit": "current",
+     "mode": "current"
+    },
+    "conflicts": [
+     "pw-facts.json"
+    ],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   }
+  },
+  "same either way": true,
+  "as expected": true
+ },
+ {
+  "scenario": "one branch rewords the question, the other rewrites the passage",
+  "expected": {
+   "limit": "stale",
+   "mode": "current"
+  },
+  "note": "neither reading answers the new question about the new text: it has to be read once more",
+  "merges": {
+   "a into b": {
+    "states": {
+     "limit": "stale: it changed since it was read",
+     "mode": "current"
+    },
+    "conflicts": [],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   },
+   "b into a": {
+    "states": {
+     "limit": "stale: it changed since it was read",
+     "mode": "current"
+    },
+    "conflicts": [],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   }
+  },
+  "same either way": true,
+  "as expected": true
+ },
+ {
+  "scenario": "both branches add a place to the same fact",
+  "expected": {
+   "limit": "current",
+   "mode": "current"
+  },
+  "note": "pw-facts.json conflicts as text and is resolved by listing both places",
+  "merges": {
+   "a into b": {
+    "states": {
+     "limit": "current",
+     "mode": "current"
+    },
+    "conflicts": [
+     "pw-facts.json"
+    ],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   },
+   "b into a": {
+    "states": {
+     "limit": "current",
+     "mode": "current"
+    },
+    "conflicts": [
+     "pw-facts.json"
+    ],
+    "proofs refused": 0,
+    "record lines lost": 0,
+    "record lines twice": 0
+   }
+  },
+  "same either way": true,
+  "as expected": true
+ }
+]

@@ -1,0 +1,358 @@
+[
+ {
+  "tried": "the value the place states",
+  "type": "Nat",
+  "value": "15",
+  "stated": "taken",
+  "fact": "violated",
+  "stands": false,
+  "seconds": 1.0,
+  "harm": null
+ },
+ {
+  "tried": "the other place's value (a plain lie)",
+  "type": "Nat",
+  "value": "14",
+  "stated": "taken",
+  "fact": "current",
+  "stands": false,
+  "seconds": 0.4,
+  "harm": "agrees (a reading does not stand)"
+ },
+ {
+  "tried": "arithmetic that comes to 14",
+  "type": "Nat",
+  "value": "15 - 1",
+  "stated": "taken",
+  "fact": "current",
+  "stands": false,
+  "seconds": 0.4,
+  "harm": "agrees (a reading does not stand)"
+ },
+ {
+  "tried": "a function applied",
+  "type": "Nat",
+  "value": "Nat.pred 15",
+  "stated": "taken",
+  "fact": "current",
+  "stands": false,
+  "seconds": 0.4,
+  "harm": "agrees (a reading does not stand)"
+ },
+ {
+  "tried": "a conditional",
+  "type": "Nat",
+  "value": "if 15 = 15 then 14 else 15",
+  "stated": "taken",
+  "fact": "current",
+  "stands": false,
+  "seconds": 0.4,
+  "harm": "agrees (a reading does not stand)"
+ },
+ {
+  "tried": "a let",
+  "type": "Nat",
+  "value": "let x := 14; x",
+  "stated": "taken",
+  "fact": "current",
+  "stands": false,
+  "seconds": 0.4,
+  "harm": "agrees (a reading does not stand)"
+ },
+ {
+  "tried": "a tactic block as a term",
+  "type": "Nat",
+  "value": "by exact 14",
+  "stated": "taken",
+  "fact": "current",
+  "stands": false,
+  "seconds": 0.4,
+  "harm": "agrees (a reading does not stand)"
+ },
+ {
+  "tried": "the length of a list",
+  "type": "Nat",
+  "value": "[1,2,3,4,5,6,7,8,9,10,11,12,13,14].length",
+  "stated": "taken",
+  "fact": "current",
+  "stands": false,
+  "seconds": 0.5,
+  "harm": "agrees (a reading does not stand)"
+ },
+ {
+  "tried": "a string built by appending",
+  "type": "String",
+  "value": "\"fa\" ++ \"st\"",
+  "stated": "taken",
+  "fact": "current",
+  "stands": false,
+  "seconds": 0.5,
+  "harm": "agrees (a reading does not stand)"
+ },
+ {
+  "tried": "closing the parenthesis early",
+  "type": "Nat",
+  "value": "14) = (14 : Nat)) ∨ True ∨ ((15",
+  "stated": "refused",
+  "why": "Lean does not accept this under Gamma: /root/.cache/parallelworld/lean-dc3ecd2c8af8c023/run-717wgvrx/PW_62750956c748003f.lean:3:19: error: type mismatch 14 = 14",
+  "seconds": 0.1
+ },
+ {
+  "tried": "balanced, with a disjunction inside",
+  "type": "Nat",
+  "value": "(14 : Nat)) = (14 : Nat) ∨ ((15",
+  "stated": "refused",
+  "why": "Lean does not accept this under Gamma: /root/.cache/parallelworld/lean-dc3ecd2c8af8c023/run-1860brd2/PW_da3d2d7be42caf1b.lean:4:0: error: unexpected end of inpu",
+  "seconds": 0.1
+ },
+ {
+  "tried": "a line comment that swallows the rest",
+  "type": "Nat",
+  "value": "14 --",
+  "stated": "refused",
+  "why": "Lean does not accept this under Gamma: /root/.cache/parallelworld/lean-dc3ecd2c8af8c023/run-e3s6c01a/PW_d456119614ef6e6b.lean:4:0: error: unexpected end of inpu",
+  "seconds": 0.1
+ },
+ {
+  "tried": "a block comment left open",
+  "type": "Nat",
+  "value": "14 /- ",
+  "stated": "refused",
+  "why": "Lean does not accept this under Gamma: /root/.cache/parallelworld/lean-dc3ecd2c8af8c023/run-snea0166/PW_15a2be97785ee78b.lean:4:0: error: unterminated comment /",
+  "seconds": 0.1
+ },
+ {
+  "tried": "a block comment closed again",
+  "type": "Nat",
+  "value": "14 /- x -/",
+  "stated": "taken",
+  "fact": "current",
+  "stands": false,
+  "seconds": 0.5,
+  "harm": "agrees (a reading does not stand)"
+ },
+ {
+  "tried": "a newline and a new command",
+  "type": "Nat",
+  "value": "14)\ntheorem x : True := trivial\n#eval (1",
+  "stated": "refused",
+  "why": "forbidden token 'theorem' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a type ascription that changes the statement",
+  "type": "Nat",
+  "value": "(14 : Nat) = 14 → 15",
+  "stated": "refused",
+  "why": "Lean does not accept this under Gamma: /root/.cache/parallelworld/lean-dc3ecd2c8af8c023/run-j5r1ij9p/PW_d60df2682d3ffc8f.lean:3:38: error: failed to synthesize ",
+  "seconds": 0.1
+ },
+ {
+  "tried": "sorry",
+  "type": "Nat",
+  "value": "sorry",
+  "stated": "refused",
+  "why": "forbidden token 'sorry' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "sorryAx (not the keyword)",
+  "type": "Nat",
+  "value": "sorryAx Nat false",
+  "stated": "taken",
+  "fact": "uncovered",
+  "stands": false,
+  "seconds": 0.7,
+  "harm": null
+ },
+ {
+  "tried": "sorryAx, as a proof inside a term",
+  "type": "Nat",
+  "value": "(⟨14, sorryAx _ false⟩ : { n : Nat // n = 15 }).1",
+  "stated": "taken",
+  "fact": "uncovered",
+  "stands": false,
+  "seconds": 1.1,
+  "harm": null
+ },
+ {
+  "tried": "an identifier in « »",
+  "type": "Nat",
+  "value": "«sorry»",
+  "stated": "refused",
+  "why": "forbidden token 'sorry' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "native_decide inside a term",
+  "type": "Nat",
+  "value": "(⟨14, by native_decide⟩ : { n : Nat // n = 14 }).1",
+  "stated": "refused",
+  "why": "forbidden token 'native_decide' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "decide inside a term, proving a falsehood",
+  "type": "Nat",
+  "value": "(⟨14, by decide⟩ : { n : Nat // n = 15 }).1",
+  "stated": "refused",
+  "why": "Lean does not accept this under Gamma: /root/.cache/parallelworld/lean-dc3ecd2c8af8c023/run-_ujwbzlz/PW_5a630777a888a831.lean:3:29: error: tactic 'decide' prove",
+  "seconds": 0.2
+ },
+ {
+  "tried": "the compiler's axiom",
+  "type": "Nat",
+  "value": "if Lean.reduceBool true then 14 else 15",
+  "stated": "taken",
+  "fact": "uncovered",
+  "stands": false,
+  "seconds": 1.1,
+  "harm": null
+ },
+ {
+  "tried": "Classical.choice (an allowed axiom)",
+  "type": "Nat",
+  "value": "Classical.choice ⟨14⟩",
+  "stated": "refused",
+  "why": "Lean does not accept this under Gamma: /root/.cache/parallelworld/lean-dc3ecd2c8af8c023/run-9jfd0edj/PW_902062ce326d6340.lean:3:0: error: failed to compile defi",
+  "seconds": 0.1
+ },
+ {
+  "tried": "a macro",
+  "type": "Nat",
+  "value": "macro \"x\" : term => `(14)\n14",
+  "stated": "refused",
+  "why": "forbidden token 'macro' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "an option",
+  "type": "Nat",
+  "value": "set_option maxRecDepth 100000 in 14",
+  "stated": "refused",
+  "why": "forbidden token 'set_option' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "running code while elaborating",
+  "type": "Nat",
+  "value": "by run_tac (IO.println \"hi\" : IO Unit); exact 14",
+  "stated": "refused",
+  "why": "forbidden token 'run_tac' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "elaboration-time evaluation",
+  "type": "Nat",
+  "value": "by_elab return Lean.mkNatLit 14",
+  "stated": "refused",
+  "why": "Lean does not accept this under Gamma: /root/.cache/parallelworld/lean-dc3ecd2c8af8c023/run-mhzaby0o/PW_7730ab3f187f9394.lean:3:20: error: unknown constant 'Lea",
+  "seconds": 0.1
+ },
+ {
+  "tried": "a debug trace",
+  "type": "Nat",
+  "value": "dbgTraceIfShared \"x\" 14",
+  "stated": "taken",
+  "fact": "current",
+  "stands": false,
+  "seconds": 0.5,
+  "harm": "agrees (a reading does not stand)"
+ },
+ {
+  "tried": "a declaration modifier",
+  "type": "Nat",
+  "value": "@[simp] 14",
+  "stated": "refused",
+  "why": "forbidden token '@[' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a # command",
+  "type": "Nat",
+  "value": "14\n#exit",
+  "stated": "refused",
+  "why": "forbidden token '#' in Lean text",
+  "seconds": 0.0
+ },
+ {
+  "tried": "a huge power",
+  "type": "Nat",
+  "value": "2 ^ (2 ^ 40)",
+  "stated": "taken",
+  "fact": "uncovered",
+  "stands": false,
+  "seconds": 0.8,
+  "harm": null
+ },
+ {
+  "tried": "a large power",
+  "type": "Nat",
+  "value": "2 ^ 100000000 % 3 + 13",
+  "stated": "taken",
+  "fact": "uncovered",
+  "stands": false,
+  "seconds": 0.8,
+  "harm": null
+ },
+ {
+  "tried": "a deep recursion",
+  "type": "Nat",
+  "value": "(List.range 30000000).length",
+  "stated": "taken",
+  "fact": "violated",
+  "stands": false,
+  "seconds": 1.0,
+  "harm": null
+ },
+ {
+  "tried": "a slow function, by rfl",
+  "type": "Nat",
+  "value": "(List.range 3000).foldl (fun a b => a + b * b % 7) 0 % 2 + 14",
+  "stated": "taken",
+  "fact": "uncovered",
+  "stands": false,
+  "seconds": 0.9,
+  "harm": null
+ },
+ {
+  "tried": "simp with a loop-prone term",
+  "type": "Nat",
+  "value": "(fun f : Nat → Nat => f (f (f (f (f (f (f (f (f (f 14)))))))))) (fun x => x * x * x * x % 1000003)",
+  "stated": "taken",
+  "fact": "violated",
+  "stands": false,
+  "seconds": 5.4,
+  "harm": null
+ },
+ {
+  "tried": "a list with an entry built by computation",
+  "type": "List String",
+  "value": "[\"fa\" ++ \"st\", \"safe\"]",
+  "stated": "taken",
+  "fact": "current",
+  "stands": false,
+  "seconds": 0.4,
+  "harm": "agrees (a reading does not stand)"
+ },
+ {
+  "tried": "a string with an escape",
+  "type": "String",
+  "value": "\"fa\\u0073t\"",
+  "stated": "taken",
+  "fact": "current",
+  "stands": false,
+  "seconds": 0.5,
+  "harm": "agrees (a reading does not stand)"
+ },
+ {
+  "tried": "a string containing code",
+  "type": "String",
+  "value": "\"x\\\" ++ sorryAx String false ++ \\\"\"",
+  "stated": "taken",
+  "fact": "violated",
+  "stands": false,
+  "seconds": 0.7,
+  "harm": null
+ }
+]
