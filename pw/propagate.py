@@ -57,6 +57,12 @@ formatting, the order and every other statement exactly as they are.
   - Where the passage writes the value in its own way (py310 for 3.10, a table row per entry),
     keep that way of writing.
 
+Where the new value brings in something the passage did not mention (a new entry of a list), the
+passage may describe each entry, as it does the others. Take what you write about it from the
+reference given with the passage: the other places of the project that state the same thing.
+Write nothing about an entry that the reference does not show; leave out a description rather
+than make one up.
+
 Give the complete new text of the passage with `rewrite(id, text)`: every character of it, with
 the change made. If the passage cannot be made to say this without changing what else it says,
 call `cannot(id, why)` instead. Call exactly one of the two for every passage.
@@ -134,7 +140,10 @@ def ask_editor(model, items, budget):
     for i in items:
         part = "   (this passage lists only some of the entries)" if i["some"] else ""
         prompt += (f"\n=== id: {i['id']}   {i['at']}\nThe value: {i['question']}\nIt reads as: {i['reads as']}\n"
-                   f"It has to read as: {i['to']}{part}\nPassage:\n<<<\n{i['unit']}\n>>>\n")
+                   f"It has to read as: {i['to']}{part}\n")
+        for at, text in i.get("reference", []):
+            prompt += f"Reference, not to be edited: {at}\n<<<\n{text}\n>>>\n"
+        prompt += f"Passage:\n<<<\n{i['unit']}\n>>>\n"
     r = subprocess.run(["claude", "-p", prompt, "--model", model, "--tools", "", "--mcp-config", cfg, "--strict-mcp-config",
                         "--allowedTools", "mcp__edit__rewrite,mcp__edit__cannot", "--output-format", "json", "--max-budget-usd", str(budget)],
                        cwd=work, capture_output=True, text=True)
@@ -266,7 +275,7 @@ def _same(read, target, some=False):
 def _by_agent(kernel, repo, lean_dir, st, text_of, texts, todo, out, editor, reader):
     """Ask an agent for the new text of each place left, and take what stands up to being read again."""
     declared = [(h, p) for h, f in st.facts.items() if h not in st.withdrawn for p in f["places"]]
-    plain = lambda t: {k: v for k, v in t.items() if k not in ("h", "decl", "some", "question", "unit", "id", "new")}
+    plain = lambda t: {k: v for k, v in t.items() if k not in ("h", "decl", "some", "question", "unit", "id", "new", "reference")}
     while todo:
         batch, seen = [], set()
         for t in list(todo):                             # one place per file at a time: the next is cut from the text as edited
@@ -281,7 +290,16 @@ def _by_agent(kernel, repo, lean_dir, st, text_of, texts, todo, out, editor, rea
             if len(unit) > UNIT:
                 out["by hand"].append({**plain(t), "why": t["why"] + f"; and the passage is longer than {UNIT} characters, too long to have rewritten whole"})
                 continue
-            batch.append({**t, "unit": unit, "id": len(batch)})
+            # what the project already says about this, where it is read by a pattern: for the agent to
+            # take names and wording from, so that it does not make up what it was not told
+            reference, room = [], 12000
+            for p in st.facts[t["h"]]["places"]:
+                if p["reader"] and p["at"] != t["at"] and not p.get("some"):
+                    ref = _read_text(text_of(p["at"].partition("::")[0])[0], p["at"])
+                    if len(ref) <= room:
+                        reference.append((p["at"], ref))
+                        room -= len(ref)
+            batch.append({**t, "unit": unit, "id": len(batch), "reference": reference})
         if not batch:
             continue
         answers, cannot, problems, cost = editor(batch)
@@ -296,10 +314,8 @@ def _by_agent(kernel, repo, lean_dir, st, text_of, texts, todo, out, editor, rea
                                       else "the agent gave no answer" + (f" ({'; '.join(problems)})" if problems else ""))
                 if new_unit.rstrip("\n") == t["unit"].rstrip("\n"):
                     raise KernelError("the agent returned the passage unchanged")
-                if not t["unit"].endswith("\n"):
-                    new_unit = new_unit.rstrip("\n")
-                elif not new_unit.endswith("\n"):
-                    new_unit += "\n"
+                # the passage ends as it ended: the blank lines before the next part are not the agent's to change
+                new_unit = new_unit.rstrip("\n") + t["unit"][len(t["unit"].rstrip("\n")):]
                 if difflib.SequenceMatcher(None, t["unit"], new_unit).ratio() < 0.6 and abs(len(new_unit) - len(t["unit"])) + 1 > 200:
                     raise KernelError("the agent rewrote the passage instead of changing the value in it")
                 new = text.replace(t["unit"], new_unit)
