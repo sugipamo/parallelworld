@@ -1,0 +1,3036 @@
+From 727fc6375f1e30aead51c61406a6ef4083f98886 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 25 Nov 2026 09:30:34 +0000
+Subject: [PATCH 1/3] Declare where miclow states the same thing twice, and
+ what is right
+
+pw-facts.json lists seven things miclow states in more than one place
+(its version, licence, the task id variable, the system commands, the
+task configuration keys, the Python client's methods, the repository
+URL) and where each is stated. pw-log.jsonl is the record of how each
+place was read; pw-calibration.json the measurement of the readers.
+
+Three of them disagree. For those, what is right is laid down: the
+licence is MIT, as in LICENSE; the configuration keys and the client's
+methods are what the code has.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_016CDHSwZWzVoy1TC6nxh6gX
+---
+ .gitattributes      |    1 +
+ pw-calibration.json | 2518 +++++++++++++++++++++++++++++++++++++++++++
+ pw-facts.json       |  221 ++++
+ pw-log.jsonl        |   98 ++
+ 4 files changed, 2838 insertions(+)
+ create mode 100644 .gitattributes
+ create mode 100644 pw-calibration.json
+ create mode 100644 pw-facts.json
+ create mode 100644 pw-log.jsonl
+
+diff --git a/.gitattributes b/.gitattributes
+new file mode 100644
+index 0000000..5470523
+--- /dev/null
++++ b/.gitattributes
+@@ -0,0 +1 @@
++pw-log.jsonl merge=union
+diff --git a/pw-calibration.json b/pw-calibration.json
+new file mode 100644
+index 0000000..c198205
+--- /dev/null
++++ b/pw-calibration.json
+@@ -0,0 +1,2518 @@
++[
++ {
++  "model": "claude-opus-5-5",
++  "instructions": "70e202f24f",
++  "date": "2026-11-24",
++  "seed": 0,
++  "cost_usd": 2.01,
++  "no answer": 0,
++  "planted": {
++   "n": 25,
++   "read": 25,
++   "stuck": 0,
++   "other": 0,
++   "declined": 0
++  },
++  "unchanged": {
++   "n": 7,
++   "read": 7
++  },
++  "decoys": {
++   "n": 35,
++   "declined": 35,
++   "accepted": 0
++  },
++  "read rate": [
++   0.863,
++   1.0
++  ],
++  "stuck rate": [
++   0.0,
++   0.137
++  ],
++  "accept rate": [
++   0.0,
++   0.1
++  ],
++  "trials": [
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "README.md::📄 ライセンス",
++    "kind": "value replaced",
++    "planted": "MIT_lob",
++    "before": "MIT",
++    "about": "license",
++    "read": "MIT_lob",
++    "outcome": "read"
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "README.md::📄 ライセンス",
++    "kind": "value replaced",
++    "planted": "MIT_gum",
++    "before": "MIT",
++    "about": "license",
++    "read": "MIT_gum",
++    "outcome": "read"
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "README.md::📄 ライセンス",
++    "kind": "value replaced",
++    "planted": "MIT_lim",
++    "before": "MIT",
++    "about": "license",
++    "read": "MIT_lim",
++    "outcome": "read"
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "README.md::📄 ライセンス",
++    "kind": "value replaced",
++    "planted": "MIT_kuf",
++    "before": "MIT",
++    "about": "license",
++    "read": "MIT_kuf",
++    "outcome": "read"
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "README.md::📄 ライセンス",
++    "kind": "value replaced",
++    "planted": "MIT_neg",
++    "before": "MIT",
++    "about": "license",
++    "read": "MIT_neg",
++    "outcome": "read"
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "README.md::📄 ライセンス",
++    "kind": "unchanged",
++    "planted": "MIT",
++    "before": "MIT",
++    "about": "license",
++    "read": "MIT",
++    "outcome": "read"
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "README.md::システムコマンド",
++    "kind": "entry renamed",
++    "planted": [
++     "system.status",
++     "system.subscribe-topic_pin",
++     "system.unsubscribe-topic"
++    ],
++    "before": [
++     "system.status",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "about": "system_commands",
++    "read": [
++     "system.status",
++     "system.subscribe-topic_pin",
++     "system.unsubscribe-topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "README.md::システムコマンド",
++    "kind": "entry renamed",
++    "planted": [
++     "system.status",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic_sud"
++    ],
++    "before": [
++     "system.status",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "about": "system_commands",
++    "read": [
++     "system.status",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic_sud"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "README.md::システムコマンド",
++    "kind": "entry renamed",
++    "planted": [
++     "system.status_gas",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "before": [
++     "system.status",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "about": "system_commands",
++    "read": [
++     "system.status_gas",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "README.md::システムコマンド",
++    "kind": "unchanged",
++    "planted": [
++     "system.status",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "before": [
++     "system.status",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "about": "system_commands",
++    "read": [
++     "system.status",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "README.md::🛠️ システムコマンド",
++    "kind": "entry renamed",
++    "planted": [
++     "system.subscribe-topic",
++     "system.unsubscribe-topic_rim"
++    ],
++    "before": [
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "about": "system_commands",
++    "read": [
++     "system.subscribe-topic",
++     "system.unsubscribe-topic_rim"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "README.md::🛠️ システムコマンド",
++    "kind": "entry renamed",
++    "planted": [
++     "system.subscribe-topic_nak",
++     "system.unsubscribe-topic"
++    ],
++    "before": [
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "about": "system_commands",
++    "read": [
++     "system.subscribe-topic_nak",
++     "system.unsubscribe-topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "README.md::🛠️ システムコマンド",
++    "kind": "unchanged",
++    "planted": [
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "before": [
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "about": "system_commands",
++    "read": [
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::設定ファイル形式",
++    "kind": "entry renamed",
++    "planted": [
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "tula",
++     "working_directory"
++    ],
++    "before": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "about": "task configuration keys",
++    "read": [
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "tula",
++     "working_directory"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::設定ファイル形式",
++    "kind": "entry renamed",
++    "planted": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory_tub"
++    ],
++    "before": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "about": "task configuration keys",
++    "read": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory_tub"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::設定ファイル形式",
++    "kind": "entry renamed",
++    "planted": [
++     "args",
++     "command",
++     "dobuvi",
++     "environment",
++     "task_name",
++     "working_directory"
++    ],
++    "before": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "about": "task configuration keys",
++    "read": [
++     "args",
++     "command",
++     "dobuvi",
++     "environment",
++     "task_name",
++     "working_directory"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::設定ファイル形式",
++    "kind": "entry renamed",
++    "planted": [
++     "args",
++     "environment",
++     "kideke",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "before": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "about": "task configuration keys",
++    "read": [
++     "args",
++     "environment",
++     "kideke",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::設定ファイル形式",
++    "kind": "entry renamed",
++    "planted": [
++     "args",
++     "command",
++     "gutadiwofi",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "before": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "about": "task configuration keys",
++    "read": [
++     "args",
++     "command",
++     "gutadiwofi",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::設定ファイル形式",
++    "kind": "unchanged",
++    "planted": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "before": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "about": "task configuration keys",
++    "read": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "python/README.md::Methods",
++    "kind": "entry renamed",
++    "planted": [
++     "get_status",
++     "receive_message_tun",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "before": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "about": "Python client methods",
++    "read": [
++     "get_status",
++     "receive_message_tun",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "python/README.md::Methods",
++    "kind": "entry renamed",
++    "planted": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task_pim",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "before": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "about": "Python client methods",
++    "read": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task_pim",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "python/README.md::Methods",
++    "kind": "entry renamed",
++    "planted": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task_cut",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "before": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "about": "Python client methods",
++    "read": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task_cut",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "python/README.md::Methods",
++    "kind": "entry renamed",
++    "planted": [
++     "get_status",
++     "receive_message",
++     "send_message_lip",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "before": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "about": "Python client methods",
++    "read": [
++     "get_status",
++     "receive_message",
++     "send_message_lip",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "python/README.md::Methods",
++    "kind": "entry renamed",
++    "planted": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic_fid",
++     "unsubscribe_topic"
++    ],
++    "before": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "about": "Python client methods",
++    "read": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic_fid",
++     "unsubscribe_topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "python/README.md::Methods",
++    "kind": "unchanged",
++    "planted": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "before": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "about": "Python client methods",
++    "read": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "README.md::インストール",
++    "kind": "unchanged",
++    "planted": "https://github.com/sugipamo/miclow",
++    "before": "https://github.com/sugipamo/miclow",
++    "about": "repository URL",
++    "read": "https://github.com/sugipamo/miclow",
++    "outcome": "read"
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "README.md::📞 サポート",
++    "kind": "value replaced",
++    "planted": "https://github.com/sugipamo/miclow_feb",
++    "before": "https://github.com/sugipamo/miclow",
++    "about": "repository URL",
++    "read": "https://github.com/sugipamo/miclow_feb",
++    "outcome": "read"
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "README.md::📞 サポート",
++    "kind": "value replaced",
++    "planted": "https://github.com/sugipamo/miclow_pim",
++    "before": "https://github.com/sugipamo/miclow",
++    "about": "repository URL",
++    "read": "https://github.com/sugipamo/miclow_pim",
++    "outcome": "read"
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "README.md::📞 サポート",
++    "kind": "value replaced",
++    "planted": "https://github.com/sugipamo/miclow_car",
++    "before": "https://github.com/sugipamo/miclow",
++    "about": "repository URL",
++    "read": "https://github.com/sugipamo/miclow_car",
++    "outcome": "read"
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "README.md::📞 サポート",
++    "kind": "value replaced",
++    "planted": "https://github.com/sugipamo/miclow_ted",
++    "before": "https://github.com/sugipamo/miclow",
++    "about": "repository URL",
++    "read": "https://github.com/sugipamo/miclow_ted",
++    "outcome": "read"
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "README.md::📞 サポート",
++    "kind": "value replaced",
++    "planted": "https://github.com/sugipamo/miclow_bas",
++    "before": "https://github.com/sugipamo/miclow",
++    "about": "repository URL",
++    "read": "https://github.com/sugipamo/miclow_bas",
++    "outcome": "read"
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "README.md::📞 サポート",
++    "kind": "unchanged",
++    "planted": "https://github.com/sugipamo/miclow",
++    "before": "https://github.com/sugipamo/miclow",
++    "about": "repository URL",
++    "read": "https://github.com/sugipamo/miclow",
++    "outcome": "read"
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::🛠️ システムコマンド",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "system_commands",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage lists system commands (system.subscribe-topic, system.unsubscribe-topic), not methods of the Python MiclowClient class."
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "src/shell_backend.rs",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task_id_env_var",
++    "read": null,
++    "outcome": "declined",
++    "why": "Rust source for the ShellBackend task backend (process spawning, stream reading, system command parsing); it has no license header or license statement."
++   },
++   {
++    "fact": "project_version",
++    "asked": "project_version: The release version of miclow (Rust crate and Python client package), e.g. \"0.1.0\".",
++    "type": "String",
++    "place": "LICENSE",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "license",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is the MIT license text; it gives no release version (2024 is only a copyright year)."
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "src/shell_backend.rs",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task_id_env_var",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is Rust source for the ShellBackend task backend; it contains no repository URL."
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "README.md::設定ファイル形式",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task configuration keys",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage shows the TOML config file format for task definitions; it lists no system control commands."
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "src/system_control_command.rs",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "system_commands",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage implements system control commands (subscribe/unsubscribe topic, status, call function) and their parsing; it does not list the keys accepted by a [[tasks]] TOML entry."
++   },
++   {
++    "fact": "task_id_env_var",
++    "asked": "task_id_env_var: Name of the environment variable through which miclow passes the task ID to each spawned task process.",
++    "type": "String",
++    "place": "README.md::📞 サポート",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "repository URL",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is the support section linking to GitHub Issues and Discussions; it names no environment variable."
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::設定ファイル形式",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task configuration keys",
++    "read": null,
++    "outcome": "declined",
++    "why": "Describes the TOML config file format for task definitions; says nothing about the Python MiclowClient class or its methods."
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "python/miclow/__init__.py",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task_id_env_var",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is the Python client library code (messages, buffer, client API); it gives a __version__ but says nothing about the project's license."
++   },
++   {
++    "fact": "project_version",
++    "asked": "project_version: The release version of miclow (Rust crate and Python client package), e.g. \"0.1.0\".",
++    "type": "String",
++    "place": "README.md::📞 サポート",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "repository URL",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is the README support section with GitHub Issues and Discussions links; it does not state a release version."
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "python/pyproject.toml",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "project_version",
++    "read": null,
++    "outcome": "declined",
++    "why": "The pyproject.toml gives the package metadata, dependencies and tool settings, but it has no [project.urls] section and no repository URL."
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "python/README.md::Methods",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "Python client methods",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage lists the Python client's method names and signatures, not the system command topic keys those methods send to miclow."
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::システムコマンド",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "system_commands",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage lists system commands that tasks can send at runtime (subscribe-topic, unsubscribe-topic, status). It does not list the keys of a [[tasks]] TOML entry."
++   },
++   {
++    "fact": "task_id_env_var",
++    "asked": "task_id_env_var: Name of the environment variable through which miclow passes the task ID to each spawned task process.",
++    "type": "String",
++    "place": "Cargo.toml",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "repository URL",
++    "read": null,
++    "outcome": "declined",
++    "why": "This is the Cargo.toml package manifest (metadata and dependencies). It names no environment variable for passing the task ID."
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "src/system_control_command.rs",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "system_commands",
++    "read": null,
++    "outcome": "declined",
++    "why": "Rust server-side code defining SystemControlCommand and its handlers (subscribe/unsubscribe topic, status, call function); it does not mention the Python MiclowClient class or its methods."
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "python/miclow/__init__.py::MiclowClient.__init__",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task_id_env_var",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is the client's __init__ method, which sets task_id, stdin, stdout and the buffer. It says nothing about a license."
++   },
++   {
++    "fact": "project_version",
++    "asked": "project_version: The release version of miclow (Rust crate and Python client package), e.g. \"0.1.0\".",
++    "type": "String",
++    "place": "README.md::📄 ライセンス",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "license",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is the license section (MIT license); it gives no release version."
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "Cargo.lock",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "project_version",
++    "read": null,
++    "outcome": "declined",
++    "why": "Cargo.lock listing dependency versions; the only GitHub URL is the crates.io registry index (rust-lang/crates.io-index), not the project's own repository, and the miclow package entry has no repository URL."
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "src/config.rs",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task configuration keys",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is the config loader (TaskConfig/SystemConfig parsing, validation, includes); it defines no system control command topics."
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "python/README.md::Methods",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "Python client methods",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage lists API methods (send_message, start_task, etc.), not the keys accepted by a [[tasks]] entry in the TOML configuration."
++   },
++   {
++    "fact": "task_id_env_var",
++    "asked": "task_id_env_var: Name of the environment variable through which miclow passes the task ID to each spawned task process.",
++    "type": "String",
++    "place": "README.md::インストール",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "repository URL",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is install/build/run instructions; it names no task ID environment variable."
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "src/config.rs",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task configuration keys",
++    "read": null,
++    "outcome": "declined",
++    "why": "Rust config module (TaskConfig/SystemConfig parsing and validation); it does not mention the Python MiclowClient class or its methods."
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "LICENSE",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "license",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is the MIT License text with a 2024 copyright notice for Miclow; it does not include a repository URL."
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "python/miclow/__init__.py::MiclowClient",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "Python client methods",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is the MiclowClient Python class that sends and receives messages over stdin/stdout; it mentions [[functions]] but never lists the keys a [[tasks]] entry accepts."
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::システムコマンド",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "system_commands",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage documents system commands that tasks can print (system.subscribe-topic, system.unsubscribe-topic, system.status). It does not list the methods of the MiclowClient class."
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "Cargo.lock",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "project_version",
++    "read": null,
++    "outcome": "declined",
++    "why": "This is Cargo.lock, which records resolved dependency versions and checksums. The miclow entry lists only its name, version and dependencies, with no license field."
++   },
++   {
++    "fact": "project_version",
++    "asked": "project_version: The release version of miclow (Rust crate and Python client package), e.g. \"0.1.0\".",
++    "type": "String",
++    "place": "README.md::インストール",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "repository URL",
++    "read": null,
++    "outcome": "declined",
++    "why": "Installation instructions (clone, cargo build, run); no release version number is given."
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "python/miclow/__init__.py::MiclowClient.__init__",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task_id_env_var",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is the MiclowClient __init__ method, which reads MICLOW_TASK_ID and sets up stdin, stdout and a buffer; it contains no repository URL."
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::🛠️ システムコマンド",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "system_commands",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage lists runtime system commands (system.subscribe-topic, system.unsubscribe-topic), not the keys a [[tasks]] TOML entry accepts."
++   },
++   {
++    "fact": "task_id_env_var",
++    "asked": "task_id_env_var: Name of the environment variable through which miclow passes the task ID to each spawned task process.",
++    "type": "String",
++    "place": "README.md::📄 ライセンス",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "license",
++    "read": null,
++    "outcome": "declined",
++    "why": "README license section saying the project is MIT-licensed; it says nothing about environment variables or task IDs."
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "python/miclow/__init__.py::__version__",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "project_version",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage only sets the Python module's version string to 0.1.0; it says nothing about a license."
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "python/miclow/__init__.py::__version__",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "project_version",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage only sets the module's version string (__version__ = \"0.1.0\"). It gives no repository URL."
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "python/miclow/__init__.py",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task_id_env_var",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is the Python client library's source code; it contains no GitHub repository URL."
++   },
++   {
++    "fact": "task_id_env_var",
++    "asked": "task_id_env_var: Name of the environment variable through which miclow passes the task ID to each spawned task process.",
++    "type": "String",
++    "place": "Cargo.toml",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "license",
++    "read": null,
++    "outcome": "declined",
++    "why": "Cargo.toml package metadata and dependencies; it does not name any environment variable for the task ID."
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "python/pyproject.toml",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "project_version",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is the pyproject.toml project metadata (name, version, authors, dependencies, build and formatter settings); it has no license field."
++   }
++  ]
++ },
++ {
++  "model": "claude-sonnet-5-5",
++  "instructions": "70e202f24f",
++  "date": "2026-11-24",
++  "seed": 0,
++  "cost_usd": 1.0,
++  "no answer": 0,
++  "planted": {
++   "n": 25,
++   "read": 25,
++   "stuck": 0,
++   "other": 0,
++   "declined": 0
++  },
++  "unchanged": {
++   "n": 7,
++   "read": 7
++  },
++  "decoys": {
++   "n": 35,
++   "declined": 35,
++   "accepted": 0
++  },
++  "read rate": [
++   0.863,
++   1.0
++  ],
++  "stuck rate": [
++   0.0,
++   0.137
++  ],
++  "accept rate": [
++   0.0,
++   0.1
++  ],
++  "trials": [
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "README.md::📄 ライセンス",
++    "kind": "value replaced",
++    "planted": "MIT_lob",
++    "before": "MIT",
++    "about": "license",
++    "read": "MIT_lob",
++    "outcome": "read"
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "README.md::📄 ライセンス",
++    "kind": "value replaced",
++    "planted": "MIT_gum",
++    "before": "MIT",
++    "about": "license",
++    "read": "MIT_gum",
++    "outcome": "read"
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "README.md::📄 ライセンス",
++    "kind": "value replaced",
++    "planted": "MIT_lim",
++    "before": "MIT",
++    "about": "license",
++    "read": "MIT_lim",
++    "outcome": "read"
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "README.md::📄 ライセンス",
++    "kind": "value replaced",
++    "planted": "MIT_kuf",
++    "before": "MIT",
++    "about": "license",
++    "read": "MIT_kuf",
++    "outcome": "read"
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "README.md::📄 ライセンス",
++    "kind": "value replaced",
++    "planted": "MIT_neg",
++    "before": "MIT",
++    "about": "license",
++    "read": "MIT_neg",
++    "outcome": "read"
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "README.md::📄 ライセンス",
++    "kind": "unchanged",
++    "planted": "MIT",
++    "before": "MIT",
++    "about": "license",
++    "read": "MIT",
++    "outcome": "read"
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "README.md::システムコマンド",
++    "kind": "entry renamed",
++    "planted": [
++     "system.status",
++     "system.subscribe-topic_pin",
++     "system.unsubscribe-topic"
++    ],
++    "before": [
++     "system.status",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "about": "system_commands",
++    "read": [
++     "system.status",
++     "system.subscribe-topic_pin",
++     "system.unsubscribe-topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "README.md::システムコマンド",
++    "kind": "entry renamed",
++    "planted": [
++     "system.status",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic_sud"
++    ],
++    "before": [
++     "system.status",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "about": "system_commands",
++    "read": [
++     "system.status",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic_sud"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "README.md::システムコマンド",
++    "kind": "entry renamed",
++    "planted": [
++     "system.status_gas",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "before": [
++     "system.status",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "about": "system_commands",
++    "read": [
++     "system.status_gas",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "README.md::システムコマンド",
++    "kind": "unchanged",
++    "planted": [
++     "system.status",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "before": [
++     "system.status",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "about": "system_commands",
++    "read": [
++     "system.status",
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "README.md::🛠️ システムコマンド",
++    "kind": "entry renamed",
++    "planted": [
++     "system.subscribe-topic",
++     "system.unsubscribe-topic_rim"
++    ],
++    "before": [
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "about": "system_commands",
++    "read": [
++     "system.subscribe-topic",
++     "system.unsubscribe-topic_rim"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "README.md::🛠️ システムコマンド",
++    "kind": "entry renamed",
++    "planted": [
++     "system.subscribe-topic_nak",
++     "system.unsubscribe-topic"
++    ],
++    "before": [
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "about": "system_commands",
++    "read": [
++     "system.subscribe-topic_nak",
++     "system.unsubscribe-topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "README.md::🛠️ システムコマンド",
++    "kind": "unchanged",
++    "planted": [
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "before": [
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "about": "system_commands",
++    "read": [
++     "system.subscribe-topic",
++     "system.unsubscribe-topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::設定ファイル形式",
++    "kind": "entry renamed",
++    "planted": [
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "tula",
++     "working_directory"
++    ],
++    "before": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "about": "task configuration keys",
++    "read": [
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "tula",
++     "working_directory"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::設定ファイル形式",
++    "kind": "entry renamed",
++    "planted": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory_tub"
++    ],
++    "before": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "about": "task configuration keys",
++    "read": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory_tub"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::設定ファイル形式",
++    "kind": "entry renamed",
++    "planted": [
++     "args",
++     "command",
++     "dobuvi",
++     "environment",
++     "task_name",
++     "working_directory"
++    ],
++    "before": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "about": "task configuration keys",
++    "read": [
++     "args",
++     "command",
++     "dobuvi",
++     "environment",
++     "task_name",
++     "working_directory"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::設定ファイル形式",
++    "kind": "entry renamed",
++    "planted": [
++     "args",
++     "environment",
++     "kideke",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "before": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "about": "task configuration keys",
++    "read": [
++     "args",
++     "environment",
++     "kideke",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::設定ファイル形式",
++    "kind": "entry renamed",
++    "planted": [
++     "args",
++     "command",
++     "gutadiwofi",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "before": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "about": "task configuration keys",
++    "read": [
++     "args",
++     "command",
++     "gutadiwofi",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::設定ファイル形式",
++    "kind": "unchanged",
++    "planted": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "before": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "about": "task configuration keys",
++    "read": [
++     "args",
++     "command",
++     "environment",
++     "task_name",
++     "topics",
++     "working_directory"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "python/README.md::Methods",
++    "kind": "entry renamed",
++    "planted": [
++     "get_status",
++     "receive_message_tun",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "before": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "about": "Python client methods",
++    "read": [
++     "get_status",
++     "receive_message_tun",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "python/README.md::Methods",
++    "kind": "entry renamed",
++    "planted": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task_pim",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "before": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "about": "Python client methods",
++    "read": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task_pim",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "python/README.md::Methods",
++    "kind": "entry renamed",
++    "planted": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task_cut",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "before": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "about": "Python client methods",
++    "read": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task_cut",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "python/README.md::Methods",
++    "kind": "entry renamed",
++    "planted": [
++     "get_status",
++     "receive_message",
++     "send_message_lip",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "before": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "about": "Python client methods",
++    "read": [
++     "get_status",
++     "receive_message",
++     "send_message_lip",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "python/README.md::Methods",
++    "kind": "entry renamed",
++    "planted": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic_fid",
++     "unsubscribe_topic"
++    ],
++    "before": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "about": "Python client methods",
++    "read": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic_fid",
++     "unsubscribe_topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "python/README.md::Methods",
++    "kind": "unchanged",
++    "planted": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "before": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "about": "Python client methods",
++    "read": [
++     "get_status",
++     "receive_message",
++     "send_message",
++     "start_task",
++     "stderr",
++     "stdout",
++     "stop_task",
++     "subscribe_topic",
++     "unsubscribe_topic"
++    ],
++    "outcome": "read"
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "README.md::インストール",
++    "kind": "unchanged",
++    "planted": "https://github.com/sugipamo/miclow",
++    "before": "https://github.com/sugipamo/miclow",
++    "about": "repository URL",
++    "read": "https://github.com/sugipamo/miclow",
++    "outcome": "read"
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "README.md::📞 サポート",
++    "kind": "value replaced",
++    "planted": "https://github.com/sugipamo/miclow_feb",
++    "before": "https://github.com/sugipamo/miclow",
++    "about": "repository URL",
++    "read": "https://github.com/sugipamo/miclow_feb",
++    "outcome": "read"
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "README.md::📞 サポート",
++    "kind": "value replaced",
++    "planted": "https://github.com/sugipamo/miclow_pim",
++    "before": "https://github.com/sugipamo/miclow",
++    "about": "repository URL",
++    "read": "https://github.com/sugipamo/miclow_pim",
++    "outcome": "read"
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "README.md::📞 サポート",
++    "kind": "value replaced",
++    "planted": "https://github.com/sugipamo/miclow_car",
++    "before": "https://github.com/sugipamo/miclow",
++    "about": "repository URL",
++    "read": "https://github.com/sugipamo/miclow_car",
++    "outcome": "read"
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "README.md::📞 サポート",
++    "kind": "value replaced",
++    "planted": "https://github.com/sugipamo/miclow_ted",
++    "before": "https://github.com/sugipamo/miclow",
++    "about": "repository URL",
++    "read": "https://github.com/sugipamo/miclow_ted",
++    "outcome": "read"
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "README.md::📞 サポート",
++    "kind": "value replaced",
++    "planted": "https://github.com/sugipamo/miclow_bas",
++    "before": "https://github.com/sugipamo/miclow",
++    "about": "repository URL",
++    "read": "https://github.com/sugipamo/miclow_bas",
++    "outcome": "read"
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "README.md::📞 サポート",
++    "kind": "unchanged",
++    "planted": "https://github.com/sugipamo/miclow",
++    "before": "https://github.com/sugipamo/miclow",
++    "about": "repository URL",
++    "read": "https://github.com/sugipamo/miclow",
++    "outcome": "read"
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::🛠️ システムコマンド",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "system_commands",
++    "read": null,
++    "outcome": "declined",
++    "why": "Lists system commands (system.subscribe-topic, system.unsubscribe-topic), not the methods of the Python MiclowClient class."
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "src/shell_backend.rs",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task_id_env_var",
++    "read": null,
++    "outcome": "declined",
++    "why": "Rust source of ShellBackend (process spawning, stream parsing); it says nothing about a license."
++   },
++   {
++    "fact": "project_version",
++    "asked": "project_version: The release version of miclow (Rust crate and Python client package), e.g. \"0.1.0\".",
++    "type": "String",
++    "place": "LICENSE",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "license",
++    "read": null,
++    "outcome": "declined",
++    "why": "This is the MIT license text with a copyright year (2024); it states no release version."
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "src/shell_backend.rs",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task_id_env_var",
++    "read": null,
++    "outcome": "declined",
++    "why": "Rust source for ShellBackend (process spawning, stream readers); it contains no GitHub repository URL."
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "README.md::設定ファイル形式",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task configuration keys",
++    "read": null,
++    "outcome": "declined",
++    "why": "Passage describes the TOML task config file format, not the system control commands/topic keys."
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "src/system_control_command.rs",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "system_commands",
++    "read": null,
++    "outcome": "declined",
++    "why": "Rust code for system control commands (subscribe, unsubscribe, status, function call); it does not list the keys of a [[tasks]] TOML entry."
++   },
++   {
++    "fact": "task_id_env_var",
++    "asked": "task_id_env_var: Name of the environment variable through which miclow passes the task ID to each spawned task process.",
++    "type": "String",
++    "place": "README.md::📞 サポート",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "repository URL",
++    "read": null,
++    "outcome": "declined",
++    "why": "Passage is only the support section with GitHub Issues/Discussions links; no environment variable for task ID."
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::設定ファイル形式",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task configuration keys",
++    "read": null,
++    "outcome": "declined",
++    "why": "Describes the TOML configuration file format; it does not mention MiclowClient or any Python client methods."
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "python/miclow/__init__.py",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task_id_env_var",
++    "read": null,
++    "outcome": "declined",
++    "why": "Python client library source; it gives __version__ = \"0.1.0\" but no license."
++   },
++   {
++    "fact": "project_version",
++    "asked": "project_version: The release version of miclow (Rust crate and Python client package), e.g. \"0.1.0\".",
++    "type": "String",
++    "place": "README.md::📞 サポート",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "repository URL",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is only the README support section with links to GitHub Issues and Discussions. It gives no release version."
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "python/pyproject.toml",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "project_version",
++    "read": null,
++    "outcome": "declined",
++    "why": "pyproject metadata with name, version, dependencies and tool config, but no repository URL."
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "python/README.md::Methods",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "Python client methods",
++    "read": null,
++    "outcome": "declined",
++    "why": "Lists client methods (send_message, start_task, etc.), not the fixed-name system control topic keys."
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::システムコマンド",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "system_commands",
++    "read": null,
++    "outcome": "declined",
++    "why": "Passage lists runtime system commands (subscribe/unsubscribe topic, status); it says nothing about the keys of a [[tasks]] entry in the TOML config."
++   },
++   {
++    "fact": "task_id_env_var",
++    "asked": "task_id_env_var: Name of the environment variable through which miclow passes the task ID to each spawned task process.",
++    "type": "String",
++    "place": "Cargo.toml",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "repository URL",
++    "read": null,
++    "outcome": "declined",
++    "why": "Cargo.toml package metadata and dependencies; no environment variable name for passing task IDs."
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "src/system_control_command.rs",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "system_commands",
++    "read": null,
++    "outcome": "declined",
++    "why": "Rust code for system control commands; it says nothing about the Python client's MiclowClient class."
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "python/miclow/__init__.py::MiclowClient.__init__",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task_id_env_var",
++    "read": null,
++    "outcome": "declined",
++    "why": "It is a client __init__ method reading the task ID from the environment; it says nothing about a license."
++   },
++   {
++    "fact": "project_version",
++    "asked": "project_version: The release version of miclow (Rust crate and Python client package), e.g. \"0.1.0\".",
++    "type": "String",
++    "place": "README.md::📄 ライセンス",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "license",
++    "read": null,
++    "outcome": "declined",
++    "why": "Passage is the license section (MIT); it states no release version."
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "Cargo.lock",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "project_version",
++    "read": null,
++    "outcome": "declined",
++    "why": "Cargo.lock listing dependency packages with registry sources; it gives no GitHub repository URL for the project."
++   },
++   {
++    "fact": "system_commands",
++    "asked": "system_commands: The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++    "type": "List String",
++    "place": "src/config.rs",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task configuration keys",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is about task/function config parsing, validation and includes; it lists no system control command topic keys."
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "python/README.md::Methods",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "Python client methods",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage lists API methods (send_message, start_task, etc.), not the keys of a [[tasks]] entry in the TOML configuration."
++   },
++   {
++    "fact": "task_id_env_var",
++    "asked": "task_id_env_var: Name of the environment variable through which miclow passes the task ID to each spawned task process.",
++    "type": "String",
++    "place": "README.md::インストール",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "repository URL",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage only shows install/build/run instructions; it does not mention the environment variable for the task ID."
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "src/config.rs",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task configuration keys",
++    "read": null,
++    "outcome": "declined",
++    "why": "Rust config code (TaskConfig/SystemConfig); says nothing about the Python MiclowClient class."
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "LICENSE",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "license",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is the MIT license text with a copyright holder (Miclow); it contains no repository URL."
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "python/miclow/__init__.py::MiclowClient",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "Python client methods",
++    "read": null,
++    "outcome": "declined",
++    "why": "Passage is the MiclowClient Python class (messaging methods); it mentions a [[functions]] section but does not list the keys accepted by a [[tasks]] entry."
++   },
++   {
++    "fact": "Python client methods",
++    "asked": "Python client methods: the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::システムコマンド",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "system_commands",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage documents system commands (subscribe-topic, unsubscribe-topic, status) sent via stdout; it does not list the public methods of the MiclowClient class."
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "Cargo.lock",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "project_version",
++    "read": null,
++    "outcome": "declined",
++    "why": "Cargo.lock lists dependency packages, versions and checksums; it does not record the miclow license."
++   },
++   {
++    "fact": "project_version",
++    "asked": "project_version: The release version of miclow (Rust crate and Python client package), e.g. \"0.1.0\".",
++    "type": "String",
++    "place": "README.md::インストール",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "repository URL",
++    "read": null,
++    "outcome": "declined",
++    "why": "Install instructions (clone, cargo build, run); no release version is stated."
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "python/miclow/__init__.py::MiclowClient.__init__",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task_id_env_var",
++    "read": null,
++    "outcome": "declined",
++    "why": "Passage is the MiclowClient __init__ method setting task_id, stdin, stdout and buffer; it contains no repository URL."
++   },
++   {
++    "fact": "task configuration keys",
++    "asked": "task configuration keys: the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++    "type": "List String",
++    "place": "README.md::🛠️ システムコマンド",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "system_commands",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage only lists the system.subscribe-topic and system.unsubscribe-topic system commands; it says nothing about the keys of a [[tasks]] entry in the TOML configuration."
++   },
++   {
++    "fact": "task_id_env_var",
++    "asked": "task_id_env_var: Name of the environment variable through which miclow passes the task ID to each spawned task process.",
++    "type": "String",
++    "place": "README.md::📄 ライセンス",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "license",
++    "read": null,
++    "outcome": "declined",
++    "why": "Only the license section (MIT); it does not mention an environment variable for the task ID."
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "python/miclow/__init__.py::__version__",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "project_version",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage gives only a package version string (0.1.0), not a license; a version is not a license."
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "python/miclow/__init__.py::__version__",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "project_version",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage only states the module version \"0.1.0\"; it gives no repository URL."
++   },
++   {
++    "fact": "repository URL",
++    "asked": "repository URL: the URL of the project's source repository on GitHub, without a trailing .git",
++    "type": "String",
++    "place": "python/miclow/__init__.py",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "task_id_env_var",
++    "read": null,
++    "outcome": "declined",
++    "why": "The passage is the Python client library source for miclow (messages, buffer, client functions); it contains no GitHub repository URL."
++   },
++   {
++    "fact": "task_id_env_var",
++    "asked": "task_id_env_var: Name of the environment variable through which miclow passes the task ID to each spawned task process.",
++    "type": "String",
++    "place": "Cargo.toml",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "license",
++    "read": null,
++    "outcome": "declined",
++    "why": "Cargo.toml package metadata and dependencies; no environment variable for the task ID is mentioned."
++   },
++   {
++    "fact": "license",
++    "asked": "license: The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++    "type": "String",
++    "place": "python/pyproject.toml",
++    "kind": "decoy",
++    "planted": null,
++    "before": null,
++    "about": "project_version",
++    "read": null,
++    "outcome": "declined",
++    "why": "pyproject.toml with name, version, description, authors, dependencies and tool config, but no license field."
++   }
++  ]
++ }
++]
+\ No newline at end of file
+diff --git a/pw-facts.json b/pw-facts.json
+new file mode 100644
+index 0000000..67fb217
+--- /dev/null
++++ b/pw-facts.json
+@@ -0,0 +1,221 @@
++[
++ {
++  "name": "project_version",
++  "type": "String",
++  "gloss": "The release version of miclow (Rust crate and Python client package), e.g. \"0.1.0\".",
++  "places": [
++   {
++    "at": "Cargo.toml",
++    "read": {
++     "as": "string",
++     "find": "^version = \"([^\"]+)\""
++    }
++   },
++   {
++    "at": "python/pyproject.toml",
++    "read": {
++     "as": "string",
++     "find": "^version = \"([^\"]+)\""
++    }
++   },
++   {
++    "at": "python/miclow/__init__.py::__version__",
++    "read": {
++     "as": "string",
++     "find": "__version__ = \"([^\"]+)\""
++    }
++   },
++   {
++    "at": "Cargo.lock",
++    "read": {
++     "as": "string",
++     "find": "name = \"miclow\"\\nversion = \"([^\"]+)\""
++    }
++   }
++  ]
++ },
++ {
++  "name": "license",
++  "type": "String",
++  "gloss": "The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").",
++  "places": [
++   {
++    "at": "Cargo.toml",
++    "read": {
++     "as": "string",
++     "find": "^license = \"([^\"]+)\""
++    }
++   },
++   "README.md::📄 ライセンス",
++   {
++    "at": "LICENSE",
++    "read": {
++     "as": "string",
++     "find": "^(MIT) License"
++    }
++   }
++  ],
++  "instructions": [
++   {
++    "is": "MIT",
++    "by": "Claude, on the owner's leave to decide for miclow",
++    "on": "2026-11-25",
++    "said": "the LICENSE file is the MIT licence alone; Cargo.toml follows it"
++   }
++  ]
++ },
++ {
++  "name": "task_id_env_var",
++  "type": "String",
++  "gloss": "Name of the environment variable through which miclow passes the task ID to each spawned task process.",
++  "places": [
++   {
++    "at": "src/shell_backend.rs",
++    "read": {
++     "as": "string",
++     "find": "command_builder\\.env\\(\"([A-Z_]+)\""
++    }
++   },
++   {
++    "at": "python/miclow/__init__.py::MiclowClient.__init__",
++    "read": {
++     "as": "string",
++     "find": "os\\.environ\\['([A-Z_]+)'\\]"
++    }
++   },
++   {
++    "at": "python/miclow/__init__.py",
++    "read": {
++     "as": "string",
++     "find": "os\\.environ\\.get\\('([A-Z_]+)'\\)"
++    }
++   }
++  ]
++ },
++ {
++  "name": "system_commands",
++  "type": "List String",
++  "gloss": "The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.",
++  "places": [
++   {
++    "at": "src/system_control_command.rs",
++    "read": {
++     "as": "string",
++     "find_all": "\"(system\\.[a-z-]+)\" => \\{",
++     "sort": true
++    }
++   },
++   "README.md::システムコマンド",
++   {
++    "at": "README.md::🛠️ システムコマンド",
++    "some": true
++   }
++  ]
++ },
++ {
++  "name": "task configuration keys",
++  "type": "List String",
++  "gloss": "the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically",
++  "places": [
++   {
++    "at": "README.md::設定ファイル形式",
++    "some": true
++   },
++   {
++    "at": "src/config.rs",
++    "read": {
++     "as": "string",
++     "find_all": "(?:rename = \"|,\\n    pub |\\(default\\)\\]\\n    pub )([a-hj-z][a-z_]*)(?:\"|: (?:String|Vec<String>|Option<[^\\n]*>|bool))",
++     "sort": true
++    }
++   },
++   {
++    "at": "README.md::基本的な使用方法",
++    "some": true
++   },
++   {
++    "at": "examples/config.toml",
++    "some": true,
++    "read": {
++     "find_all": "^(\\w+) = ",
++     "as": "string",
++     "sort": true,
++     "unique": true
++    }
++   }
++  ],
++  "instructions": [
++   {
++    "is": [
++     "args",
++     "command",
++     "environment_vars",
++     "stderr_topic",
++     "stdout_topic",
++     "subscribe_topics",
++     "task_name",
++     "view_stderr",
++     "view_stdout",
++     "working_directory"
++    ],
++    "by": "Claude, on the owner's leave to decide for miclow",
++    "on": "2026-11-25",
++    "said": "the keys are what src/config.rs accepts; the README follows the code"
++   }
++  ]
++ },
++ {
++  "name": "Python client methods",
++  "type": "List String",
++  "gloss": "the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically",
++  "places": [
++   "python/README.md::Methods",
++   {
++    "at": "python/miclow/__init__.py::MiclowClient",
++    "read": {
++     "as": "string",
++     "find_all": "\\n    def ([a-z]\\w*)\\(self",
++     "sort": true
++    }
++   },
++   {
++    "at": "python/README.md::Quick Start",
++    "some": true
++   }
++  ],
++  "instructions": [
++   {
++    "is": [
++     "call_function",
++     "get_status",
++     "listen_to_topic",
++     "receive_message",
++     "return_value",
++     "send_message",
++     "subscribe_topic",
++     "unsubscribe_topic",
++     "wait_for_topic"
++    ],
++    "by": "Claude, on the owner's leave to decide for miclow",
++    "on": "2026-11-25",
++    "said": "the methods are what the client defines; the README follows the code"
++   }
++  ]
++ },
++ {
++  "name": "repository URL",
++  "type": "String",
++  "gloss": "the URL of the project's source repository on GitHub, without a trailing .git",
++  "places": [
++   {
++    "at": "Cargo.toml",
++    "read": {
++     "as": "string",
++     "find": "^repository = \"([^\"]+)\""
++    }
++   },
++   "README.md::インストール",
++   "README.md::📞 サポート"
++  ]
++ }
++]
+diff --git a/pw-log.jsonl b/pw-log.jsonl
+new file mode 100644
+index 0000000..ff064fc
+--- /dev/null
++++ b/pw-log.jsonl
+@@ -0,0 +1,98 @@
++{"ts": 1795488700.84, "actor": "discover", "type": "claim", "h": "H:45815a2e80", "text": "The release version of miclow (Rust crate and Python client package), e.g. \"0.1.0\".", "prior": 0.5, "fact": {"name": "project_version", "type": "String", "places": [{"at": "Cargo.toml", "reader": {"language": "pattern", "as": "string", "find": "(?m)^version = \"([^\"]+)\""}}, {"at": "python/pyproject.toml", "reader": {"language": "pattern", "as": "string", "find": "(?m)^version = \"([^\"]+)\""}}, {"at": "python/miclow/__init__.py::__version__", "reader": {"language": "pattern", "as": "string", "find": "__version__ = \"([^\"]+)\""}}], "value": null, "asked": "c964fe9558"}}
++{"ts": 1795488700.841, "actor": "discover", "type": "claim", "h": "H:7b797df0dc", "text": "The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").", "prior": 0.5, "fact": {"name": "license", "type": "String", "places": [{"at": "Cargo.toml", "reader": {"language": "pattern", "as": "string", "find": "(?m)^license = \"([^\"]+)\""}}, {"at": "README.md::📄 ライセンス", "reader": null}, {"at": "LICENSE", "reader": {"language": "pattern", "as": "string", "find": "^(MIT) License"}}], "value": null, "asked": "071ba1bf22"}}
++{"ts": 1795488700.841, "actor": "discover", "type": "claim", "h": "H:218cc97e05", "text": "Name of the environment variable through which miclow passes the task ID to each spawned task process.", "prior": 0.5, "fact": {"name": "task_id_env_var", "type": "String", "places": [{"at": "src/shell_backend.rs", "reader": {"language": "pattern", "as": "string", "find": "command_builder\\.env\\(\"([A-Z_]+)\""}}, {"at": "python/miclow/__init__.py::MiclowClient.__init__", "reader": {"language": "pattern", "as": "string", "find": "os\\.environ\\['([A-Z_]+)'\\]"}}], "value": null, "asked": "d8f9d2abcf"}}
++{"ts": 1795488700.841, "actor": "discover", "type": "claim", "h": "H:0a77e779d4", "text": "The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.", "prior": 0.5, "fact": {"name": "system_commands", "type": "List String", "places": [{"at": "src/system_control_command.rs", "reader": {"language": "pattern", "as": "string", "find_all": "\"(system\\.[a-z-]+)\" => \\{", "sort": true, "unique": false}}, {"at": "README.md::システムコマンド", "reader": null}], "value": null, "asked": "d199e55351"}}
++{"ts": 1795488710.717, "actor": "discover", "type": "reading", "h": "H:45815a2e80", "place": "Cargo.toml", "subject": "Cargo.toml@b67b41303c", "m": "M:783cb93868", "obj": {"id": "O:78f751cd4c", "type": "String", "text": "\"0.1.0\""}, "binding": {"language": "pattern", "as": "string", "find": "(?m)^version = \"([^\"]+)\""}, "quote": null, "asked": "c964fe9558", "blind": false, "model": null, "literal": false, "anchor": false, "model_prior": 0.98}
++{"ts": 1795488711.047, "actor": "discover", "type": "reading", "h": "H:45815a2e80", "place": "python/pyproject.toml", "subject": "python/pyproject.toml@d2aedf2e75", "m": "M:6c1ae94e44", "obj": {"id": "O:78f751cd4c", "type": "String", "text": "\"0.1.0\""}, "binding": {"language": "pattern", "as": "string", "find": "(?m)^version = \"([^\"]+)\""}, "quote": null, "asked": "c964fe9558", "blind": false, "model": null, "literal": false, "anchor": false, "model_prior": 0.98}
++{"ts": 1795488711.351, "actor": "discover", "type": "reading", "h": "H:45815a2e80", "place": "python/miclow/__init__.py::__version__", "subject": "python/miclow/__init__.py::__version__@3ebbb40651", "m": "M:ce25f689d0", "obj": {"id": "O:78f751cd4c", "type": "String", "text": "\"0.1.0\""}, "binding": {"language": "pattern", "as": "string", "find": "__version__ = \"([^\"]+)\""}, "quote": null, "asked": "c964fe9558", "blind": false, "model": null, "literal": false, "anchor": false, "model_prior": 0.98}
++{"ts": 1795488711.351, "actor": "discover", "type": "agree", "h": "H:45815a2e80", "f": "F:1b4e3562e9", "lean": "(((\"0.1.0\") : String) = ((\"0.1.0\") : String)) ∧ (((\"0.1.0\") : String) = ((\"0.1.0\") : String))", "guards": ["M:783cb93868", "M:6c1ae94e44", "M:ce25f689d0"]}
++{"ts": 1795488712.107, "actor": "discover", "type": "proof", "relation": "holds", "args": ["F:1b4e3562e9"], "proof_sha": "5589aa5863", "proof": "decide", "axioms": [], "gamma": "87c8d84c5066"}
++{"ts": 1795488712.435, "actor": "discover", "type": "reading", "h": "H:7b797df0dc", "place": "Cargo.toml", "subject": "Cargo.toml@b67b41303c", "m": "M:b619dd8e1f", "obj": {"id": "O:eca19cf83d", "type": "String", "text": "\"MIT OR Apache-2.0\""}, "binding": {"language": "pattern", "as": "string", "find": "(?m)^license = \"([^\"]+)\""}, "quote": null, "asked": "071ba1bf22", "blind": false, "model": null, "literal": false, "anchor": false, "model_prior": 0.98}
++{"ts": 1795488712.76, "actor": "discover", "type": "reading", "h": "H:7b797df0dc", "place": "LICENSE", "subject": "LICENSE@5fd54b819d", "m": "M:dee929ee76", "obj": {"id": "O:aacf28b802", "type": "String", "text": "\"MIT\""}, "binding": {"language": "pattern", "as": "string", "find": "^(MIT) License"}, "quote": null, "asked": "071ba1bf22", "blind": false, "model": null, "literal": false, "anchor": false, "model_prior": 0.98}
++{"ts": 1795488713.079, "actor": "discover", "type": "reading", "h": "H:218cc97e05", "place": "src/shell_backend.rs", "subject": "src/shell_backend.rs@69569b05f0", "m": "M:1a1db0d3e8", "obj": {"id": "O:ab9bdac1d0", "type": "String", "text": "\"MICLOW_TASK_ID\""}, "binding": {"language": "pattern", "as": "string", "find": "command_builder\\.env\\(\"([A-Z_]+)\""}, "quote": null, "asked": "d8f9d2abcf", "blind": false, "model": null, "literal": false, "anchor": false, "model_prior": 0.98}
++{"ts": 1795488713.413, "actor": "discover", "type": "reading", "h": "H:218cc97e05", "place": "python/miclow/__init__.py::MiclowClient.__init__", "subject": "python/miclow/__init__.py::MiclowClient.__init__@5570678831", "m": "M:8a75f2bc98", "obj": {"id": "O:ab9bdac1d0", "type": "String", "text": "\"MICLOW_TASK_ID\""}, "binding": {"language": "pattern", "as": "string", "find": "os\\.environ\\['([A-Z_]+)'\\]"}, "quote": null, "asked": "d8f9d2abcf", "blind": false, "model": null, "literal": false, "anchor": false, "model_prior": 0.98}
++{"ts": 1795488713.414, "actor": "discover", "type": "agree", "h": "H:218cc97e05", "f": "F:9e9adda436", "lean": "(((\"MICLOW_TASK_ID\") : String) = ((\"MICLOW_TASK_ID\") : String))", "guards": ["M:1a1db0d3e8", "M:8a75f2bc98"]}
++{"ts": 1795488713.839, "actor": "discover", "type": "proof", "relation": "holds", "args": ["F:9e9adda436"], "proof_sha": "5a633da644", "proof": "rfl", "axioms": [], "gamma": "87c8d84c5066"}
++{"ts": 1795488714.154, "actor": "discover", "type": "reading", "h": "H:0a77e779d4", "place": "src/system_control_command.rs", "subject": "src/system_control_command.rs@586de2ccab", "m": "M:04b9437cc5", "obj": {"id": "O:190583f379", "type": "List String", "text": "[\"system.status\", \"system.subscribe-topic\", \"system.unsubscribe-topic\"]"}, "binding": {"language": "pattern", "as": "string", "find_all": "\"(system\\.[a-z-]+)\" => \\{", "sort": true, "unique": false}, "quote": null, "asked": "d199e55351", "blind": false, "model": null, "literal": false, "anchor": false, "model_prior": 0.98}
++{"ts": 1795488718.761, "actor": "proposed-640b00-2", "type": "reading", "h": "H:45815a2e80", "place": "python/miclow/__init__.py::__version__", "subject": "python/miclow/__init__.py::__version__@3ebbb40651", "m": "M:d0fb45f9b1", "obj": {"id": "O:78f751cd4c", "type": "String", "text": "\"0.1.0\""}, "binding": null, "quote": "__version__ = \"0.1.0\"", "asked": "c964fe9558", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488718.779, "actor": "proposed-640b00-0", "type": "reading", "h": "H:45815a2e80", "place": "Cargo.toml", "subject": "Cargo.toml@b67b41303c", "m": "M:26b4ad416c", "obj": {"id": "O:78f751cd4c", "type": "String", "text": "\"0.1.0\""}, "binding": null, "quote": "version = \"0.1.0\"", "asked": "c964fe9558", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488718.82, "actor": "proposed-640b00-1", "type": "reading", "h": "H:45815a2e80", "place": "python/pyproject.toml", "subject": "python/pyproject.toml@d2aedf2e75", "m": "M:ecdadef38e", "obj": {"id": "O:78f751cd4c", "type": "String", "text": "\"0.1.0\""}, "binding": null, "quote": "version = \"0.1.0\"", "asked": "c964fe9558", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488719.328, "actor": "proposed-640b00-2", "type": "reading", "h": "H:7b797df0dc", "place": "LICENSE", "subject": "LICENSE@5fd54b819d", "m": "M:43b71ac308", "obj": {"id": "O:aacf28b802", "type": "String", "text": "\"MIT\""}, "binding": null, "quote": "MIT License", "asked": "071ba1bf22", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488719.697, "actor": "proposed-640b00-0", "type": "reading", "h": "H:7b797df0dc", "place": "Cargo.toml", "subject": "Cargo.toml@b67b41303c", "m": "M:b60679d2ca", "obj": {"id": "O:eca19cf83d", "type": "String", "text": "\"MIT OR Apache-2.0\""}, "binding": null, "quote": "license = \"MIT OR Apache-2.0\"", "asked": "071ba1bf22", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488719.739, "actor": "proposed-640b00-1", "type": "reading", "h": "H:7b797df0dc", "place": "README.md::📄 ライセンス", "subject": "README.md::📄 ライセンス@c54ba1c1f0", "m": "M:9ac7aa7b0a", "obj": {"id": "O:aacf28b802", "type": "String", "text": "\"MIT\""}, "binding": null, "quote": "このプロジェクトはMITライセンスの下で公開されています。", "asked": "071ba1bf22", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488720.996, "actor": "proposed-640b00-0", "type": "reading", "h": "H:218cc97e05", "place": "src/shell_backend.rs", "subject": "src/shell_backend.rs@69569b05f0", "m": "M:d618124e58", "obj": {"id": "O:ab9bdac1d0", "type": "String", "text": "\"MICLOW_TASK_ID\""}, "binding": null, "quote": "command_builder.env(\"MICLOW_TASK_ID\", task_id.to_string());", "asked": "d8f9d2abcf", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488721.184, "actor": "proposed-640b00-1", "type": "reading", "h": "H:218cc97e05", "place": "python/miclow/__init__.py::MiclowClient.__init__", "subject": "python/miclow/__init__.py::MiclowClient.__init__@5570678831", "m": "M:4339644b6c", "obj": {"id": "O:ab9bdac1d0", "type": "String", "text": "\"MICLOW_TASK_ID\""}, "binding": null, "quote": "        self.task_id: str = os.environ['MICLOW_TASK_ID']", "asked": "d8f9d2abcf", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488721.351, "actor": "proposed-640b00-0", "type": "reading", "h": "H:0a77e779d4", "place": "src/system_control_command.rs", "subject": "src/system_control_command.rs@586de2ccab", "m": "M:3f6058ee21", "obj": {"id": "O:190583f379", "type": "List String", "text": "[\"system.status\", \"system.subscribe-topic\", \"system.unsubscribe-topic\"]"}, "binding": null, "quote": "\"system.subscribe-topic\" => {", "asked": "d199e55351", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": false, "model_prior": 0.75}
++{"ts": 1795488721.526, "actor": "proposed-640b00-1", "type": "reading", "h": "H:0a77e779d4", "place": "README.md::システムコマンド", "subject": "README.md::システムコマンド@6d40adb00d", "m": "M:9f7d2a4f88", "obj": {"id": "O:190583f379", "type": "List String", "text": "[\"system.status\", \"system.subscribe-topic\", \"system.unsubscribe-topic\"]"}, "binding": null, "quote": "- `system.status` - システムの状態を取得", "asked": "d199e55351", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": false, "model_prior": 0.75}
++{"ts": 1795488729.056, "actor": "discover", "type": "agree", "h": "H:7b797df0dc", "f": "F:6fda2467b1", "lean": "(((\"MIT OR Apache-2.0\") : String) = ((\"MIT\") : String)) ∧ (((\"MIT OR Apache-2.0\") : String) = ((\"MIT\") : String))", "guards": ["M:b619dd8e1f", "M:9ac7aa7b0a", "M:dee929ee76"]}
++{"ts": 1795488730.536, "actor": "discover", "type": "proof", "relation": "not", "args": ["F:6fda2467b1"], "proof_sha": "5589aa5863", "proof": "decide", "axioms": [], "gamma": "87c8d84c5066"}
++{"ts": 1795488731.545, "actor": "discover", "type": "agree", "h": "H:0a77e779d4", "f": "F:d2ff9e091d", "lean": "((([\"system.status\", \"system.subscribe-topic\", \"system.unsubscribe-topic\"]) : List String) = (([\"system.status\", \"system.subscribe-topic\", \"system.unsubscribe-topic\"]) : List String))", "guards": ["M:04b9437cc5", "M:9f7d2a4f88"]}
++{"ts": 1795488731.993, "actor": "discover", "type": "proof", "relation": "holds", "args": ["F:d2ff9e091d"], "proof_sha": "5a633da644", "proof": "rfl", "axioms": [], "gamma": "87c8d84c5066"}
++{"ts": 1795488905.069, "actor": "discover", "type": "claim", "h": "H:45815a2e80", "text": "The release version of miclow (Rust crate and Python client package), e.g. \"0.1.0\".", "prior": 0.5, "fact": {"name": "project_version", "type": "String", "places": [{"at": "Cargo.toml", "reader": {"language": "pattern", "as": "string", "find": "(?m)^version = \"([^\"]+)\""}}, {"at": "python/pyproject.toml", "reader": {"language": "pattern", "as": "string", "find": "(?m)^version = \"([^\"]+)\""}}, {"at": "python/miclow/__init__.py::__version__", "reader": {"language": "pattern", "as": "string", "find": "__version__ = \"([^\"]+)\""}}, {"at": "Cargo.lock", "reader": {"language": "pattern", "as": "string", "find": "name = \"miclow\"\\nversion = \"([^\"]+)\""}}], "value": null, "asked": "c964fe9558"}}
++{"ts": 1795488905.07, "actor": "discover", "type": "claim", "h": "H:218cc97e05", "text": "Name of the environment variable through which miclow passes the task ID to each spawned task process.", "prior": 0.5, "fact": {"name": "task_id_env_var", "type": "String", "places": [{"at": "src/shell_backend.rs", "reader": {"language": "pattern", "as": "string", "find": "command_builder\\.env\\(\"([A-Z_]+)\""}}, {"at": "python/miclow/__init__.py::MiclowClient.__init__", "reader": {"language": "pattern", "as": "string", "find": "os\\.environ\\['([A-Z_]+)'\\]"}}, {"at": "python/miclow/__init__.py", "reader": {"language": "pattern", "as": "string", "find": "os\\.environ\\.get\\('([A-Z_]+)'\\)"}}], "value": null, "asked": "d8f9d2abcf"}}
++{"ts": 1795488905.07, "actor": "discover", "type": "claim", "h": "H:0a77e779d4", "text": "The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.", "prior": 0.5, "fact": {"name": "system_commands", "type": "List String", "places": [{"at": "src/system_control_command.rs", "reader": {"language": "pattern", "as": "string", "find_all": "\"(system\\.[a-z-]+)\" => \\{", "sort": true, "unique": false}}, {"at": "README.md::システムコマンド", "reader": null}, {"at": "README.md::🛠️ システムコマンド", "reader": null}], "value": null, "asked": "d199e55351"}}
++{"ts": 1795488905.071, "actor": "discover", "type": "claim", "h": "H:98603b1c98", "text": "the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically", "prior": 0.5, "fact": {"name": "task configuration keys", "type": "List String", "places": [{"at": "README.md::設定ファイル形式", "reader": null}, {"at": "src/config.rs", "reader": {"language": "pattern", "as": "string", "find_all": "(?:rename = \"|,\\n    pub |\\(default\\)\\]\\n    pub )([a-hj-z][a-z_]*)(?:\"|: (?:String|Vec<String>|Option<[^\\n]*>|bool))", "sort": true, "unique": false}}], "value": null, "asked": "5de86be72c"}}
++{"ts": 1795488905.071, "actor": "discover", "type": "claim", "h": "H:77eff6b7f6", "text": "the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically", "prior": 0.5, "fact": {"name": "Python client methods", "type": "List String", "places": [{"at": "python/README.md::Methods", "reader": null}, {"at": "python/miclow/__init__.py::MiclowClient", "reader": {"language": "pattern", "as": "string", "find_all": "\\n    def ([a-z]\\w*)\\(self", "sort": true, "unique": false}}], "value": null, "asked": "f1fd667d8b"}}
++{"ts": 1795488905.072, "actor": "discover", "type": "claim", "h": "H:bb5dee1cd1", "text": "the URL of the project's source repository on GitHub, without a trailing .git", "prior": 0.5, "fact": {"name": "repository URL", "type": "String", "places": [{"at": "Cargo.toml", "reader": {"language": "pattern", "as": "string", "find": "^repository = \"([^\"]+)\""}}, {"at": "README.md::インストール", "reader": null}, {"at": "README.md::📞 サポート", "reader": null}], "value": null, "asked": "5691f5f28b"}}
++{"ts": 1795488906.359, "actor": "discover", "type": "reading", "h": "H:45815a2e80", "place": "Cargo.lock", "subject": "Cargo.lock@47a130be5d", "m": "M:f2171d8c57", "obj": {"id": "O:78f751cd4c", "type": "String", "text": "\"0.1.0\""}, "binding": {"language": "pattern", "as": "string", "find": "name = \"miclow\"\\nversion = \"([^\"]+)\""}, "quote": null, "asked": "c964fe9558", "blind": false, "model": null, "literal": false, "anchor": false, "model_prior": 0.98}
++{"ts": 1795488906.36, "actor": "discover", "type": "agree", "h": "H:45815a2e80", "f": "F:61ae8f787c", "lean": "(((\"0.1.0\") : String) = ((\"0.1.0\") : String)) ∧ (((\"0.1.0\") : String) = ((\"0.1.0\") : String)) ∧ (((\"0.1.0\") : String) = ((\"0.1.0\") : String))", "guards": ["M:783cb93868", "M:6c1ae94e44", "M:ce25f689d0", "M:f2171d8c57"]}
++{"ts": 1795488907.089, "actor": "discover", "type": "proof", "relation": "holds", "args": ["F:61ae8f787c"], "proof_sha": "5589aa5863", "proof": "decide", "axioms": [], "gamma": "87c8d84c5066"}
++{"ts": 1795488908.747, "actor": "discover", "type": "reading", "h": "H:218cc97e05", "place": "python/miclow/__init__.py", "subject": "python/miclow/__init__.py@3ecb48f39b", "m": "M:fb0062a30b", "obj": {"id": "O:ab9bdac1d0", "type": "String", "text": "\"MICLOW_TASK_ID\""}, "binding": {"language": "pattern", "as": "string", "find": "os\\.environ\\.get\\('([A-Z_]+)'\\)"}, "quote": null, "asked": "d8f9d2abcf", "blind": false, "model": null, "literal": false, "anchor": false, "model_prior": 0.98}
++{"ts": 1795488908.749, "actor": "discover", "type": "agree", "h": "H:218cc97e05", "f": "F:4aa1210a17", "lean": "(((\"MICLOW_TASK_ID\") : String) = ((\"MICLOW_TASK_ID\") : String)) ∧ (((\"MICLOW_TASK_ID\") : String) = ((\"MICLOW_TASK_ID\") : String))", "guards": ["M:1a1db0d3e8", "M:8a75f2bc98", "M:fb0062a30b"]}
++{"ts": 1795488909.584, "actor": "discover", "type": "proof", "relation": "holds", "args": ["F:4aa1210a17"], "proof_sha": "5589aa5863", "proof": "decide", "axioms": [], "gamma": "87c8d84c5066"}
++{"ts": 1795488910.251, "actor": "discover", "type": "reading", "h": "H:98603b1c98", "place": "src/config.rs", "subject": "src/config.rs@9cb712a77c", "m": "M:1dd1e20d8f", "obj": {"id": "O:e43e48c57e", "type": "List String", "text": "[\"args\", \"command\", \"environment_vars\", \"stderr_topic\", \"stdout_topic\", \"subscribe_topics\", \"task_name\", \"view_stderr\", \"view_stdout\", \"working_directory\"]"}, "binding": {"language": "pattern", "as": "string", "find_all": "(?:rename = \"|,\\n    pub |\\(default\\)\\]\\n    pub )([a-hj-z][a-z_]*)(?:\"|: (?:String|Vec<String>|Option<[^\\n]*>|bool))", "sort": true, "unique": false}, "quote": null, "asked": "5de86be72c", "blind": false, "model": null, "literal": false, "anchor": false, "model_prior": 0.98}
++{"ts": 1795488910.567, "actor": "discover", "type": "reading", "h": "H:77eff6b7f6", "place": "python/miclow/__init__.py::MiclowClient", "subject": "python/miclow/__init__.py::MiclowClient@df772c57b4", "m": "M:955c455b68", "obj": {"id": "O:0b7b1109bb", "type": "List String", "text": "[\"call_function\", \"get_status\", \"listen_to_topic\", \"receive_message\", \"return_value\", \"send_message\", \"subscribe_topic\", \"unsubscribe_topic\", \"wait_for_topic\"]"}, "binding": {"language": "pattern", "as": "string", "find_all": "\\n    def ([a-z]\\w*)\\(self", "sort": true, "unique": false}, "quote": null, "asked": "f1fd667d8b", "blind": false, "model": null, "literal": false, "anchor": false, "model_prior": 0.98}
++{"ts": 1795488910.881, "actor": "discover", "type": "reading", "h": "H:bb5dee1cd1", "place": "Cargo.toml", "subject": "Cargo.toml@b67b41303c", "m": "M:c8e91b9520", "obj": {"id": "O:fd5cdf794e", "type": "String", "text": "\"https://github.com/sugipamo/miclow\""}, "binding": {"language": "pattern", "as": "string", "find": "^repository = \"([^\"]+)\""}, "quote": null, "asked": "5691f5f28b", "blind": false, "model": null, "literal": false, "anchor": false, "model_prior": 0.98}
++{"ts": 1795488918.001, "actor": "proposed-25e162-1", "type": "reading", "h": "H:bb5dee1cd1", "place": "README.md::📞 サポート", "subject": "README.md::📞 サポート@a161d987fa", "m": "M:10bcf0dbe2", "obj": {"id": "O:fd5cdf794e", "type": "String", "text": "\"https://github.com/sugipamo/miclow\""}, "binding": null, "quote": "- 問題報告: [GitHub Issues](https://github.com/sugipamo/miclow/issues)", "asked": "5691f5f28b", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488923.109, "actor": "proposed-25e162-0", "type": "reading", "h": "H:45815a2e80", "place": "Cargo.lock", "subject": "Cargo.lock@47a130be5d", "m": "M:cd75195eb8", "obj": {"id": "O:78f751cd4c", "type": "String", "text": "\"0.1.0\""}, "binding": null, "quote": "name = \"miclow\"", "asked": "c964fe9558", "blind": true, "model": "claude-sonnet-5-5", "literal": false, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488924.027, "actor": "proposed-25e162-0", "type": "reading", "h": "H:bb5dee1cd1", "place": "README.md::インストール", "subject": "README.md::インストール@6622c9459c", "m": "M:a6cd02c115", "obj": {"id": "O:fd5cdf794e", "type": "String", "text": "\"https://github.com/sugipamo/miclow\""}, "binding": null, "quote": "git clone https://github.com/sugipamo/miclow.git", "asked": "5691f5f28b", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488924.853, "actor": "proposed-25e162-0", "type": "reading", "h": "H:218cc97e05", "place": "python/miclow/__init__.py", "subject": "python/miclow/__init__.py@3ecb48f39b", "m": "M:2c9a8f3918", "obj": {"id": "O:ab9bdac1d0", "type": "String", "text": "\"MICLOW_TASK_ID\""}, "binding": null, "quote": "self.task_id: str = os.environ['MICLOW_TASK_ID']", "asked": "d8f9d2abcf", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488925.708, "actor": "proposed-25e162-0", "type": "reading", "h": "H:98603b1c98", "place": "src/config.rs", "subject": "src/config.rs@9cb712a77c", "m": "M:7fa58f6019", "obj": {"id": "O:e7f7472717", "type": "List String", "text": "[\"args\",\"command\",\"environment_vars\",\"stderr_topic\",\"stdout_topic\",\"subscribe_topics\",\"task_name\",\"view_stderr\",\"view_stdout\",\"working_directory\"]"}, "binding": null, "quote": "    pub working_directory: Option<String>,", "asked": "5de86be72c", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": false, "model_prior": 0.75}
++{"ts": 1795488926.609, "actor": "proposed-25e162-0", "type": "reading", "h": "H:77eff6b7f6", "place": "python/miclow/__init__.py::MiclowClient", "subject": "python/miclow/__init__.py::MiclowClient@df772c57b4", "m": "M:949a861656", "obj": {"id": "O:74c90e29e9", "type": "List String", "text": "[\"call_function\",\"get_status\",\"listen_to_topic\",\"receive_message\",\"return_value\",\"send_message\",\"subscribe_topic\",\"unsubscribe_topic\",\"wait_for_topic\"]"}, "binding": null, "quote": "    def return_value(self, data: str) -> None:", "asked": "f1fd667d8b", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": false, "model_prior": 0.75}
++{"ts": 1795488927.521, "actor": "proposed-25e162-0", "type": "reading", "h": "H:0a77e779d4", "place": "README.md::🛠️ システムコマンド", "subject": "README.md::🛠️ システムコマンド@30e5316bf9", "m": "M:f806e8fc85", "obj": {"id": "O:6a96c815ab", "type": "List String", "text": "[\"system.subscribe-topic\",\"system.unsubscribe-topic\"]"}, "binding": null, "quote": "- `system.subscribe-topic`: 実行時にトピックを動的購読開始", "asked": "d199e55351", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": false, "model_prior": 0.75}
++{"ts": 1795488937.295, "actor": "discover", "type": "agree", "h": "H:0a77e779d4", "f": "F:0ab668da74", "lean": "((([\"system.status\", \"system.subscribe-topic\", \"system.unsubscribe-topic\"]) : List String) = (([\"system.status\", \"system.subscribe-topic\", \"system.unsubscribe-topic\"]) : List String)) ∧ ((([\"system.status\", \"system.subscribe-topic\", \"system.unsubscribe-topic\"]) : List String) = (([\"system.subscribe-topic\",\"system.unsubscribe-topic\"]) : List String))", "guards": ["M:04b9437cc5", "M:9f7d2a4f88", "M:f806e8fc85"]}
++{"ts": 1795488938.609, "actor": "discover", "type": "proof", "relation": "not", "args": ["F:0ab668da74"], "proof_sha": "5589aa5863", "proof": "decide", "axioms": [], "gamma": "87c8d84c5066"}
++{"ts": 1795488939.572, "actor": "discover", "type": "agree", "h": "H:bb5dee1cd1", "f": "F:fc5697a000", "lean": "(((\"https://github.com/sugipamo/miclow\") : String) = ((\"https://github.com/sugipamo/miclow\") : String)) ∧ (((\"https://github.com/sugipamo/miclow\") : String) = ((\"https://github.com/sugipamo/miclow\") : String))", "guards": ["M:c8e91b9520", "M:a6cd02c115", "M:10bcf0dbe2"]}
++{"ts": 1795488940.29, "actor": "discover", "type": "proof", "relation": "holds", "args": ["F:fc5697a000"], "proof_sha": "5589aa5863", "proof": "decide", "axioms": [], "gamma": "87c8d84c5066"}
++{"ts": 1795488963.913, "actor": "first-2b900f-0", "type": "reading", "h": "H:98603b1c98", "place": "README.md::設定ファイル形式", "subject": "README.md::設定ファイル形式@7ccb668002", "m": "M:efd556e738", "obj": {"id": "O:1235cde7b6", "type": "List String", "text": "[\"args\", \"command\", \"environment\", \"task_name\", \"topics\", \"working_directory\"]"}, "binding": null, "quote": "working_directory = \"/作業ディレクトリ\"", "asked": "5de86be72c", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": false, "model_prior": 0.75}
++{"ts": 1795488965.141, "actor": "first-2b900f-0", "type": "reading", "h": "H:77eff6b7f6", "place": "python/README.md::Methods", "subject": "python/README.md::Methods@71a5adb1f9", "m": "M:38f9f620a0", "obj": {"id": "O:d9d4c0fbe9", "type": "List String", "text": "[\"get_status\", \"receive_message\", \"send_message\", \"start_task\", \"stderr\", \"stdout\", \"stop_task\", \"subscribe_topic\", \"unsubscribe_topic\"]"}, "binding": null, "quote": "- `send_message(topic: str, message: str)` - Send a message to a topic", "asked": "f1fd667d8b", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": false, "model_prior": 0.75}
++{"ts": 1795488973.33, "actor": "maintain", "type": "agree", "h": "H:98603b1c98", "f": "F:bef4c6a051", "lean": "((([\"args\", \"command\", \"environment\", \"task_name\", \"topics\", \"working_directory\"]) : List String) = (([\"args\", \"command\", \"environment_vars\", \"stderr_topic\", \"stdout_topic\", \"subscribe_topics\", \"task_name\", \"view_stderr\", \"view_stdout\", \"working_directory\"]) : List String))", "guards": ["M:efd556e738", "M:1dd1e20d8f"]}
++{"ts": 1795488974.801, "actor": "maintain", "type": "proof", "relation": "not", "args": ["F:bef4c6a051"], "proof_sha": "5589aa5863", "proof": "decide", "axioms": [], "gamma": "87c8d84c5066"}
++{"ts": 1795488975.14, "actor": "maintain", "type": "agree", "h": "H:77eff6b7f6", "f": "F:12c0bd32bc", "lean": "((([\"get_status\", \"receive_message\", \"send_message\", \"start_task\", \"stderr\", \"stdout\", \"stop_task\", \"subscribe_topic\", \"unsubscribe_topic\"]) : List String) = (([\"call_function\", \"get_status\", \"listen_to_topic\", \"receive_message\", \"return_value\", \"send_message\", \"subscribe_topic\", \"unsubscribe_topic\", \"wait_for_topic\"]) : List String))", "guards": ["M:38f9f620a0", "M:955c455b68"]}
++{"ts": 1795488976.505, "actor": "maintain", "type": "proof", "relation": "not", "args": ["F:12c0bd32bc"], "proof_sha": "5589aa5863", "proof": "decide", "axioms": [], "gamma": "87c8d84c5066"}
++{"ts": 1795488982.223, "actor": "pattern-20bc1f-1", "type": "reading", "h": "H:45815a2e80", "place": "python/pyproject.toml", "subject": "python/pyproject.toml@d2aedf2e75", "m": "M:ecdadef38e", "obj": {"id": "O:78f751cd4c", "type": "String", "text": "\"0.1.0\""}, "binding": null, "quote": "version = \"0.1.0\"", "asked": "c964fe9558", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488982.59, "actor": "pattern-20bc1f-2", "type": "reading", "h": "H:45815a2e80", "place": "python/miclow/__init__.py::__version__", "subject": "python/miclow/__init__.py::__version__@3ebbb40651", "m": "M:d0fb45f9b1", "obj": {"id": "O:78f751cd4c", "type": "String", "text": "\"0.1.0\""}, "binding": null, "quote": "__version__ = \"0.1.0\"", "asked": "c964fe9558", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488982.855, "actor": "pattern-20bc1f-1", "type": "reading", "h": "H:7b797df0dc", "place": "LICENSE", "subject": "LICENSE@5fd54b819d", "m": "M:43b71ac308", "obj": {"id": "O:aacf28b802", "type": "String", "text": "\"MIT\""}, "binding": null, "quote": "MIT License", "asked": "071ba1bf22", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488983.362, "actor": "pattern-20bc1f-3", "type": "reading", "h": "H:45815a2e80", "place": "Cargo.lock", "subject": "Cargo.lock@47a130be5d", "m": "M:cd75195eb8", "obj": {"id": "O:78f751cd4c", "type": "String", "text": "\"0.1.0\""}, "binding": null, "quote": "version = \"0.1.0\"", "asked": "c964fe9558", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488983.364, "actor": "pattern-20bc1f-2", "type": "reading", "h": "H:218cc97e05", "place": "python/miclow/__init__.py", "subject": "python/miclow/__init__.py@3ecb48f39b", "m": "M:2c9a8f3918", "obj": {"id": "O:ab9bdac1d0", "type": "String", "text": "\"MICLOW_TASK_ID\""}, "binding": null, "quote": "self.task_id: str = os.environ['MICLOW_TASK_ID']", "asked": "d8f9d2abcf", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488983.832, "actor": "pattern-20bc1f-1", "type": "reading", "h": "H:218cc97e05", "place": "python/miclow/__init__.py::MiclowClient.__init__", "subject": "python/miclow/__init__.py::MiclowClient.__init__@5570678831", "m": "M:4339644b6c", "obj": {"id": "O:ab9bdac1d0", "type": "String", "text": "\"MICLOW_TASK_ID\""}, "binding": null, "quote": "self.task_id: str = os.environ['MICLOW_TASK_ID']", "asked": "d8f9d2abcf", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488985.635, "actor": "pattern-20bc1f-0", "type": "reading", "h": "H:45815a2e80", "place": "Cargo.toml", "subject": "Cargo.toml@b67b41303c", "m": "M:26b4ad416c", "obj": {"id": "O:78f751cd4c", "type": "String", "text": "\"0.1.0\""}, "binding": null, "quote": "version = \"0.1.0\"", "asked": "c964fe9558", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488986.623, "actor": "pattern-20bc1f-0", "type": "reading", "h": "H:7b797df0dc", "place": "Cargo.toml", "subject": "Cargo.toml@b67b41303c", "m": "M:b60679d2ca", "obj": {"id": "O:eca19cf83d", "type": "String", "text": "\"MIT OR Apache-2.0\""}, "binding": null, "quote": "license = \"MIT OR Apache-2.0\"", "asked": "071ba1bf22", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488987.696, "actor": "pattern-20bc1f-0", "type": "reading", "h": "H:218cc97e05", "place": "src/shell_backend.rs", "subject": "src/shell_backend.rs@69569b05f0", "m": "M:d618124e58", "obj": {"id": "O:ab9bdac1d0", "type": "String", "text": "\"MICLOW_TASK_ID\""}, "binding": null, "quote": "command_builder.env(\"MICLOW_TASK_ID\", task_id.to_string());", "asked": "d8f9d2abcf", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795488988.851, "actor": "pattern-20bc1f-0", "type": "reading", "h": "H:0a77e779d4", "place": "src/system_control_command.rs", "subject": "src/system_control_command.rs@586de2ccab", "m": "M:3f6058ee21", "obj": {"id": "O:190583f379", "type": "List String", "text": "[\"system.status\", \"system.subscribe-topic\", \"system.unsubscribe-topic\"]"}, "binding": null, "quote": "\"system.subscribe-topic\" => {", "asked": "d199e55351", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": false, "model_prior": 0.75}
++{"ts": 1795488990.089, "actor": "pattern-20bc1f-0", "type": "reading", "h": "H:98603b1c98", "place": "src/config.rs", "subject": "src/config.rs@9cb712a77c", "m": "M:fc81145e87", "obj": {"id": "O:e43e48c57e", "type": "List String", "text": "[\"args\", \"command\", \"environment_vars\", \"stderr_topic\", \"stdout_topic\", \"subscribe_topics\", \"task_name\", \"view_stderr\", \"view_stdout\", \"working_directory\"]"}, "binding": null, "quote": "#[serde(rename = \"task_name\")]", "asked": "5de86be72c", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": false, "model_prior": 0.75}
++{"ts": 1795488991.581, "actor": "pattern-20bc1f-0", "type": "reading", "h": "H:77eff6b7f6", "place": "python/miclow/__init__.py::MiclowClient", "subject": "python/miclow/__init__.py::MiclowClient@df772c57b4", "m": "M:ebb497df9b", "obj": {"id": "O:0b7b1109bb", "type": "List String", "text": "[\"call_function\", \"get_status\", \"listen_to_topic\", \"receive_message\", \"return_value\", \"send_message\", \"subscribe_topic\", \"unsubscribe_topic\", \"wait_for_topic\"]"}, "binding": null, "quote": "def call_function(self, function_name: str, data: str = \"\") -> SystemResponse:", "asked": "f1fd667d8b", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": false, "model_prior": 0.75}
++{"ts": 1795488992.485, "actor": "pattern-20bc1f-0", "type": "reading", "h": "H:bb5dee1cd1", "place": "Cargo.toml", "subject": "Cargo.toml@b67b41303c", "m": "M:8f5508e9e9", "obj": {"id": "O:fd5cdf794e", "type": "String", "text": "\"https://github.com/sugipamo/miclow\""}, "binding": null, "quote": "repository = \"https://github.com/sugipamo/miclow\"", "asked": "5691f5f28b", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795489008.702, "actor": "second-9ea8fe-0", "type": "reading", "h": "H:bb5dee1cd1", "place": "README.md::インストール", "subject": "README.md::インストール@6622c9459c", "m": "M:a6cd02c115", "obj": {"id": "O:fd5cdf794e", "type": "String", "text": "\"https://github.com/sugipamo/miclow\""}, "binding": null, "quote": "git clone https://github.com/sugipamo/miclow.git", "asked": "5691f5f28b", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795489009.899, "actor": "second-9ea8fe-1", "type": "reading", "h": "H:bb5dee1cd1", "place": "README.md::📞 サポート", "subject": "README.md::📞 サポート@a161d987fa", "m": "M:10bcf0dbe2", "obj": {"id": "O:fd5cdf794e", "type": "String", "text": "\"https://github.com/sugipamo/miclow\""}, "binding": null, "quote": "- 問題報告: [GitHub Issues](https://github.com/sugipamo/miclow/issues)", "asked": "5691f5f28b", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": true, "model_prior": 0.75}
++{"ts": 1795489210.709, "actor": "second-74f704-0", "type": "reading", "h": "H:98603b1c98", "place": "README.md::設定ファイル形式", "subject": "README.md::設定ファイル形式@7ccb668002", "m": "M:efd556e738", "obj": {"id": "O:1235cde7b6", "type": "List String", "text": "[\"args\", \"command\", \"environment\", \"task_name\", \"topics\", \"working_directory\"]"}, "binding": null, "quote": "task_name = \"example_task\"", "asked": "5de86be72c", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": false, "model_prior": 0.75}
++{"ts": 1795489211.303, "actor": "second-74f704-0", "type": "reading", "h": "H:77eff6b7f6", "place": "python/README.md::Methods", "subject": "python/README.md::Methods@71a5adb1f9", "m": "M:38f9f620a0", "obj": {"id": "O:d9d4c0fbe9", "type": "List String", "text": "[\"get_status\", \"receive_message\", \"send_message\", \"start_task\", \"stderr\", \"stdout\", \"stop_task\", \"subscribe_topic\", \"unsubscribe_topic\"]"}, "binding": null, "quote": "- `get_status()` - Get system status", "asked": "f1fd667d8b", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": false, "model_prior": 0.75}
++{"ts": 1795489324.235, "actor": "check", "type": "claim", "h": "H:45815a2e80", "text": "The release version of miclow (Rust crate and Python client package), e.g. \"0.1.0\".", "prior": 0.5, "fact": {"name": "project_version", "type": "String", "places": [{"at": "Cargo.toml", "reader": {"language": "pattern", "as": "string", "find": "^version = \"([^\"]+)\""}}, {"at": "python/pyproject.toml", "reader": {"language": "pattern", "as": "string", "find": "^version = \"([^\"]+)\""}}, {"at": "python/miclow/__init__.py::__version__", "reader": {"language": "pattern", "as": "string", "find": "__version__ = \"([^\"]+)\""}}, {"at": "Cargo.lock", "reader": {"language": "pattern", "as": "string", "find": "name = \"miclow\"\\nversion = \"([^\"]+)\""}}], "value": null, "asked": "c964fe9558"}}
++{"ts": 1795489324.236, "actor": "check", "type": "claim", "h": "H:7b797df0dc", "text": "The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").", "prior": 0.5, "fact": {"name": "license", "type": "String", "places": [{"at": "Cargo.toml", "reader": {"language": "pattern", "as": "string", "find": "^license = \"([^\"]+)\""}}, {"at": "README.md::📄 ライセンス", "reader": null}, {"at": "LICENSE", "reader": {"language": "pattern", "as": "string", "find": "^(MIT) License"}}], "value": null, "asked": "071ba1bf22"}}
++{"ts": 1795489324.574, "actor": "check", "type": "reading", "h": "H:45815a2e80", "place": "Cargo.toml", "subject": "Cargo.toml@b67b41303c", "m": "M:d9ce71a05a", "obj": {"id": "O:78f751cd4c", "type": "String", "text": "\"0.1.0\""}, "binding": {"language": "pattern", "as": "string", "find": "^version = \"([^\"]+)\""}, "quote": null, "asked": "c964fe9558", "blind": false, "model": null, "literal": false, "anchor": false, "model_prior": 0.98}
++{"ts": 1795489324.883, "actor": "check", "type": "reading", "h": "H:45815a2e80", "place": "python/pyproject.toml", "subject": "python/pyproject.toml@d2aedf2e75", "m": "M:415173794b", "obj": {"id": "O:78f751cd4c", "type": "String", "text": "\"0.1.0\""}, "binding": {"language": "pattern", "as": "string", "find": "^version = \"([^\"]+)\""}, "quote": null, "asked": "c964fe9558", "blind": false, "model": null, "literal": false, "anchor": false, "model_prior": 0.98}
++{"ts": 1795489325.536, "actor": "check", "type": "agree", "h": "H:45815a2e80", "f": "F:61ae8f787c", "lean": "(((\"0.1.0\") : String) = ((\"0.1.0\") : String)) ∧ (((\"0.1.0\") : String) = ((\"0.1.0\") : String)) ∧ (((\"0.1.0\") : String) = ((\"0.1.0\") : String))", "guards": ["M:d9ce71a05a", "M:415173794b", "M:ce25f689d0", "M:f2171d8c57"]}
++{"ts": 1795489325.855, "actor": "check", "type": "reading", "h": "H:7b797df0dc", "place": "Cargo.toml", "subject": "Cargo.toml@b67b41303c", "m": "M:d52dab46b0", "obj": {"id": "O:eca19cf83d", "type": "String", "text": "\"MIT OR Apache-2.0\""}, "binding": {"language": "pattern", "as": "string", "find": "^license = \"([^\"]+)\""}, "quote": null, "asked": "071ba1bf22", "blind": false, "model": null, "literal": false, "anchor": false, "model_prior": 0.98}
++{"ts": 1795489326.163, "actor": "check", "type": "agree", "h": "H:7b797df0dc", "f": "F:6fda2467b1", "lean": "(((\"MIT OR Apache-2.0\") : String) = ((\"MIT\") : String)) ∧ (((\"MIT OR Apache-2.0\") : String) = ((\"MIT\") : String))", "guards": ["M:d52dab46b0", "M:9ac7aa7b0a", "M:dee929ee76"]}
++{"ts": 1795495397.468, "actor": "maintain", "type": "claim", "h": "H:0a77e779d4", "text": "The fixed-name system control commands (topic keys) a task can send to miclow, excluding the system.function.<name> prefix family, sorted alphabetically.", "fact": {"name": "system_commands", "type": "List String", "places": [{"at": "src/system_control_command.rs", "reader": {"language": "pattern", "as": "string", "find_all": "\"(system\\.[a-z-]+)\" => \\{", "sort": true, "unique": false}}, {"at": "README.md::システムコマンド", "reader": null}, {"at": "README.md::🛠️ システムコマンド", "reader": null, "some": true}], "value": null, "asked": "d199e55351"}}
++{"ts": 1795495397.469, "actor": "maintain", "type": "claim", "h": "H:98603b1c98", "text": "the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically", "fact": {"name": "task configuration keys", "type": "List String", "places": [{"at": "README.md::設定ファイル形式", "reader": null}, {"at": "src/config.rs", "reader": {"language": "pattern", "as": "string", "find_all": "(?:rename = \"|,\\n    pub |\\(default\\)\\]\\n    pub )([a-hj-z][a-z_]*)(?:\"|: (?:String|Vec<String>|Option<[^\\n]*>|bool))", "sort": true, "unique": false}}, {"at": "README.md::基本的な使用方法", "reader": null, "some": true}, {"at": "examples/config.toml", "reader": {"language": "pattern", "as": "string", "find_all": "^(\\w+) = ", "sort": true, "unique": true}, "some": true}], "value": null, "asked": "5de86be72c"}}
++{"ts": 1795495397.47, "actor": "maintain", "type": "claim", "h": "H:77eff6b7f6", "text": "the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically", "fact": {"name": "Python client methods", "type": "List String", "places": [{"at": "python/README.md::Methods", "reader": null}, {"at": "python/miclow/__init__.py::MiclowClient", "reader": {"language": "pattern", "as": "string", "find_all": "\\n    def ([a-z]\\w*)\\(self", "sort": true, "unique": false}}, {"at": "python/README.md::Quick Start", "reader": null, "some": true}], "value": null, "asked": "f1fd667d8b"}}
++{"ts": 1795495401.251, "actor": "maintain", "type": "reading", "h": "H:98603b1c98", "place": "examples/config.toml", "subject": "examples/config.toml@1e0c61f675", "m": "M:2678e5fb7a", "obj": {"id": "O:b9fd89a96b", "type": "List String", "text": "[\"args\", \"command\", \"subscribe_topics\", \"task_name\", \"view_stderr\", \"view_stdout\"]"}, "binding": {"language": "pattern", "as": "string", "find_all": "^(\\w+) = ", "sort": true, "unique": true}, "quote": null, "asked": "3eb7f4cd15", "blind": false, "model": null, "literal": false, "anchor": false}
++{"ts": 1795495409.332, "actor": "first-28a930-0", "type": "reading", "h": "H:0a77e779d4", "place": "README.md::🛠️ システムコマンド", "subject": "README.md::🛠️ システムコマンド@30e5316bf9", "m": "M:469a4830a9", "obj": {"id": "O:302c0245a0", "type": "List String", "text": "[\"system.subscribe-topic\", \"system.unsubscribe-topic\"]"}, "binding": null, "quote": "- `system.subscribe-topic`: 実行時にトピックを動的購読開始", "asked": "3a526b0f32", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": false}
++{"ts": 1795495410.392, "actor": "first-28a930-0", "type": "reading", "h": "H:98603b1c98", "place": "README.md::基本的な使用方法", "subject": "README.md::基本的な使用方法@facda2cbea", "m": "M:efaf4e7b28", "obj": {"id": "O:34c5ea19d2", "type": "List String", "text": "[\"args\", \"command\", \"environment_vars\", \"subscribe_topics\", \"task_name\", \"working_directory\"]"}, "binding": null, "quote": "task_name = \"python-script\"", "asked": "3eb7f4cd15", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": false}
++{"ts": 1795495411.402, "actor": "first-28a930-0", "type": "reading", "h": "H:77eff6b7f6", "place": "python/README.md::Quick Start", "subject": "python/README.md::Quick Start@eb5a19bd10", "m": "M:f275998888", "obj": {"id": "O:fa644580ec", "type": "List String", "text": "[\"receive_message\", \"send_message\", \"subscribe_topic\"]"}, "binding": null, "quote": "client.subscribe_topic(\"my_topic\")", "asked": "e6c7d799f1", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": false}
++{"ts": 1795495419.899, "actor": "maintain", "type": "agree", "h": "H:0a77e779d4", "f": "F:3a791f7fa7", "lean": "(∀ x ∈ (([\"system.subscribe-topic\", \"system.unsubscribe-topic\"]) : List String), x ∈ (([\"system.status\", \"system.subscribe-topic\", \"system.unsubscribe-topic\"]) : List String))", "guards": ["M:469a4830a9", "M:04b9437cc5"]}
++{"ts": 1795495420.679, "actor": "maintain", "type": "proof", "relation": "holds", "args": ["F:3a791f7fa7"], "proof_sha": "5589aa5863", "proof": "decide", "axioms": ["propext"], "gamma": "87c8d84c5066"}
++{"ts": 1795495428.777, "actor": "pattern-4744e3-0", "type": "reading", "h": "H:98603b1c98", "place": "examples/config.toml", "subject": "examples/config.toml@1e0c61f675", "m": "M:aec73350fb", "obj": {"id": "O:b9fd89a96b", "type": "List String", "text": "[\"args\", \"command\", \"subscribe_topics\", \"task_name\", \"view_stderr\", \"view_stdout\"]"}, "binding": null, "quote": "subscribe_topics = [\"json-data\", \"user-info\"]", "asked": "3eb7f4cd15", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": false}
++{"ts": 1795495445.28, "actor": "second-5f90f2-0", "type": "reading", "h": "H:98603b1c98", "place": "README.md::基本的な使用方法", "subject": "README.md::基本的な使用方法@facda2cbea", "m": "M:efaf4e7b28", "obj": {"id": "O:34c5ea19d2", "type": "List String", "text": "[\"args\", \"command\", \"environment_vars\", \"subscribe_topics\", \"task_name\", \"working_directory\"]"}, "binding": null, "quote": "subscribe_topics = [\"key1\", \"key2\"]", "asked": "3eb7f4cd15", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": false}
++{"ts": 1795495445.604, "actor": "second-5f90f2-0", "type": "reading", "h": "H:77eff6b7f6", "place": "python/README.md::Quick Start", "subject": "python/README.md::Quick Start@eb5a19bd10", "m": "M:f275998888", "obj": {"id": "O:fa644580ec", "type": "List String", "text": "[\"receive_message\", \"send_message\", \"subscribe_topic\"]"}, "binding": null, "quote": "client.subscribe_topic(\"my_topic\")", "asked": "e6c7d799f1", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": false}
+-- 
+2.43.0
+
+
+From 90e4b4cb8b11a7c9015f982c57f401d05759fa4b Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 25 Nov 2026 09:31:48 +0000
+Subject: [PATCH 2/3] Record the reading of the configuration section as an
+ excerpt
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_016CDHSwZWzVoy1TC6nxh6gX
+---
+ pw-log.jsonl | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/pw-log.jsonl b/pw-log.jsonl
+index ff064fc..d787e2d 100644
+--- a/pw-log.jsonl
++++ b/pw-log.jsonl
+@@ -96,3 +96,26 @@
+ {"ts": 1795495428.777, "actor": "pattern-4744e3-0", "type": "reading", "h": "H:98603b1c98", "place": "examples/config.toml", "subject": "examples/config.toml@1e0c61f675", "m": "M:aec73350fb", "obj": {"id": "O:b9fd89a96b", "type": "List String", "text": "[\"args\", \"command\", \"subscribe_topics\", \"task_name\", \"view_stderr\", \"view_stdout\"]"}, "binding": null, "quote": "subscribe_topics = [\"json-data\", \"user-info\"]", "asked": "3eb7f4cd15", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": false}
+ {"ts": 1795495445.28, "actor": "second-5f90f2-0", "type": "reading", "h": "H:98603b1c98", "place": "README.md::基本的な使用方法", "subject": "README.md::基本的な使用方法@facda2cbea", "m": "M:efaf4e7b28", "obj": {"id": "O:34c5ea19d2", "type": "List String", "text": "[\"args\", \"command\", \"environment_vars\", \"subscribe_topics\", \"task_name\", \"working_directory\"]"}, "binding": null, "quote": "subscribe_topics = [\"key1\", \"key2\"]", "asked": "3eb7f4cd15", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": false}
+ {"ts": 1795495445.604, "actor": "second-5f90f2-0", "type": "reading", "h": "H:77eff6b7f6", "place": "python/README.md::Quick Start", "subject": "python/README.md::Quick Start@eb5a19bd10", "m": "M:f275998888", "obj": {"id": "O:fa644580ec", "type": "List String", "text": "[\"receive_message\", \"send_message\", \"subscribe_topic\"]"}, "binding": null, "quote": "client.subscribe_topic(\"my_topic\")", "asked": "e6c7d799f1", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": false}
++{"ts": 1795599046.386, "actor": "check", "type": "claim", "h": "H:7b797df0dc", "text": "The license under which the miclow project is published, as an SPDX expression (e.g. \"MIT\").", "fact": {"name": "license", "type": "String", "places": [{"at": "Cargo.toml", "reader": {"language": "pattern", "as": "string", "find": "^license = \"([^\"]+)\""}}, {"at": "README.md::📄 ライセンス", "reader": null}, {"at": "LICENSE", "reader": {"language": "pattern", "as": "string", "find": "^(MIT) License"}}], "asked": "071ba1bf22", "instructions": [{"is": "\"MIT\"", "by": "Claude, on the owner's leave to decide for miclow", "said": "the LICENSE file is the MIT licence alone; Cargo.toml follows it", "on": "2026-11-25"}]}}
++{"ts": 1795599046.685, "actor": "check", "type": "claim", "h": "H:98603b1c98", "text": "the keys that a [[tasks]] entry of the TOML configuration file accepts, sorted alphabetically", "fact": {"name": "task configuration keys", "type": "List String", "places": [{"at": "README.md::設定ファイル形式", "reader": null, "some": true}, {"at": "src/config.rs", "reader": {"language": "pattern", "as": "string", "find_all": "(?:rename = \"|,\\n    pub |\\(default\\)\\]\\n    pub )([a-hj-z][a-z_]*)(?:\"|: (?:String|Vec<String>|Option<[^\\n]*>|bool))", "sort": true, "unique": false}}, {"at": "README.md::基本的な使用方法", "reader": null, "some": true}, {"at": "examples/config.toml", "reader": {"language": "pattern", "as": "string", "find_all": "^(\\w+) = ", "sort": true, "unique": true}, "some": true}], "asked": "5de86be72c", "instructions": [{"is": "[\"args\", \"command\", \"environment_vars\", \"stderr_topic\", \"stdout_topic\", \"subscribe_topics\", \"task_name\", \"view_stderr\", \"view_stdout\", \"working_directory\"]", "by": "Claude, on the owner's leave to decide for miclow", "said": "the keys are what src/config.rs accepts; the README follows the code", "on": "2026-11-25"}]}}
++{"ts": 1795599047.033, "actor": "check", "type": "claim", "h": "H:77eff6b7f6", "text": "the names of the public methods of the MiclowClient class of the Python client library, sorted alphabetically", "fact": {"name": "Python client methods", "type": "List String", "places": [{"at": "python/README.md::Methods", "reader": null}, {"at": "python/miclow/__init__.py::MiclowClient", "reader": {"language": "pattern", "as": "string", "find_all": "\\n    def ([a-z]\\w*)\\(self", "sort": true, "unique": false}}, {"at": "python/README.md::Quick Start", "reader": null, "some": true}], "asked": "f1fd667d8b", "instructions": [{"is": "[\"call_function\", \"get_status\", \"listen_to_topic\", \"receive_message\", \"return_value\", \"send_message\", \"subscribe_topic\", \"unsubscribe_topic\", \"wait_for_topic\"]", "by": "Claude, on the owner's leave to decide for miclow", "said": "the methods are what the client defines; the README follows the code", "on": "2026-11-25"}]}}
++{"ts": 1795599049.011, "actor": "check", "type": "agree", "h": "H:7b797df0dc", "f": "F:d86c698268", "lean": "(((\"MIT OR Apache-2.0\") : String) = ((\"MIT\") : String))", "guards": ["M:d52dab46b0"]}
++{"ts": 1795599050.421, "actor": "check", "type": "proof", "relation": "not", "args": ["F:d86c698268"], "proof_sha": "5589aa5863", "proof": "decide", "axioms": [], "gamma": "87c8d84c5066"}
++{"ts": 1795599050.424, "actor": "check", "type": "agree", "h": "H:7b797df0dc", "f": "F:3e7246b752", "lean": "(((\"MIT\") : String) = ((\"MIT\") : String))", "guards": ["M:9ac7aa7b0a"]}
++{"ts": 1795599050.82, "actor": "check", "type": "proof", "relation": "holds", "args": ["F:3e7246b752"], "proof_sha": "5a633da644", "proof": "rfl", "axioms": [], "gamma": "87c8d84c5066"}
++{"ts": 1795599050.823, "actor": "check", "type": "agree", "h": "H:7b797df0dc", "f": "F:3e7246b752", "lean": "(((\"MIT\") : String) = ((\"MIT\") : String))", "guards": ["M:dee929ee76"]}
++{"ts": 1795599053.0, "actor": "check", "type": "agree", "h": "H:77eff6b7f6", "f": "F:12c0bd32bc", "lean": "((([\"get_status\", \"receive_message\", \"send_message\", \"start_task\", \"stderr\", \"stdout\", \"stop_task\", \"subscribe_topic\", \"unsubscribe_topic\"]) : List String) = (([\"call_function\", \"get_status\", \"listen_to_topic\", \"receive_message\", \"return_value\", \"send_message\", \"subscribe_topic\", \"unsubscribe_topic\", \"wait_for_topic\"]) : List String))", "guards": ["M:38f9f620a0"]}
++{"ts": 1795599053.003, "actor": "check", "type": "agree", "h": "H:77eff6b7f6", "f": "F:676e8574d2", "lean": "((([\"call_function\", \"get_status\", \"listen_to_topic\", \"receive_message\", \"return_value\", \"send_message\", \"subscribe_topic\", \"unsubscribe_topic\", \"wait_for_topic\"]) : List String) = (([\"call_function\", \"get_status\", \"listen_to_topic\", \"receive_message\", \"return_value\", \"send_message\", \"subscribe_topic\", \"unsubscribe_topic\", \"wait_for_topic\"]) : List String))", "guards": ["M:955c455b68"]}
++{"ts": 1795599053.41, "actor": "check", "type": "proof", "relation": "holds", "args": ["F:676e8574d2"], "proof_sha": "5a633da644", "proof": "rfl", "axioms": [], "gamma": "87c8d84c5066"}
++{"ts": 1795599053.415, "actor": "check", "type": "agree", "h": "H:77eff6b7f6", "f": "F:94b600b8b0", "lean": "(∀ x ∈ (([\"receive_message\", \"send_message\", \"subscribe_topic\"]) : List String), x ∈ (([\"call_function\", \"get_status\", \"listen_to_topic\", \"receive_message\", \"return_value\", \"send_message\", \"subscribe_topic\", \"unsubscribe_topic\", \"wait_for_topic\"]) : List String))", "guards": ["M:f275998888"]}
++{"ts": 1795599054.198, "actor": "check", "type": "proof", "relation": "holds", "args": ["F:94b600b8b0"], "proof_sha": "5589aa5863", "proof": "decide", "axioms": ["propext"], "gamma": "87c8d84c5066"}
++{"ts": 1795599075.923, "actor": "first-99c37e-0", "type": "reading", "h": "H:98603b1c98", "place": "README.md::設定ファイル形式", "subject": "README.md::設定ファイル形式@7ccb668002", "m": "M:efd556e738", "obj": {"id": "O:1235cde7b6", "type": "List String", "text": "[\"args\", \"command\", \"environment\", \"task_name\", \"topics\", \"working_directory\"]"}, "binding": null, "quote": "task_name = \"example_task\"", "asked": "3eb7f4cd15", "blind": true, "model": "claude-opus-5-5", "literal": true, "anchor": false}
++{"ts": 1795599086.343, "actor": "maintain", "type": "agree", "h": "H:98603b1c98", "f": "F:e821af7ab0", "lean": "(∀ x ∈ (([\"args\", \"command\", \"environment\", \"task_name\", \"topics\", \"working_directory\"]) : List String), x ∈ (([\"args\", \"command\", \"environment_vars\", \"stderr_topic\", \"stdout_topic\", \"subscribe_topics\", \"task_name\", \"view_stderr\", \"view_stdout\", \"working_directory\"]) : List String))", "guards": ["M:efd556e738"]}
++{"ts": 1795599087.931, "actor": "maintain", "type": "proof", "relation": "not", "args": ["F:e821af7ab0"], "proof_sha": "5589aa5863", "proof": "decide", "axioms": ["propext"], "gamma": "87c8d84c5066"}
++{"ts": 1795599087.934, "actor": "maintain", "type": "agree", "h": "H:98603b1c98", "f": "F:1c905b60b9", "lean": "((([\"args\", \"command\", \"environment_vars\", \"stderr_topic\", \"stdout_topic\", \"subscribe_topics\", \"task_name\", \"view_stderr\", \"view_stdout\", \"working_directory\"]) : List String) = (([\"args\", \"command\", \"environment_vars\", \"stderr_topic\", \"stdout_topic\", \"subscribe_topics\", \"task_name\", \"view_stderr\", \"view_stdout\", \"working_directory\"]) : List String))", "guards": ["M:1dd1e20d8f"]}
++{"ts": 1795599088.385, "actor": "maintain", "type": "proof", "relation": "holds", "args": ["F:1c905b60b9"], "proof_sha": "5a633da644", "proof": "rfl", "axioms": [], "gamma": "87c8d84c5066"}
++{"ts": 1795599088.389, "actor": "maintain", "type": "agree", "h": "H:98603b1c98", "f": "F:38619a8aa9", "lean": "(∀ x ∈ (([\"args\", \"command\", \"environment_vars\", \"subscribe_topics\", \"task_name\", \"working_directory\"]) : List String), x ∈ (([\"args\", \"command\", \"environment_vars\", \"stderr_topic\", \"stdout_topic\", \"subscribe_topics\", \"task_name\", \"view_stderr\", \"view_stdout\", \"working_directory\"]) : List String))", "guards": ["M:efaf4e7b28"]}
++{"ts": 1795599089.248, "actor": "maintain", "type": "proof", "relation": "holds", "args": ["F:38619a8aa9"], "proof_sha": "5589aa5863", "proof": "decide", "axioms": ["propext"], "gamma": "87c8d84c5066"}
++{"ts": 1795599089.252, "actor": "maintain", "type": "agree", "h": "H:98603b1c98", "f": "F:c061ea9094", "lean": "(∀ x ∈ (([\"args\", \"command\", \"subscribe_topics\", \"task_name\", \"view_stderr\", \"view_stdout\"]) : List String), x ∈ (([\"args\", \"command\", \"environment_vars\", \"stderr_topic\", \"stdout_topic\", \"subscribe_topics\", \"task_name\", \"view_stderr\", \"view_stdout\", \"working_directory\"]) : List String))", "guards": ["M:2678e5fb7a"]}
++{"ts": 1795599090.117, "actor": "maintain", "type": "proof", "relation": "holds", "args": ["F:c061ea9094"], "proof_sha": "5589aa5863", "proof": "decide", "axioms": ["propext"], "gamma": "87c8d84c5066"}
++{"ts": 1795599098.137, "actor": "second-803291-0", "type": "reading", "h": "H:98603b1c98", "place": "README.md::設定ファイル形式", "subject": "README.md::設定ファイル形式@7ccb668002", "m": "M:efd556e738", "obj": {"id": "O:1235cde7b6", "type": "List String", "text": "[\"args\", \"command\", \"environment\", \"task_name\", \"topics\", \"working_directory\"]"}, "binding": null, "quote": "topics = [\"購読するトピック1\", \"トピック2\"]", "asked": "3eb7f4cd15", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": false}
+-- 
+2.43.0
+
+
+From aa1872426486eaffcc47dfd3bcd028f5357bc9a5 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 25 Nov 2026 09:35:36 +0000
+Subject: [PATCH 3/3] Make the places say what was laid down
+
+Cargo.toml now gives the licence as MIT, as LICENSE does. The README's
+configuration section uses the keys the code accepts (environment_vars,
+subscribe_topics). The Python client's README lists the methods the
+client has, with their signatures, and no longer the four it does not.
+
+The configuration and the client's README were changed by an agent and
+read back by a reader shown only the new text; Cargo.toml was written
+by its pattern and read back the same way.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_016CDHSwZWzVoy1TC6nxh6gX
+---
+ Cargo.toml       |  2 +-
+ README.md        |  4 ++--
+ pw-log.jsonl     | 10 ++++++++++
+ python/README.md |  8 ++++----
+ 4 files changed, 17 insertions(+), 7 deletions(-)
+
+diff --git a/Cargo.toml b/Cargo.toml
+index 8b7ff4d..af2acda 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -5,7 +5,7 @@ edition = "2021"
+ authors = ["sugipamo <sugipamo@gmail.com>"]
+ description = "Miclow - A lightweight orchestration system for asynchronous task execution"
+ repository = "https://github.com/sugipamo/miclow"
+-license = "MIT OR Apache-2.0"
++license = "MIT"
+ keywords = ["orchestration", "async", "task", "execution", "lightweight"]
+ categories = ["asynchronous", "command-line-utilities"]
+ 
+diff --git a/README.md b/README.md
+index f0f8987..d76ee2f 100644
+--- a/README.md
++++ b/README.md
+@@ -109,8 +109,8 @@ task_name = "example_task"
+ command = "実行するコマンド"
+ args = ["引数1", "引数2"]
+ working_directory = "/作業ディレクトリ"
+-environment = { VAR1 = "value1", VAR2 = "value2" }
+-topics = ["購読するトピック1", "トピック2"]
++environment_vars = { VAR1 = "value1", VAR2 = "value2" }
++subscribe_topics = ["購読するトピック1", "トピック2"]
+ ```
+ 
+ ### システムコマンド
+diff --git a/pw-log.jsonl b/pw-log.jsonl
+index d787e2d..9280002 100644
+--- a/pw-log.jsonl
++++ b/pw-log.jsonl
+@@ -119,3 +119,13 @@
+ {"ts": 1795599089.252, "actor": "maintain", "type": "agree", "h": "H:98603b1c98", "f": "F:c061ea9094", "lean": "(∀ x ∈ (([\"args\", \"command\", \"subscribe_topics\", \"task_name\", \"view_stderr\", \"view_stdout\"]) : List String), x ∈ (([\"args\", \"command\", \"environment_vars\", \"stderr_topic\", \"stdout_topic\", \"subscribe_topics\", \"task_name\", \"view_stderr\", \"view_stdout\", \"working_directory\"]) : List String))", "guards": ["M:2678e5fb7a"]}
+ {"ts": 1795599090.117, "actor": "maintain", "type": "proof", "relation": "holds", "args": ["F:c061ea9094"], "proof_sha": "5589aa5863", "proof": "decide", "axioms": ["propext"], "gamma": "87c8d84c5066"}
+ {"ts": 1795599098.137, "actor": "second-803291-0", "type": "reading", "h": "H:98603b1c98", "place": "README.md::設定ファイル形式", "subject": "README.md::設定ファイル形式@7ccb668002", "m": "M:efd556e738", "obj": {"id": "O:1235cde7b6", "type": "List String", "text": "[\"args\", \"command\", \"environment\", \"task_name\", \"topics\", \"working_directory\"]"}, "binding": null, "quote": "topics = [\"購読するトピック1\", \"トピック2\"]", "asked": "3eb7f4cd15", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": false}
++{"ts": 1795599306.938, "actor": "written-73aef0-0", "type": "reading", "h": "H:98603b1c98", "place": "README.md::設定ファイル形式", "subject": "README.md::設定ファイル形式@dd561d62ce", "m": "M:8092b5ad1c", "obj": {"id": "O:34c5ea19d2", "type": "List String", "text": "[\"args\", \"command\", \"environment_vars\", \"subscribe_topics\", \"task_name\", \"working_directory\"]"}, "binding": null, "quote": "subscribe_topics = [\"購読するトピック1\", \"トピック2\"]", "asked": "3eb7f4cd15", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": false}
++{"ts": 1795599307.723, "actor": "written-73aef0-0", "type": "reading", "h": "H:77eff6b7f6", "place": "python/README.md::Methods", "subject": "python/README.md::Methods@a8f92be038", "m": "M:56521ccc5f", "obj": {"id": "O:0b7b1109bb", "type": "List String", "text": "[\"call_function\", \"get_status\", \"listen_to_topic\", \"receive_message\", \"return_value\", \"send_message\", \"subscribe_topic\", \"unsubscribe_topic\", \"wait_for_topic\"]"}, "binding": null, "quote": "- `get_status()` - Get system status", "asked": "f1fd667d8b", "blind": true, "model": "claude-sonnet-5-5", "literal": true, "anchor": false}
++{"ts": 1795599318.662, "actor": "check", "type": "reading", "h": "H:45815a2e80", "place": "Cargo.toml", "subject": "Cargo.toml@635961ccce", "m": "M:3cdbb23fa0", "obj": {"id": "O:78f751cd4c", "type": "String", "text": "\"0.1.0\""}, "binding": {"language": "pattern", "as": "string", "find": "^version = \"([^\"]+)\""}, "quote": null, "asked": "c964fe9558", "blind": false, "model": null, "literal": false, "anchor": false}
++{"ts": 1795599319.627, "actor": "check", "type": "agree", "h": "H:45815a2e80", "f": "F:61ae8f787c", "lean": "(((\"0.1.0\") : String) = ((\"0.1.0\") : String)) ∧ (((\"0.1.0\") : String) = ((\"0.1.0\") : String)) ∧ (((\"0.1.0\") : String) = ((\"0.1.0\") : String))", "guards": ["M:3cdbb23fa0", "M:415173794b", "M:ce25f689d0", "M:f2171d8c57"]}
++{"ts": 1795599319.931, "actor": "check", "type": "reading", "h": "H:7b797df0dc", "place": "Cargo.toml", "subject": "Cargo.toml@635961ccce", "m": "M:a18dcf9b2a", "obj": {"id": "O:aacf28b802", "type": "String", "text": "\"MIT\""}, "binding": {"language": "pattern", "as": "string", "find": "^license = \"([^\"]+)\""}, "quote": null, "asked": "071ba1bf22", "blind": false, "model": null, "literal": false, "anchor": false}
++{"ts": 1795599320.254, "actor": "check", "type": "agree", "h": "H:7b797df0dc", "f": "F:3e7246b752", "lean": "(((\"MIT\") : String) = ((\"MIT\") : String))", "guards": ["M:a18dcf9b2a"]}
++{"ts": 1795599322.196, "actor": "check", "type": "agree", "h": "H:98603b1c98", "f": "F:38619a8aa9", "lean": "(∀ x ∈ (([\"args\", \"command\", \"environment_vars\", \"subscribe_topics\", \"task_name\", \"working_directory\"]) : List String), x ∈ (([\"args\", \"command\", \"environment_vars\", \"stderr_topic\", \"stdout_topic\", \"subscribe_topics\", \"task_name\", \"view_stderr\", \"view_stdout\", \"working_directory\"]) : List String))", "guards": ["M:8092b5ad1c"]}
++{"ts": 1795599322.57, "actor": "check", "type": "agree", "h": "H:77eff6b7f6", "f": "F:676e8574d2", "lean": "((([\"call_function\", \"get_status\", \"listen_to_topic\", \"receive_message\", \"return_value\", \"send_message\", \"subscribe_topic\", \"unsubscribe_topic\", \"wait_for_topic\"]) : List String) = (([\"call_function\", \"get_status\", \"listen_to_topic\", \"receive_message\", \"return_value\", \"send_message\", \"subscribe_topic\", \"unsubscribe_topic\", \"wait_for_topic\"]) : List String))", "guards": ["M:56521ccc5f"]}
++{"ts": 1795599322.886, "actor": "check", "type": "reading", "h": "H:bb5dee1cd1", "place": "Cargo.toml", "subject": "Cargo.toml@635961ccce", "m": "M:473c0bdb7d", "obj": {"id": "O:fd5cdf794e", "type": "String", "text": "\"https://github.com/sugipamo/miclow\""}, "binding": {"language": "pattern", "as": "string", "find": "^repository = \"([^\"]+)\""}, "quote": null, "asked": "5691f5f28b", "blind": false, "model": null, "literal": false, "anchor": false}
++{"ts": 1795599322.894, "actor": "check", "type": "agree", "h": "H:bb5dee1cd1", "f": "F:fc5697a000", "lean": "(((\"https://github.com/sugipamo/miclow\") : String) = ((\"https://github.com/sugipamo/miclow\") : String)) ∧ (((\"https://github.com/sugipamo/miclow\") : String) = ((\"https://github.com/sugipamo/miclow\") : String))", "guards": ["M:473c0bdb7d", "M:a6cd02c115", "M:10bcf0dbe2"]}
+diff --git a/python/README.md b/python/README.md
+index af687e5..a986a2c 100644
+--- a/python/README.md
++++ b/python/README.md
+@@ -49,12 +49,12 @@ The main client class for interacting with miclow.
+ 
+ - `send_message(topic: str, message: str)` - Send a message to a topic
+ - `receive_message() -> Tuple[str, str]` - Receive a message
++- `wait_for_topic(topic: str)` - Wait for and retrieve a message for the specified topic
+ - `subscribe_topic(topic: str)` - Subscribe to a topic
+ - `unsubscribe_topic(topic: str)` - Unsubscribe from a topic
+-- `stdout(message: str)` - Send message to stdout
+-- `stderr(message: str)` - Send message to stderr
+-- `start_task(task_name: str)` - Start a task
+-- `stop_task(task_name: str)` - Stop a task
++- `call_function(function_name: str, data: str = "")` - Call a function defined in [[functions]] section and wait for return value
++- `return_value(data: str)` - Return a value to the caller
++- `listen_to_topic(topic: str)` - Context manager for listening to a specific topic
+ - `get_status()` - Get system status
+ 
+ ### Convenience Functions
+-- 
+2.43.0
+
