@@ -31,7 +31,7 @@
 ## 動かす
 
 ```
-pip install scipy numpy mcp pytest          # CI は requirements-ci.txt（動かすのに要るもの）と requirements-test.txt（テスト用）の版とハッシュで固定している
+pip install -e '.[agents,test]'             # scipy と、エージェントを使うものに要る mcp、テスト用の pytest。CI は requirements-ci.txt（動かすのに要るもの）と requirements-test.txt（テスト用）の版とハッシュで固定している
 python -m pytest tests
 python -m pw.check --repo .                        # 事実をいまのファイルで確かめ直す。通らないものがあれば終了コード 1。記録（pw-log.jsonl）には書かない
 python -m pw.check --repo . --verify               # 加えて、記録にある証明を Lean に通し直す（CI はこれを回す：.github/workflows/decisions.yml）

@@ -108,6 +108,13 @@ FAIL violated  fact: task configuration keys
 
 費用は合計 $0.5 ほど（読み直し、書き戻し 3 回）。
 
+## その後：`sugipamo/miclow` に入り、CI で回っている
+
+- 上の 3 コミットは、書き込める `sugipamo/miclow` の main に入った（「Declare where miclow states the same thing twice, and what is right」から「Make the places say what was laid down」まで）。引き継ぎ用に置いていたパッチと手順書（`experiments/external/handoff/`）は、役目を終えたので削除した。
+- miclow の CI（`.github/workflows/facts.yml`）が、プッシュのたびに `pw.check --verify` を回している。このリポジトリは公開になったので、miclow からそのまま取ってこられる。
+- 使ってみて出た 2 点は直した：`pw.check` が確かめるだけで記録に書き足していたこと、ほかのリポジトリから使う入口（手順、CI の部品）がなかったこと。いまは `uses: sugipamo/parallelworld@<コミット>` の 1 ステップで使える（README「他のリポジトリから使う」）。
+- miclow では、その後も宣言が足されている（モジュール直下の関数の一覧など）。継続して使った場合の手間は、これから分かる。
+
 ## 分かったこと
 
 - **流れそのものは、別のリポジトリ、別の言語でも動く。** 探索、目隠しの確認、測定、チェックのどれも、手を入れずに通った。

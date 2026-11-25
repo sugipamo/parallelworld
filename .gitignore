@@ -1,9 +1,7 @@
 __pycache__/
 *.pyc
-.pw/
 .pytest_cache/
 
 **/.lake/
-**/PWCheck/
 build/
 *.egg-info/

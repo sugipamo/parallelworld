@@ -274,7 +274,7 @@ def test_a_search_that_failed_does_not_look_like_one_that_found_nothing(tmp_path
 def test_a_declared_place_that_cannot_be_read_is_said_and_can_be_repaired(tmp_path, monkeypatch):
     import json
     from pw import discover
-    from pw.kernel import pattern, unreadable
+    from pw.kernel import unreadable
     (tmp_path / "guide.md").write_text("## Limits\n\nAt most 14 atoms are solved.\n")
     (tmp_path / "app.py").write_text("LIMIT = 14\n")
     repo = str(tmp_path)

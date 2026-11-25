@@ -32,7 +32,7 @@ ALLOWED_AXIOMS = frozenset({"propext", "Classical.choice", "Quot.sound"})
 
 # Text from agents is spliced into a Lean file, so anything that could start a
 # new command or alter the environment is refused. This is a denylist, i.e. a
-# known weak point: see docs/spec.md "未解決".
+# known weak point: see docs/spec.md §6 (限界).
 _FORBIDDEN = re.compile(
     r"#|@\[|declare_|register_|builtin_|\b(sorry|admit|axiom|macro|macro_rules|syntax|notation|infix[lr]?|prefix|postfix|elab|"
     r"elab_rules|import|open|export|set_option|attribute|instance|unsafe|implemented_by|extern|"

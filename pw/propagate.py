@@ -40,7 +40,7 @@ import tempfile
 import time
 
 from .check import FACTS
-from .kernel import LOG, Kernel, KernelError, _anchored, _json_part, _md_section, _py_part, _sha, compute, context, question, write_pattern
+from .kernel import LOG, Kernel, KernelError, _json_part, _md_section, _py_part, _sha, compute, context, question, write_pattern
 from .lean_gate import LEAN_DIR, LeanGate
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

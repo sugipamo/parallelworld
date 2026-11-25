@@ -465,7 +465,6 @@ def test_a_place_may_state_only_some_entries_of_a_list(tmp_path):
     cwd = str(tmp_path)
     _measure(cwd, opus=27)
     a = Kernel(str(tmp_path / "pw-log.jsonl"), gate=LeanGate(), actor="reader-a")
-    code = {"at": "config.py::KEYS", "reader": pattern(find_all=r'"(\w+)"', sort=True)}
     toml = {"at": "example.toml", "reader": pattern(find_all=r"^(\w+) = ", sort=True), "some": True}
     with pytest.raises(KernelError):
         a.claim_fact("keys", "List String", [{"at": "doc.md::Example", "some": True}, toml])     # nothing states the whole of it
