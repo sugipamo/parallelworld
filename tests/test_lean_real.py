@@ -768,3 +768,68 @@ def test_an_agent_may_propose_the_new_text_of_a_place_and_it_is_read_back(tmp_pa
     # the blind reader does not read the value off the proposed prose: the prose is not taken
     left, got = why(good, '["fast", "safe"]')
     assert "a blind reader shown it reads" in left["doc.md::Modes"] and "doc.md" not in got["files"] and "app.py" in got["files"]
+
+
+def test_checking_does_not_write_to_the_record(tmp_path, capsys):
+    """pw.check works on a copy of the record: trying something out leaves nothing in a committed file."""
+    import json
+    from pw import check
+    repo, record = str(tmp_path), str(tmp_path / "pw-log.jsonl")
+    (tmp_path / "k.py").write_text("LIMIT = 14\n")
+    (tmp_path / "doc.md").write_text("## Limits\n\nAt most 14 atoms.\n")
+    (tmp_path / "pw-facts.json").write_text(json.dumps([{"name": "limit", "type": "Nat", "places": [
+        {"at": "k.py", "read": {"find": r"= (\d+)", "as": "nat"}},
+        {"at": "doc.md::Limits", "read": {"find": r"most (\d+)", "as": "nat"}}]}]))
+
+    assert check.run(repo, record, unconfirmed="warn") is False       # (no blind reader has seen the patterns: a warning here)
+    assert "WARN current" in capsys.readouterr().out
+    assert not os.path.exists(record)                                 # not even created
+
+    (tmp_path / "k.py").write_text("LIMIT = 15\n")                    # changed on purpose, to see the check fail
+    assert check.run(repo, record, unconfirmed="warn") is True
+    assert "FAIL violated" in capsys.readouterr().out and not os.path.exists(record)
+
+    assert check.run(repo, record, unconfirmed="warn", keep=True) is True          # asked to record: it does
+    kept = open(record).read()
+    assert {json.loads(l)["type"] for l in kept.splitlines()} == {"claim", "reading", "agree", "proof"}
+    assert all(json.loads(l)["actor"] == "check" for l in kept.splitlines())
+
+    (tmp_path / "k.py").write_text("LIMIT = 16\n")
+    assert check.run(repo, record, verify=True, unconfirmed="warn") is True
+    out = capsys.readouterr().out
+    assert open(record).read() == kept                                # an existing record is read, and left as it was
+    assert "1 recorded proof(s) verified again, 0 refused" in out     # the record's proof, not the one this check just made
+
+    # a proof written into the record by hand is still found out, by a check that records nothing
+    f = next(json.loads(l)["f"] for l in kept.splitlines() if json.loads(l)["type"] == "agree")
+    fake = {"ts": 0, "actor": "x", "type": "proof", "relation": "holds", "args": [f], "proof": "decide", "proof_sha": "x", "axioms": [], "gamma": "x"}
+    open(record, "a").write(json.dumps(fake) + "\n")
+    forged = open(record).read()
+    assert check.run(repo, record, verify=True, unconfirmed="warn") is True
+    assert "1 recorded proof(s) verified again, 1 refused" in capsys.readouterr().out and open(record).read() == forged
+
+
+def test_lean_is_not_run_where_the_tool_is_kept(tmp_path, monkeypatch):
+    """The Lean project may be a shared checkout or a read-only install: the gate builds and checks elsewhere."""
+    from pw.lean_gate import LEAN_DIR
+    project, work = tmp_path / "lean", tmp_path / "work"
+    project.mkdir()
+    names = [n for n in ("lean-toolchain", "Gamma.lean", "lakefile.toml", "lake-manifest.json") if os.path.exists(os.path.join(LEAN_DIR, n))]
+    for n in names:
+        shutil.copy(os.path.join(LEAN_DIR, n), project / n)
+    monkeypatch.setenv("PW_LEAN_WORK", str(work))
+    gate = LeanGate(str(project))
+    assert gate.check("holds", P("(1 : Nat) = 1"), "rfl")["ok"]
+    assert not gate.check("holds", P("(1 : Nat) = 2"), "rfl")["ok"]
+    assert gate.typecheck([("Nat", "14")])["ok"] and gate.evaluate("Nat", "[1, 2, 3].length") == "3"
+    assert sorted(os.listdir(project)) == sorted(names)               # nothing was written next to the project
+    home, = os.listdir(work)
+    assert sorted(os.listdir(work / home)) == sorted(names + [".lake"])            # built there; what each check wrote is gone
+
+    (project / "Gamma.lean").write_text((project / "Gamma.lean").read_text() + "\ndef pwTestExtra : Nat := 7\n")
+    assert gate.evaluate("Nat", "pwTestExtra") == "7"                 # other premises: another directory, not the old build
+    assert len(os.listdir(work)) == 2
+
+    os.remove(project / "lakefile.toml")
+    v = gate.check("holds", P("(1 : Nat) = 1"), "rfl")
+    assert not v["ok"] and "is not the Lean project" in v["reason"]

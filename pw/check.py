@@ -1,15 +1,23 @@
 """Hold every declared fact against the files as they are now.
 
-    python -m pw.check [--repo DIR] [--db PATH] [--lean-dir DIR] [--verify] [--unconfirmed warn]
+    python -m pw.check [--repo DIR] [--db PATH] [--lean-dir DIR] [--verify] [--unconfirmed warn] [--record]
 
 The facts are those declared in the repository's pw-facts.json; the record is its pw-log.jsonl.
 No model is consulted: places read by a pattern are computed again, Lean settles whether the
 values agree, and the project's rules (pw-rules.json) say whether each reading stands. Exit
 status is 1 unless every fact's places agree and every reading stands.
+
+Checking only looks: it works on a copy of the record and leaves the project's as it is, so
+that trying something out (a file changed on purpose, a branch not yet agreed on) puts nothing
+into a file that is committed. Nothing is lost by that: what a check works out, it works out
+again the next time. With --record, what it computed and what Lean proved is appended to the
+project's record, as `pw.maintain` does for what the readers say.
 """
 import argparse
 import os
+import shutil
 import sys
+import tempfile
 
 from .kernel import LOG, Kernel
 from .lean_gate import LEAN_DIR, LeanGate
@@ -112,19 +120,40 @@ def main():
                     help="run every recorded proof through Lean again instead of believing the record (use this in CI)")
     ap.add_argument("--unconfirmed", choices=("fail", "warn"), default="fail",
                     help="what to do about facts whose places agree but that rest on a reading that does not stand by the rules")
+    ap.add_argument("--record", action="store_true",
+                    help="append what this check computed and what Lean proved to the project's record (by default the record is only read)")
     args = ap.parse_args()
     repo = os.path.abspath(args.repo)
-    kernel = Kernel(args.db or os.path.join(repo, LOG), gate=LeanGate(args.lean_dir), actor="check")
-    if os.path.exists(os.path.join(repo, FACTS)):
-        kernel.sync_facts(os.path.join(repo, FACTS))
-    bad = show(kernel.recheck(repo), args.unconfirmed)
-    if args.verify:
-        refused = kernel.verify()
-        for r in refused:
-            print(f"FAIL the record contains a proof Lean does not accept: {r['relation']} {r['args']}\n       {r['reason'][:200]}")
-        print(f"{len(kernel.state().proofs) - len(refused)} recorded proof(s) verified again, {len(refused)} refused")
-        bad |= bool(refused)
-    sys.exit(1 if bad else 0)
+    sys.exit(1 if run(repo, args.db or os.path.join(repo, LOG), args.lean_dir, args.verify, args.unconfirmed, args.record) else 0)
+
+
+def run(repo, record, lean_dir=LEAN_DIR, verify=False, unconfirmed="fail", keep=False):
+    """Hold the facts of `repo` against its files and print where they stand. True if anything needs attention.
+
+    Unless `keep`, the record is copied and the copy is what gets appended to.
+    """
+    scratch = None
+    if not keep:
+        scratch = tempfile.mkdtemp(prefix="pw-check-")
+        if os.path.exists(record):
+            shutil.copy(record, os.path.join(scratch, LOG))
+        record = os.path.join(scratch, LOG)
+    try:
+        kernel = Kernel(record, gate=LeanGate(lean_dir), actor="check")
+        recorded = list(kernel.state().proofs)      # what the project's record claims Lean proved, before this check adds anything
+        if os.path.exists(os.path.join(repo, FACTS)):
+            kernel.sync_facts(os.path.join(repo, FACTS))
+        bad = show(kernel.recheck(repo), unconfirmed)
+        if verify:
+            refused = kernel.verify(recorded)
+            for r in refused:
+                print(f"FAIL the record contains a proof Lean does not accept: {r['relation']} {r['args']}\n       {r['reason'][:200]}")
+            print(f"{len(recorded) - len(refused)} recorded proof(s) verified again, {len(refused)} refused")
+            bad |= bool(refused)
+        return bad
+    finally:
+        if scratch:
+            shutil.rmtree(scratch, ignore_errors=True)
 
 
 if __name__ == "__main__":

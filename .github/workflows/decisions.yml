@@ -6,7 +6,8 @@ name: decisions
 # for the exact content they were made for.
 #
 # Everything this job fetches is pinned to content, not to a name that can be moved:
-# the actions by commit, the Python packages by hash (requirements-ci.txt), Lean by checksum.
+# the actions by commit, the Python packages by hash (requirements-ci.txt, requirements-test.txt),
+# Lean by checksum (ci/lean.sh).
 # The job can read the repository and nothing else.
 
 on:
@@ -16,10 +17,6 @@ on:
 permissions:
   contents: read
 
-env:
-  LEAN_VERSION: 4.14.0   # must equal lean/lean-toolchain; pw-facts.json holds the two together
-  LEAN_SHA256: 320f18e7d58271d95fced740522b5a5ed41b85b2af5bf0e8ab9a8dbc380e450a
-
 jobs:
   check:
     runs-on: ubuntu-24.04
@@ -28,29 +25,18 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0    # v7.1.0
-        with:
-          python-version: "3.13"
-
-      - name: Python packages, by hash
-        run: pip install --require-hashes -r requirements-ci.txt
-
-      - name: Lean, by checksum
-        run: |
-          mkdir -p "$HOME/lean"
-          curl -fsSL -o "$HOME/lean/lean.tar.zst" \
-            "https://github.com/leanprover/lean4/releases/download/v$LEAN_VERSION/lean-$LEAN_VERSION-linux.tar.zst"
-          echo "$LEAN_SHA256  $HOME/lean/lean.tar.zst" | sha256sum -c --quiet
-          tar --zstd -xf "$HOME/lean/lean.tar.zst" -C "$HOME/lean"
-          rm "$HOME/lean/lean.tar.zst"
-          echo "$HOME/lean/lean-$LEAN_VERSION-linux/bin" >> "$GITHUB_PATH"
-
+      # The same steps another repository gets by using this one as an action (action.yml):
+      # Python and its packages, the Lean that lean/lean-toolchain names, then pw.check --verify.
       - name: Facts and decisions, with the recorded proofs verified again
-        run: python -m pw.check --verify
+        uses: ./
 
       - name: What a person still has to confirm
         if: always()
         run: python -m pw.confirm | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Packages the tests need, by hash
+        if: always()
+        run: pip install --require-hashes -r requirements-test.txt
 
       - name: Tests
         if: always()

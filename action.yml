@@ -1,0 +1,48 @@
+name: parallelworld check
+description: >-
+  Hold a repository's declared facts (pw-facts.json) against its files as they are checked out:
+  python -m pw.check, with the Python packages and Lean this needs. No agent is used.
+
+# For another repository's workflow. Pin this action by commit; that one commit then fixes
+# everything else: the checker, its Python packages (by hash, requirements-ci.txt) and Lean
+# (the version in lean/lean-toolchain, by checksum, ci/lean.sh).
+#
+#     - uses: actions/checkout@<commit>
+#     - uses: sugipamo/parallelworld@<commit>
+#
+# The job needs nothing beyond reading the repository (permissions: contents: read).
+
+inputs:
+  repo:
+    description: The directory whose pw-facts.json is checked, relative to the workspace.
+    default: "."
+  args:
+    description: >-
+      Further arguments to pw.check. The default runs the proofs in the record through Lean
+      again instead of believing them.
+    default: "--verify"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0    # v7.1.0
+      with:
+        python-version: "3.13"     # requirements-ci.txt pins wheels for this version
+
+    - name: Python packages, by hash
+      shell: bash
+      run: pip install --require-hashes -r "$GITHUB_ACTION_PATH/requirements-ci.txt"
+
+    - name: Lean, by checksum
+      shell: bash
+      run: |
+        bin=$("$GITHUB_ACTION_PATH/ci/lean.sh" "$RUNNER_TEMP/parallelworld-lean")
+        echo "$bin" >> "$GITHUB_PATH"
+
+    - name: Facts, held against the files
+      shell: bash
+      env:
+        PYTHONPATH: ${{ github.action_path }}
+        PW_REPO: ${{ inputs.repo }}
+        PW_ARGS: ${{ inputs.args }}
+      run: python -m pw.check --repo "$PW_REPO" $PW_ARGS

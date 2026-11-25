@@ -531,8 +531,9 @@ class Kernel:
         with open(self.db_path, encoding="utf-8") as fh:
             return [{"id": n, **json.loads(line)} for n, line in enumerate(fh, 1) if line.strip()]
 
-    def verify(self):
-        """Run every recorded proof through the gate again; return those it does not accept.
+    def verify(self, proofs=None):
+        """Run every recorded proof (or just `proofs`, taken from the record) through the gate
+        again; return those it does not accept.
 
         The log is a text file anyone can edit. Whatever in it can be checked again is not
         taken on trust: readers are re-run on every check, and proofs are re-run here.
@@ -543,7 +544,7 @@ class Kernel:
             raise KernelError("no Lean gate configured; proofs cannot be verified")
         st = self.state()
         refused = []
-        for p in st.proofs:
+        for p in st.proofs if proofs is None else proofs:
             verdict = self.gate.check(p["relation"], [("Prop", st.props[p["args"][0]])], p.get("proof", ""))
             if not verdict["ok"]:
                 refused.append({"relation": p["relation"], "args": p["args"], "reason": verdict["reason"][-300:]})

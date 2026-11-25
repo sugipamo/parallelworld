@@ -1,0 +1,30 @@
+# So that another repository can use the checker without a PYTHONPATH:
+#     pip install /path/to/parallelworld        (or: pip install git+https://github.com/sugipamo/parallelworld@<commit>)
+#     python -m pw.check --repo .
+# The Lean project (lean/) is installed inside the package; pw.lean_gate looks for it there.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "parallelworld"
+version = "0.5.0"
+description = "Declare what a project states in several places, and keep the places saying the same thing"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["scipy"]
+
+[project.optional-dependencies]
+agents = ["mcp"]        # pw.maintain, pw.calibrate, pw.discover, pw.propagate --agent (they also need the claude CLI)
+test = ["pytest"]
+
+[tool.setuptools]
+packages = ["pw", "pw.lean"]
+
+[tool.setuptools.package-dir]
+"pw.lean" = "lean"
+
+[tool.setuptools.package-data]
+pw = ["reader.txt", "rules.json"]
+"pw.lean" = ["lean-toolchain", "Gamma.lean", "lakefile.toml", "lake-manifest.json"]
