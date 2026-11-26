@@ -156,6 +156,15 @@ class LeanGate:
         _READY[(lake, home)] = p.stdout.strip()
         return lake, home
 
+    def usable(self):
+        """Raise GateError, saying why, if Lean cannot be run here. Whether values agree is settled
+        by Lean and by nothing else, so without it nothing can be checked."""
+        try:
+            self._lake()
+        except GateError as e:
+            raise GateError(f"{e}. Whether places agree is settled by Lean: nothing can be checked without it "
+                            "(ci/lean.sh in this tool's repository fetches the right version)")
+
     def check(self, relation, items, proof):
         try:
             src = self.render(relation, items, proof)

@@ -189,8 +189,8 @@ def run(repo, record, lean_dir=LEAN_DIR, verify=False, unconfirmed="fail", keep=
         recorded = list(before.proofs)              # what the project's record claims Lean proved, before this check adds anything
         ways = {(h, at, json.dumps(before.models[m]["binding"], sort_keys=True)) for h, f in before.facts.items()
                 for at, m in f["readings"] if before.models[m]["binding"]}
-        if os.path.exists(os.path.join(repo, FACTS)):
-            kernel.sync_facts(os.path.join(repo, FACTS))
+        kernel.gate.usable()
+        kernel.sync_facts(os.path.join(repo, FACTS))
         report = kernel.recheck(repo)
         bad = show(report, unconfirmed)
         if not keep:
@@ -220,4 +220,5 @@ def run(repo, record, lean_dir=LEAN_DIR, verify=False, unconfirmed="fail", keep=
 
 
 if __name__ == "__main__":
-    main()
+    from .kernel import cli
+    cli(main)

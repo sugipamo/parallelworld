@@ -292,8 +292,8 @@ def main():
     if os.path.exists(os.path.join(repo, LOG)):
         shutil.copy(os.path.join(repo, LOG), scratch)
     kernel = Kernel(scratch, gate=LeanGate(args.lean_dir), actor="calibrate")
-    if os.path.exists(os.path.join(repo, FACTS)):
-        kernel.sync_facts(os.path.join(repo, FACTS))
+    kernel.gate.usable()
+    kernel.sync_facts(os.path.join(repo, FACTS))
     todo = trials(kernel, repo, args.per_place, random.Random(args.seed), args.decoys, args.twice)
     if not todo:
         sys.exit("no place read by an agent whose value occurs literally in it: nothing to plant")
@@ -373,4 +373,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    from .kernel import cli
+    cli(main)

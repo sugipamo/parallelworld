@@ -433,3 +433,35 @@ def test_the_documents_are_there_and_point_at_things_that_exist():
             if "://" not in target:
                 there = os.path.join(os.path.dirname(path), target)
                 assert os.path.exists(there) and (os.path.isdir(there) or os.path.getsize(there) > 0), f"{name} links to {target}, which is not there"
+
+
+def test_a_declaration_that_cannot_be_used_is_said_in_a_line(tmp_path):
+    import json
+    k = Kernel(str(tmp_path / "pw-log.jsonl"))
+    path = tmp_path / "pw-facts.json"
+    with pytest.raises(KernelError, match="there is no pw-facts.json"):
+        k.sync_facts(str(path))
+    for text, said in [("[{", "is not JSON"), ('{"name": "x"}', "is a list of facts"), ('[{"type": "Nat", "places": ["a"]}]', 'object with a "name"'),
+                       ('[{"name": "x", "places": ["a"]}]', 'needs a "type"'), ('[{"name": "x", "type": "Nat", "place": ["a"]}]', 'needs "places"'),
+                       ('[{"name": "x", "type": "Nat", "places": ["a"], "glos": "y"}]', "unknown keys"),
+                       (json.dumps([{"name": "x", "type": "Nat", "places": ["a"]}] * 2), "declared more than once")]:
+        path.write_text(text)
+        with pytest.raises(KernelError, match=said):
+            k.sync_facts(str(path))
+    path.write_text("[]")
+    assert k.sync_facts(str(path)) == set()
+
+
+def test_a_long_place_read_by_structure_is_shown_in_part():
+    from pw.kernel import excerpt, reader
+    lock = "version = 4\n\n" + "".join(f'[[package]]\nname = "dep{i}"\nversion = "1.{i}.0"\ndependencies = [\n "a",\n]\n\n' for i in range(40))
+    lock += '[[package]]\nname = "mine"\nversion = "0.1.0"\n'
+    shown = excerpt(reader({"data": "package[name=mine].version"}, "Cargo.lock"), lock)
+    assert shown == '[[package]]\nname = "mine"\nversion = "0.1.0"\n' and shown in lock
+    assert excerpt(reader({"data": "package[name=mine].version"}, "Cargo.lock"), shown) is None          # short: shown whole
+    assert excerpt(reader({"data": "package.*.version"}, "Cargo.lock"), lock) is None                    # needs every table: nothing to leave out
+    src = "import os\n\n" + "".join(f"@route('/{i}')\ndef page{i}(request,\n          flag=False):\n    return {i} * [\n        os.sep,\n        os.linesep,\n        os.pathsep,\n        os.curdir,\n    ]\n\n\n" for i in range(30))
+    shown = excerpt(reader({"python": "names"}, "app.py"), src)
+    assert shown.startswith("@route('/0')\ndef page0(request,\n          flag=False):\n@route('/1')") and "return" not in shown
+    assert excerpt(reader({"python": "value"}, "app.py"), "X = " + repr(list(range(900)))) is None        # no smaller part can be told
+    assert excerpt({"language": "pattern", "find": "(x)", "as": "string"}, "x" * 5000) is None

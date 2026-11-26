@@ -23,6 +23,7 @@ import hashlib
 import json
 import os
 import re
+import sys
 import time
 from contextlib import contextmanager
 from fractions import Fraction
@@ -333,6 +334,53 @@ def _read_data(rd, text):
 READERS = {"pattern": _read_pattern, "python": _read_python, "data": _read_data}
 
 
+def excerpt(rd, text, least=1500):
+    """The part of a long place that a way of reading by structure looks at, as it stands in the
+    file: for a blind reader who is to say whether what is read there is the thing asked.
+    None where the whole place is to be shown (it is short, or no smaller part can be told).
+
+    A path into TOML names tables: the tables it passes through are shown, each from its
+    header to the next. Functions taken by name are shown by their headers. Whatever is shown
+    is lines of the file, unchanged, so that a quote from it is a quote from the place.
+    """
+    if len(text) < least:
+        return None
+    try:
+        if rd.get("language") == "data" and rd.get("format") == "toml":
+            lines = text.splitlines(keepends=True)
+            starts = [0] + [i for i, line in enumerate(lines) if line.lstrip().startswith("[") and i > 0]
+            pieces = ["".join(lines[a:b]) for a, b in zip(starts, starts[1:] + [len(lines)])]
+            kept = []
+            for piece in pieces:
+                try:
+                    _read_data(rd, piece)
+                    kept.append(piece)
+                except KernelError:
+                    pass
+            shown = "".join(kept)
+            if kept and _read_data(rd, shown) == _read_data(rd, text) and len(shown) < len(text) / 2:
+                return shown
+        if rd.get("language") == "python" and rd.get("take") == "names":
+            src = textwrap.dedent(text)
+            if src != text:
+                return None
+            body = ast.parse(src).body
+            cls = body[0] if len(body) == 1 and isinstance(body[0], ast.ClassDef) else None
+            inside = cls.body if cls else body
+            lines = text.splitlines(keepends=True)
+            heads = [lines[cls.lineno - 1]] if cls else []
+            for n in inside:
+                if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    first = min([n.lineno] + [d.lineno for d in n.decorator_list])
+                    heads.append("".join(lines[first - 1:n.body[0].lineno - 1]) or lines[n.lineno - 1])
+            shown = "".join(heads)
+            if heads and len(shown) < len(text) / 2:
+                return shown
+    except (KernelError, SyntaxError, ValueError):
+        return None
+    return None
+
+
 def reader(read, at):
     """The way of reading a place that its declaration describes ("read" in pw-facts.json)."""
     r = dict(read)
@@ -359,6 +407,17 @@ def compute(rd, text):
     if how is None:
         raise KernelError(f"no way to read a place by {rd.get('language')!r}; the record may come from another version")
     return how(rd, text)
+
+
+def cli(main):
+    """Run a command; say what is wrong with the declaration or the setup in a line, not a traceback.
+    Exit status 2: the check could not be made (1 is for a check that was made and failed)."""
+    from .lean_gate import GateError
+    try:
+        main()
+    except (KernelError, GateError) as e:
+        print(f"pw: {e}", file=sys.stderr)
+        sys.exit(2)
 
 
 class KernelError(Exception):
@@ -1149,9 +1208,36 @@ class Kernel:
         "defined" makes the fact a definition: {"from": [names of facts], "as": a Lean function
         of their values}, e.g. {"from": ["modes"], "as": "fun ms => ms.length"}.
         """
-        with open(path, encoding="utf-8") as fh:
-            declared = json.load(fh)
+        name = os.path.basename(path)
+        try:
+            with open(path, encoding="utf-8") as fh:
+                declared = json.load(fh)
+        except FileNotFoundError:
+            raise KernelError(f"nothing is declared here: there is no {name} in {os.path.dirname(os.path.abspath(path))}")
+        except ValueError as e:
+            raise KernelError(f"{name} is not JSON: {e}")
+        if not isinstance(declared, list):
+            raise KernelError(f"{name} is a list of facts: [{{\"name\": ..., \"type\": ..., \"places\": [...]}}, ...]")
+        for n, d in enumerate(declared, 1):          # said in terms of the file, before anything is looked up in it
+            what = f"{name}, fact {n}" + (f" ({d['name']})" if isinstance(d, dict) and isinstance(d.get("name"), str) else "")
+            if not isinstance(d, dict) or not isinstance(d.get("name"), str) or not d["name"].strip():
+                raise KernelError(f"{what}: a fact is an object with a \"name\"")
+            if not isinstance(d.get("type"), str) or not d["type"].strip():
+                raise KernelError(f"{what}: it needs a \"type\", the Lean type of its value: String, Nat, Int, List String, List Nat")
+            if not isinstance(d.get("places"), list) or not d["places"]:
+                raise KernelError(f"{what}: it needs \"places\", the list of places that state it")
+            unknown = set(d) - {"name", "type", "gloss", "places", "instructions", "defined", "value"}
+            if unknown:
+                raise KernelError(f"{what}: unknown keys {sorted(unknown)}; a fact has name, type, places and optionally gloss, instructions, defined")
+        twice = sorted({d["name"] for d in declared if [x["name"] for x in declared].count(d["name"]) > 1})
+        if twice:
+            raise KernelError(f"{name}: {', '.join(twice)} is declared more than once; a fact is declared once, with all its places")
         types = {d["name"]: _norm(d["type"]) for d in declared}
+        for t in sorted(set(types.values())):
+            if not _json_like(t) and self.gate is not None:
+                v = self.gate.typecheck([("Type", t)])
+                if not v["ok"] and "is not installed" not in v["reason"] and "Gamma pins" not in v["reason"]:
+                    raise KernelError(f"{name}: {t!r} is not a type Lean knows here; the usual ones are String, Nat, Int, List String, List Nat")
         for d in declared:                         # a definition has to make sense before anything is recorded
             how = d.get("defined")
             if how is None:

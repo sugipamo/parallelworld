@@ -47,7 +47,7 @@ python -m pw.propagate --repo . --agent            # 一覧や散文は、エー
 ```
 
 一致の判定には `lean/lean-toolchain` と同じ版の Lean 4 が必要。`lake` が PATH にないときは `PW_LAKE` でパスを渡す。
-Lean がない、または版が違うときは、判定はすべて不受理になる（`tests/test_lean_real.py` はスキップされる）。
+Lean がない、または版が違うときは、`pw.check` は何も確かめずに、理由を 1 行で言って終了コード 2 で止まる（`tests/test_lean_real.py` はスキップされる）。終了コードは、確かめて通らなければ 1、確かめられなければ 2（Lean が使えない、`pw-facts.json` が無い・書き方が違う）。
 その版の Lean が手元になければ `ci/lean.sh` が取ってくる（`export PATH="$(ci/lean.sh):$PATH"`。Linux x86_64 のみ。`curl` と `zstd` が要る）。
 
 Lean は `lean/` の中では動かさない。`lean/` の中身を `~/.cache/parallelworld/`（`PW_LEAN_WORK` で変えられる）に写し、そこでビルドと判定をする。仕組みを置いた場所は読むだけなので、読み取り専用でも、ほかのジョブと共有していてもよい。

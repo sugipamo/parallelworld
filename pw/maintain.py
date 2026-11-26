@@ -33,7 +33,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 from .check import FACTS, show
-from .kernel import LOG, READER, Kernel, _sha, context, locate, question
+from .kernel import LOG, READER, Kernel, _sha, context, excerpt, locate, question
 from .lean_gate import LEAN_DIR, LeanGate
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -68,11 +68,13 @@ def blind_read(repo, lean_dir, model, actor, items, budget, db=None):
             "PW_DB": db or os.path.join(repo, LOG), "PW_AGENT": actor, "PW_WORKDIR": repo, "PW_LEAN_DIR": lean_dir,
             "PW_BLIND": "1", "PW_MODEL": model, "PYTHONPATH": ROOT}}}}, fh)
     prompt = READER
-    for h, place, typ, what, around in items:
-        text = locate(place, repo).decode("utf-8", "replace")
+    for h, place, typ, what, around, *shown in items:
+        text = shown[0] if shown and shown[0] else locate(place, repo).decode("utf-8", "replace")
         prompt += f"\n=== h: {h}   place: {place}\nAsked: {what} (type {typ})\n"
         if around:
             prompt += f"What surrounds the passage in its file (not the passage; do not read the value from here):\n<<<\n{around}\n>>>\n"
+        if shown and shown[0]:
+            prompt += "Only the parts of the place that are read are shown; the rest of the file is left out.\n"
         prompt += f"Passage:\n<<<\n{text}\n>>>\n"
     r = subprocess.run(["claude", "-p", prompt, "--model", model, "--tools", "", "--mcp-config", cfg, "--strict-mcp-config",
                         "--allowedTools", "mcp__pw__read_place,mcp__pw__not_stated", "--output-format", "json",
@@ -104,7 +106,9 @@ def read_blind(kernel, repo, args, wanted, model, label):
         # another place of the same fact is in that file: the reader must not see two places of one fact
         alone = all(p["at"] == at or p["at"].partition("::")[0] != at.partition("::")[0] for p in st.facts[d["h"]]["places"])
         asked = question(st.facts[d["h"]], next(p for p in st.facts[d["h"]]["places"] if p["at"] == at))[0]
-        batches.setdefault(n, []).append((d["h"], at, st.facts[d["h"]]["type"], asked, context(at, repo) if alone else None))
+        decl = next(p for p in st.facts[d["h"]]["places"] if p["at"] == at)
+        part = excerpt(decl["reader"], locate(at, repo).decode("utf-8", "replace")) if decl["reader"] else None
+        batches.setdefault(n, []).append((d["h"], at, st.facts[d["h"]]["type"], asked, context(at, repo) if alone else None, part))
     # a reader's name is its session's: reading the same places again is another session, so that
     # what an earlier one said is never taken for an answer of this one
     tag = _sha(model, label, str(time.time_ns()), *[at for _, at in wanted])[:6]
@@ -113,7 +117,8 @@ def read_blind(kernel, repo, args, wanted, model, label):
         runs = list(pool.map(lambda kv: blind_read(repo, args.lean_dir, model, f"{label}-{tag}-{kv[0]}", kv[1], args.budget,
                                                    db=kernel.db_path), sorted(batches.items())))
     for r, (_, batch) in zip(runs, sorted(batches.items())):
-        print(f"   {r['actor']}: " + (r.get("error") or f"{r['turns']} turns, ${r['cost_usd']}"), flush=True)
+        sizes = ", ".join(f"{item[1]} ({len(item[5] or locate(item[1], repo)):,} characters{', in part' if item[5] else ''})" for item in batch)
+        print(f"   {r['actor']}: " + (r.get("error") or f"{r['turns']} turns, ${r['cost_usd']}") + f"   read {sizes}", flush=True)
         done = answered(kernel, r["actor"])
         r["no answer"] = [item[1] for item in batch if (item[0], item[1]) not in done]
         for at in r["no answer"]:                         # silence is not a finding about the place
@@ -132,8 +137,8 @@ def main():
     args = ap.parse_args()
     repo = os.path.abspath(args.repo)
     kernel = Kernel(os.path.join(repo, LOG), gate=LeanGate(args.lean_dir), actor="maintain")
-    if os.path.exists(os.path.join(repo, FACTS)):
-        kernel.sync_facts(os.path.join(repo, FACTS))
+    kernel.gate.usable()
+    kernel.sync_facts(os.path.join(repo, FACTS))
     report = kernel.recheck(repo)
 
     def needs_agent(d, u):
@@ -187,4 +192,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    from .kernel import cli
+    cli(main)
