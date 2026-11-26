@@ -36,7 +36,7 @@ from collections import Counter
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, ROOT)
 
-from pw.kernel import KernelError, compute, locate, pattern      # noqa: E402
+from pw.kernel import KernelError, compute, locate, pattern, reader      # noqa: E402
 
 HASH = (".py", ".toml", ".yml", ".yaml", ".lock", ".sh", ".cfg", ".ini")
 SLASH = (".rs", ".js", ".ts", ".go", ".c", ".h", ".java")
@@ -239,7 +239,8 @@ def read(repo, path, at, rd, text):
         shutil.rmtree(work, ignore_errors=True)
 
 
-def trial(repo, fact, place):
+def trial(repo, fact, place, other=None):
+    """`other`: another way of reading the same thing ({"at", "read"}), put through the same edits."""
     at = place["at"]
     path, ext = at.partition("::")[0], os.path.splitext(at.partition("::")[0])[1]
     r = place["read"]
@@ -250,6 +251,26 @@ def trial(repo, fact, place):
     base = read(repo, path, at, rd, F)
     if isinstance(base, dict):
         return [{"fact": fact["name"], "at": at, "kind": "-", "edit": "as it is", "outcome": "loud", "detail": base["loud"]}]
+    rd2 = base2 = None
+    if other:
+        rd2 = reader(other["read"], other["at"])
+        base2 = read(repo, path, other["at"], rd2, F)
+        assert not isinstance(base2, dict) and json.loads(base2) == json.loads(base), (at, base, base2)
+
+    def second(text, kind, expect=None):
+        """The outcome for the other way of reading, for the same edited text."""
+        if rd2 is None:
+            return {}
+        got = read(repo, path, other["at"], rd2, text)
+        if isinstance(got, dict):
+            return {"structured": "loud", "structured detail": got["loud"]}
+        val, was = json.loads(got), json.loads(base2)
+        if kind == "A":
+            return {"structured": "same" if val == was else "other value", **({} if val == was else {"structured detail": got[:80]})}
+        how, want = expect
+        seen = val == want if how == "is" else isinstance(val, list) and want in val
+        return {"structured": "seen" if seen else "missed" if val == was else "other value"}
+
     # (a JSON part is not a piece of the file's text: only the file as a whole is edited then)
     target = F if P == F else P if F.count(P) == 1 else None
     put = (lambda new: new) if P == F else (lambda new: F.replace(P, new))
@@ -290,11 +311,11 @@ def trial(repo, fact, place):
             verified = True
         got = read(repo, path, at, rd, text)
         if isinstance(got, dict):
-            out.append(row("A", name, "loud", detail=got["loud"], verified=verified))
+            out.append(row("A", name, "loud", detail=got["loud"], verified=verified, **second(text, "A")))
         elif json.loads(got) == json.loads(base):
-            out.append(row("A", name, "same", verified=verified))
+            out.append(row("A", name, "same", verified=verified, **second(text, "A")))
         else:
-            out.append(row("A", name, "other value", detail=f"{base[:70]} -> {got[:70]}", verified=verified))
+            out.append(row("A", name, "other value", detail=f"{base[:70]} -> {got[:70]}", verified=verified, **second(text, "A")))
     for name, new, (how, value) in (changes(target, rd, ext) if target is not None else []):
         text = put(new)
         try:
@@ -302,24 +323,31 @@ def trial(repo, fact, place):
         except Exception:
             continue
         got = read(repo, path, at, rd, text)
+        want = int(value) if rd["as"] in ("nat", "int") else int(round(float(value) * 1000)) if rd["as"] == "permille" else value
         if isinstance(got, dict):
-            out.append(row("B", name, "loud", detail=got["loud"]))
+            out.append(row("B", name, "loud", detail=got["loud"], **second(text, "B", (how, want))))
             continue
         val, was = json.loads(got), json.loads(base)
-        want = int(value) if rd["as"] in ("nat", "int") else int(round(float(value) * 1000)) if rd["as"] == "permille" else value
         if rd.get("rewrite"):
             seen = val != was
         else:
             seen = val == want if how == "is" else isinstance(val, list) and want in val
-        out.append(row("B", name, "seen" if seen else "missed" if val == was else "other value", detail=f"{base[:60]} -> {got[:60]}"))
+        out.append(row("B", name, "seen" if seen else "missed" if val == was else "other value", detail=f"{base[:60]} -> {got[:60]}",
+                       **second(text, "B", (how, want))))
     return out
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("repos", nargs="+")
+    ap.add_argument("--structured", metavar="FILE", help='another way of reading some of the places, by structure: {"repo|at[|fact]": {"at", "read"}}; '
+                    "it is put through the same edits and reported next to the pattern")
     ap.add_argument("--out")
     args = ap.parse_args()
+    alt = {}
+    if args.structured:
+        with open(args.structured, encoding="utf-8") as fh:
+            alt = json.load(fh)
     rows = []
     for repo in map(os.path.abspath, args.repos):
         with open(os.path.join(repo, "pw-facts.json"), encoding="utf-8") as fh:
@@ -327,7 +355,9 @@ def main():
         for fact in facts:
             for place in fact["places"]:
                 if isinstance(place, dict) and "read" in place:
-                    for r in trial(repo, fact, place):
+                    name = os.path.basename(repo)
+                    other = alt.get(f"{name}|{place['at']}|{fact['name']}") or alt.get(f"{name}|{place['at']}")
+                    for r in trial(repo, fact, place, other):
                         rows.append({"repo": os.path.basename(repo), **r})
     for kind, title in (("A", "A: the value is left as it is"), ("B", "B: the value is changed")):
         part = [r for r in rows if r["kind"] == kind]
@@ -338,6 +368,15 @@ def main():
         for edit in sorted({e for e, _ in tally}):
             print(f"  {edit:<42}" + "".join(f"{tally[(edit, o)]:>13}" for o in outcomes))
         print(f"  {'all':<42}" + "".join(f"{sum(1 for r in part if r['outcome'] == o):>13}" for o in outcomes))
+    both = [r for r in rows if "structured" in r]
+    if both:
+        print(f"\nThe {len({(r['repo'], r['at'], r['fact']) for r in both})} places that can also be read by structure, the same edits:")
+        for kind in ("A", "B"):
+            part = [r for r in both if r["kind"] == kind]
+            outcomes = sorted({r["outcome"] for r in part} | {r["structured"] for r in part})
+            print(f"  {kind}: {len(part)} edits   " + "".join(f"{o:>13}" for o in outcomes))
+            print("     by pattern      " + "".join(f"{sum(1 for r in part if r['outcome'] == o):>13}" for o in outcomes))
+            print("     by structure    " + "".join(f"{sum(1 for r in part if r['structured'] == o):>13}" for o in outcomes))
     if args.out:
         with open(args.out, "w", encoding="utf-8") as fh:
             json.dump(rows, fh, ensure_ascii=False, indent=1)

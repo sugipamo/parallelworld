@@ -52,7 +52,7 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 
 from .check import FACTS
-from .kernel import CALIBRATION, LOG, Kernel, KernelError, _anchored, _json_part, _md_section, _py_part, _read_pattern, locate, pattern
+from .kernel import CALIBRATION, LOG, Kernel, KernelError, _anchored, _json_part, _md_section, _py_part, _read_pattern, compute, locate, pattern, reader
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TYPES = {"String": str, "Nat": int, "Int": int, "List String": str, "List Nat": int}
@@ -102,6 +102,20 @@ What to report for a place
               place writes the value another way than the other places (["py(\\d)(\\d+)", "\\1.\\2"]
               turns py310 into 3.10).
   No look-around, back-references or named groups. Leave the pattern out for prose.
+  For a Python file, and for a TOML or JSON file, prefer `structure` to a pattern: it reads the
+  place by what it is, so quotes, spacing and line breaks do not matter and an entry added in
+  another style is still seen. Give it instead of find/find_all, as an object:
+    {"python": "value"}     the literal a name is assigned (name the assignment: path::NAME)
+    {"python": "strings"}   every string literal in what a name is assigned (a set, a tuple, ...)
+    {"python": "keys"}      the keys of the dictionary a name is assigned
+    {"python": "names"}     the functions defined directly in the place (a module, or path::Class);
+                            add "public": true to leave out _names, "decorator": "app.route" to keep
+                            only those carrying that decorator
+    {"python": "keyword", "call": "add_argument", "with": "--mode", "keyword": "default"}
+                            the literal passed as that keyword to the one such call
+    {"data": "package.version"}   a dotted path into a .toml or .json file, named whole; a step may
+                            be * (every entry) or name[key=value]; add "keys": true for the keys
+  with "as" (string, nat, int, permille), and "sort": true for a list, as needed.
   Read the place that really determines the thing, even if it writes the value differently:
   do not settle for another line that merely happens to spell it the same way.
 
@@ -220,7 +234,7 @@ def _json_value(typ, value):
     return value
 
 
-def screen(repo, typ, at, value, quote, find=None, find_all=None, kind=None, within=None, rewrite=None):
+def screen(repo, typ, at, value, quote, find=None, find_all=None, kind=None, within=None, rewrite=None, structure=None):
     """Check one reported place against the files. Returns the place as pw-facts.json lists it,
     with the value and quote kept alongside for whoever looks at the proposal."""
     text = _part(at, repo)
@@ -228,7 +242,21 @@ def screen(repo, typ, at, value, quote, find=None, find_all=None, kind=None, wit
     if not quote or not _anchored(quote, at, repo):
         raise Refused("the quote is not in the place word for word")
     read = None
-    if find or find_all:
+    if structure:
+        if find or find_all:
+            raise Refused("give a pattern or `structure`, not both")
+        if not isinstance(structure, dict):
+            raise Refused('`structure` is an object such as {"python": "keys"} or {"data": "package.version"}')
+        try:
+            term = compute(reader(structure, at), text)
+            computed = json.loads(re.sub(r"\((-\d+)\)", r"\1", term))
+        except KernelError as e:
+            raise Refused(f"this way of reading does not work on the place: {e}")
+        same = sorted(computed) == sorted(value) if isinstance(value, list) and isinstance(computed, list) else computed == value
+        if not same:
+            raise Refused(f"read that way the place gives {json.dumps(computed, ensure_ascii=False)[:200]}, not the value you gave")
+        read = {**structure, **({"sort": True} if isinstance(computed, list) else {})}      # (a list is compared in one order, as with find_all)
+    elif find or find_all:
         try:
             read = pattern(find or None, find_all or None, kind or ("nat" if typ.endswith("Nat") else "int" if typ == "Int" else "string"),
                            sort=bool(find_all), unique=False, within=within or None, rewrite=rewrite or None)
@@ -287,12 +315,13 @@ def serve():
 
     @mcp.tool()
     def add_place(fact: str, at: str, value: str | int | list, quote: str, find: str = "", find_all: str = "", kind: str = "",
-                  some: bool = False, within: str = "", rewrite: list[str] | None = None) -> dict:
+                  some: bool = False, within: str = "", rewrite: list[str] | None = None, structure: dict | None = None) -> dict:
         """Report a further place that states a declared fact. `fact` is the fact's name exactly
         as listed, `at` the place ("path" or "path::part"), `value` what the place says as JSON
         text ("\\"fast\\"", "14", "[\\"a\\", \\"b\\"]"), `quote` the line of the place that says it,
         copied character for character. For code and configuration give `find` (or `find_all`
-        for a list) and `kind` as well, and `within` or `rewrite` where needed. Set `some` for a
+        for a list) and `kind` as well, and `within` or `rewrite` where needed; or, for Python, TOML
+        and JSON, `structure` instead of a pattern. Set `some` for a
         place that lists only some entries of a list (an example, an excerpt): `value` is then
         the entries it mentions."""
         if fact not in facts:
@@ -303,7 +332,7 @@ def serve():
         if some and not facts[fact]["type"].startswith("List "):
             return {"error": "only a list can be stated in part"}
         try:
-            place = {**screen(repo, facts[fact]["type"], at, value, quote, find, find_all, kind, within, rewrite), "some": bool(some)}
+            place = {**screen(repo, facts[fact]["type"], at, value, quote, find, find_all, kind, within, rewrite, structure), "some": bool(some)}
         except Refused as e:
             return {"error": str(e)}
         keep({"fact": fact, "place": place})
@@ -312,7 +341,7 @@ def serve():
 
     @mcp.tool()
     def replace_place(fact: str, old: str, at: str, value: str | int | list, quote: str, find: str = "", find_all: str = "",
-                      kind: str = "", within: str = "", rewrite: list[str] | None = None) -> dict:
+                      kind: str = "", within: str = "", rewrite: list[str] | None = None, structure: dict | None = None) -> dict:
         """Report where a declared place that can no longer be read is now. `old` is the place
         exactly as listed; `at`, `value`, `quote` and the pattern are as for `add_place`. `at`
         may equal `old` when only the pattern has to change."""
@@ -325,7 +354,7 @@ def serve():
             return {"error": f"{at} is already listed for this fact"}
         some = isinstance(listed[old], dict) and bool(listed[old].get("some"))
         try:
-            place = {**screen(repo, facts[fact]["type"], at, value, quote, find, find_all, kind, within, rewrite), "some": some}
+            place = {**screen(repo, facts[fact]["type"], at, value, quote, find, find_all, kind, within, rewrite, structure), "some": some}
         except Refused as e:
             return {"error": str(e)}
         keep({"replace": {"fact": fact, "old": old}, "place": place})
@@ -348,7 +377,7 @@ def serve():
     def new_fact(name: str, type: str, gloss: str, places: list[dict]) -> dict:
         """Report a thing stated in two or more places that is not declared yet. Each place is
         {"at": ..., "value": ..., "quote": ...} plus, for code and configuration, "find" or
-        "find_all" and "kind" (and "within", "rewrite" where needed), and "some": true for a place
+        "find_all" and "kind" (and "within", "rewrite" where needed) or "structure", and "some": true for a place
         that lists only some entries of a list. `value` is what that place says, as JSON; places that state different values are
         reported as they are. At least one place has to state the whole of it."""
         if name in facts:
@@ -358,13 +387,13 @@ def serve():
         kept, wrong = [], {}
         for p in places:
             try:
-                extra = set(p) - {"at", "value", "quote", "find", "find_all", "kind", "some", "within", "rewrite"}
+                extra = set(p) - {"at", "value", "quote", "find", "find_all", "kind", "some", "within", "rewrite", "structure"}
                 if extra or not {"at", "value", "quote"} <= set(p):
-                    raise Refused(f"a place has at, value, quote and optionally find, find_all, kind, within, rewrite, some; not {sorted(extra)}")
+                    raise Refused(f"a place has at, value, quote and optionally find, find_all, kind, within, rewrite, structure, some; not {sorted(extra)}")
                 if p.get("some") and not type.startswith("List "):
                     raise Refused("only a list can be stated in part")
                 kept.append({**screen(repo, type, p["at"], p["value"], p["quote"], p.get("find"), p.get("find_all"), p.get("kind"),
-                                      p.get("within"), p.get("rewrite")),
+                                      p.get("within"), p.get("rewrite"), p.get("structure")),
                              "some": bool(p.get("some"))})
             except Refused as e:
                 wrong[str(p.get("at"))] = str(e)
@@ -474,7 +503,7 @@ def repair(repo, model, facts, broken, budget):
         text += f'\n- "{f["name"]}" (type {f["type"]}): {f.get("gloss") or f["name"]}\n'
         for p in f["places"]:
             at = _at(p)
-            read = f'   pattern: {json.dumps(p["read"], ensure_ascii=False)}' if isinstance(p, dict) and p.get("read") else ""
+            read = f'   read by: {json.dumps(p["read"], ensure_ascii=False)}' if isinstance(p, dict) and p.get("read") else ""
             part = "   (states only some entries)" if isinstance(p, dict) and p.get("some") else ""
             mark = f'    CANNOT BE READ: {why[(f["name"], at)]}\n      listed as: {at}{read}{part}\n' if (f["name"], at) in why else f"    place: {at}{part}\n"
             text += mark
@@ -688,7 +717,7 @@ def main():
                 mark = "keep" if v["kept"] else "drop" if v["answered"] else "????"
                 moved = f"  (instead of {was[(name, p['at'])]})" if (name, p["at"]) in was else ""
                 print(f"   {mark} {p['at']}{moved}  {'lists in part' if p.get('some') else 'says'} {json.dumps(p['value'], ensure_ascii=False)[:100]}"
-                      + ("  (pattern)" if p["read"] else ""))
+                      + ("  (computed)" if p["read"] else ""))
                 print(f"        {p['quote'][:160]}")
                 print(f"        {v['why'][:300]}")
             if name not in declared and not _agree([p for p in places if by[(name, p['at'])]['kept'] and not p.get("some")]):

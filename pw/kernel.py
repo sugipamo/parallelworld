@@ -16,6 +16,8 @@ The record is one JSON object per line, appended and never rewritten. What in it
 again is not believed: patterns are re-run at every check, proofs with `verify`.
 """
 import ast
+import textwrap
+import tomllib
 import fcntl
 import hashlib
 import json
@@ -180,9 +182,176 @@ def write_pattern(rd, text, term):
     return new
 
 
-# How a computed place is read, by the kind of description it carries. One kind so far; a kind
-# that looks at syntax rather than text would be added here, and nowhere else.
-READERS = {"pattern": _read_pattern}
+def _listed(rd, items):
+    """Values taken from a parsed file, as a Lean term: one value, or a list."""
+    def term(v):
+        if rd["as"] == "string":
+            if not isinstance(v, str):
+                raise KernelError(f"{v!r} is not a string")
+            return _term("string", v)
+        if isinstance(v, bool) or not isinstance(v, (int, float, str)):
+            raise KernelError(f"{v!r} is not a {rd['as']}")
+        return _term(rd["as"], str(v))
+    if not isinstance(items, list):
+        return term(items)[1]
+    if not items:
+        raise KernelError("nothing is found here; a list has to have at least one entry")
+    values = [term(v) for v in items]
+    if rd.get("unique"):
+        values = list({v[1]: v for v in values}.values())
+    if rd.get("sort"):
+        values.sort(key=lambda v: v[0])
+    return "[" + ", ".join(v[1] for v in values) + "]"
+
+
+def structure(python=None, data=None, kind="string", sort=False, unique=False, keys=False, public=False, decorator=None,
+              call=None, with_=None, keyword=None, fmt=None):
+    """A way to read a place by what it is, not by how it is spelled: the syntax of a piece of
+    Python, or a path into a TOML or JSON file. Quotes, spacing, line breaks, comments and the
+    order of unrelated things do not matter to it, and an entry added in another style is seen.
+
+      python  what to take from the place (a file, or the definition `path::name` names):
+                "value"    the literal a name is assigned: "x", 14, ["a", "b"]
+                "strings"  every string literal in what a name is assigned: {"a", "b"}, frozenset({...})
+                "keys"     the keys of the dictionary a name is assigned
+                "names"    the functions defined directly in the place (a module, a class);
+                           `public` leaves out names that start with an underscore, `decorator`
+                           keeps those carrying that decorator ("mcp.tool")
+                "keyword"  the literal passed as `keyword` to the one call of `call` that has
+                           `with` among its positional arguments: the default of --model
+      data    a dotted path into a .toml or .json file: "package.version". A step may be `*`
+              (every entry of a table or array) or `name[key=value]` (the entries of an array of
+              tables whose `key` is `value`). `keys` takes the keys found there, not the values.
+      kind, sort, unique   as for `pattern`
+
+    Nothing is evaluated: only literals are taken.
+    """
+    if (python is None) == (data is None):
+        raise KernelError("give exactly one of python and data")
+    if kind not in _KINDS:
+        raise KernelError(f"a value is one of {sorted(_KINDS)}, not {kind!r}")
+    out = {"as": kind, "sort": bool(sort), "unique": bool(unique)}
+    if python is not None:
+        if python not in ("value", "strings", "keys", "names", "keyword"):
+            raise KernelError(f'"python" is one of value, strings, keys, names, keyword; not {python!r}')
+        out.update(language="python", take=python)
+        if python == "names":
+            out.update(public=bool(public), **({"decorator": str(decorator)} if decorator else {}))
+        elif public or decorator:
+            raise KernelError('"public" and "decorator" go with "python": "names"')
+        if python == "keyword":
+            if not (isinstance(call, str) and isinstance(keyword, str)):
+                raise KernelError('"python": "keyword" needs "call" and "keyword" (and "with", to say which call)')
+            out.update(call=call, keyword=keyword, **({"with": with_} if with_ is not None else {}))
+        elif call or keyword or with_ is not None:
+            raise KernelError('"call", "with" and "keyword" go with "python": "keyword"')
+    else:
+        if fmt not in ("toml", "json"):
+            raise KernelError('"data" reads a .toml or .json file (or a .lock file written as TOML)')
+        if not isinstance(data, str) or not data or any(not re.fullmatch(r"\*|[^.\[\]=*]+(\[[^.\[\]=*]+=[^.\[\]]*\])?", step) for step in data.split(".")):
+            raise KernelError(f'"data" is a dotted path such as package.version, tasks.*, package[name=x].version; not {data!r}')
+        out.update(language="data", format=fmt, path=data, keys=bool(keys))
+    return out
+
+
+def _read_python(rd, text):
+    try:
+        body = ast.parse(textwrap.dedent(text)).body
+    except SyntaxError as e:
+        raise KernelError(f"the place is not Python that parses: {e.msg}")
+    one = body[0] if len(body) == 1 else None
+    assigned = one.value if isinstance(one, (ast.Assign, ast.AnnAssign)) else None
+    take = rd["take"]
+
+    def literal(node, what):
+        try:
+            v = ast.literal_eval(node)
+        except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
+            raise KernelError(f"{what} is not written out as a literal")
+        return sorted(v, key=repr) if isinstance(v, (set, frozenset)) else list(v) if isinstance(v, tuple) else v
+
+    if take == "names":
+        inside = one.body if isinstance(one, ast.ClassDef) else body
+        dotted = lambda d: ast.unparse(d.func if isinstance(d, ast.Call) else d)
+        return _listed(rd, [n.name for n in inside if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                            and not (rd.get("public") and n.name.startswith("_"))
+                            and (not rd.get("decorator") or any(dotted(d) == rd["decorator"] for d in n.decorator_list))])
+    if take == "keyword":
+        calls = [c for n in body for c in ast.walk(n) if isinstance(c, ast.Call)
+                 and (getattr(c.func, "attr", None) or getattr(c.func, "id", None)) == rd["call"]
+                 and ("with" not in rd or any(isinstance(a, ast.Constant) and a.value == rd["with"] for a in c.args))]
+        if len(calls) != 1:
+            raise KernelError(f"{len(calls)} calls of {rd['call']} fit here; it has to be exactly one")
+        given = [k.value for k in calls[0].keywords if k.arg == rd["keyword"]]
+        if len(given) != 1:
+            raise KernelError(f"the call does not pass {rd['keyword']}")
+        return _listed(rd, literal(given[0], f"{rd['keyword']} of {rd['call']}"))
+    if assigned is None:
+        raise KernelError('the place is not one assignment; name it as path::NAME')
+    if take == "value":
+        return _listed(rd, literal(assigned, "what is assigned"))
+    if take == "keys":
+        if not isinstance(assigned, ast.Dict) or any(k is None for k in assigned.keys):
+            raise KernelError("what is assigned is not a dictionary written out")
+        return _listed(rd, [literal(k, "a key") for k in assigned.keys])
+    return _listed(rd, [n.value for n in ast.walk(assigned) if isinstance(n, ast.Constant) and isinstance(n.value, str)])      # strings
+
+
+def _read_data(rd, text):
+    try:
+        nodes = [tomllib.loads(text) if rd["format"] == "toml" else json.loads(text)]
+    except (ValueError, tomllib.TOMLDecodeError) as e:
+        raise KernelError(f"the file does not parse as {rd['format']}: {e}")
+    for step in rd["path"].split("."):
+        name, _, cond = step.partition("[")
+        found = []
+        for n in nodes:
+            if name == "*":
+                found += list(n.values()) if isinstance(n, dict) else list(n) if isinstance(n, list) else []
+            elif isinstance(n, dict) and name in n:
+                found.append(n[name])
+        if cond:
+            key, _, want = cond.rstrip("]").partition("=")
+            found = [x for n in found for x in (n if isinstance(n, list) else [n]) if isinstance(x, dict) and str(x.get(key)) == want]
+        nodes = found
+    many = "*" in rd["path"].split(".") or rd["keys"]
+    if rd["keys"]:
+        if not nodes or not all(isinstance(n, dict) for n in nodes):
+            raise KernelError(f"{rd['path']} is not a table here")
+        return _listed(rd, [k for n in nodes for k in n])
+    if not nodes:
+        raise KernelError(f"{rd['path']} is not in the file")
+    if many:
+        return _listed(rd, [x for n in nodes for x in (n if isinstance(n, list) else [n])])
+    if len(nodes) != 1:
+        raise KernelError(f"{rd['path']} is found {len(nodes)} times; it has to be exactly one")
+    return _listed(rd, nodes[0])
+
+
+# How a computed place is read, by the kind of description it carries: by a pattern over its
+# text, or by its structure (the syntax of Python, a path into TOML or JSON).
+READERS = {"pattern": _read_pattern, "python": _read_python, "data": _read_data}
+
+
+def reader(read, at):
+    """The way of reading a place that its declaration describes ("read" in pw-facts.json)."""
+    r = dict(read)
+    if "python" in r or "data" in r:
+        extra = set(r) - {"python", "data", "as", "sort", "unique", "keys", "public", "decorator", "call", "with", "keyword"}
+        if extra:
+            raise KernelError(f"{at}: unknown keys in \"read\": {sorted(extra)}")
+        ext = os.path.splitext(at.partition("::")[0])[1]
+        if "python" in r and ext != ".py":
+            raise KernelError(f'{at}: "python" reads a .py file')
+        if "data" in r and "::" in at:
+            raise KernelError(f'{at}: "data" reads a whole file; put the path into "data", not after ::')
+        return structure(r.get("python"), r.get("data"), r.get("as", "string"), r.get("sort", False), r.get("unique", False),
+                         r.get("keys", False), r.get("public", False), r.get("decorator"), r.get("call"), r.get("with"), r.get("keyword"),
+                         {".toml": "toml", ".lock": "toml", ".json": "json"}.get(ext))
+    extra = set(r) - {"find", "find_all", "as", "sort", "unique", "within", "rewrite"}
+    if extra:
+        raise KernelError(f"{at}: unknown keys in \"read\": {sorted(extra)}")
+    return pattern(r.get("find"), r.get("find_all"), r.get("as", "string"), r.get("sort", False), r.get("unique", False), r.get("within"), r.get("rewrite"))
 
 
 def compute(rd, text):
@@ -1003,13 +1172,10 @@ class Kernel:
                 elif set(p) == {"at", "some"} and p["some"] is True:
                     places.append({"at": p["at"], "some": True})
                 elif "read" in p and set(p) in ({"at", "read"}, {"at", "read", "some"}) and p.get("some", True) is True:
-                    r = p["read"]
-                    extra = set(r) - {"find", "find_all", "as", "sort", "unique", "within", "rewrite"}
-                    if extra:
-                        raise KernelError(f"{d['name']}, {p['at']}: unknown keys in \"read\": {sorted(extra)}")
-                    places.append({"at": p["at"], "some": p.get("some", False),
-                                   "reader": pattern(r.get("find"), r.get("find_all"), r.get("as", "string"),
-                                                     r.get("sort", False), r.get("unique", False), r.get("within"), r.get("rewrite"))})
+                    try:
+                        places.append({"at": p["at"], "some": p.get("some", False), "reader": reader(p["read"], p["at"])})
+                    except KernelError as e:
+                        raise KernelError(f"{d['name']}: {e}")
                 else:
                     raise KernelError(f"{d['name']}: a place is a string, or {{\"at\": ..., \"read\": {{...}}}}, "
                                       "either with \"some\": true if it states only some entries of a list")

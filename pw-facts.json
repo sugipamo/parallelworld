@@ -8,8 +8,7 @@
    {
     "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
     "read": {
-     "find_all": "\"([^\"]+)\"",
-     "as": "string",
+     "python": "strings",
      "sort": true
     }
    }
@@ -24,8 +23,8 @@
    {
     "at": "pw/mcp_server.py",
     "read": {
-     "find_all": "@mcp\\.tool\\(\\)\\ndef (\\w+)\\(",
-     "as": "string",
+     "python": "names",
+     "decorator": "mcp.tool",
      "sort": true
     }
    }
@@ -60,28 +59,25 @@
    {
     "at": "pw/kernel.py::CONDITIONS",
     "read": {
-     "as": "string",
-     "find_all": "^    \"([^\"]+)\": \"",
+     "python": "keys",
      "sort": true
     }
    },
    "docs/spec.md::読みが成り立つ条件",
    {
-    "at": "pw-rules.json::a reading stands if any of",
+    "at": "pw-rules.json",
     "some": true,
     "read": {
-     "find_all": "\"([^\"]+)\"",
-     "as": "string",
+     "data": "a reading stands if any of.*",
      "sort": true,
      "unique": true
     }
    },
    {
-    "at": "pw/rules.json::a reading stands if any of",
+    "at": "pw/rules.json",
     "some": true,
     "read": {
-     "find_all": "\"([^\"]+)\"",
-     "as": "string",
+     "data": "a reading stands if any of.*",
      "sort": true,
      "unique": true
     }
@@ -94,10 +90,10 @@
   "gloss": "the lowest 95% bound, in thousandths, on the rate at which a blind reader reads the altered value, for that reader to count as measured",
   "places": [
    {
-    "at": "pw-rules.json::a blind reader counts if measured.read at least",
+    "at": "pw-rules.json",
     "read": {
-     "as": "permille",
-     "find": "([\\d.]+)"
+     "data": "a blind reader counts if measured.read at least",
+     "as": "permille"
     }
    },
    {
@@ -115,10 +111,10 @@
   "gloss": "the highest 95% bound, in thousandths, on the rate at which a blind reader is stuck on the original value, for that reader to count as measured",
   "places": [
    {
-    "at": "pw-rules.json::a blind reader counts if measured.stuck at most",
+    "at": "pw-rules.json",
     "read": {
-     "as": "permille",
-     "find": "([\\d.]+)"
+     "data": "a blind reader counts if measured.stuck at most",
+     "as": "permille"
     }
    },
    {
@@ -138,15 +134,19 @@
    {
     "at": "pw/maintain.py::main",
     "read": {
-     "as": "string",
-     "find": "\"--model\", default=\"([\\w.-]+)\""
+     "python": "keyword",
+     "call": "add_argument",
+     "with": "--model",
+     "keyword": "default"
     }
    },
    {
     "at": "pw/calibrate.py::main",
     "read": {
-     "as": "string",
-     "find": "\"--model\", default=\"([\\w.-]+)\""
+     "python": "keyword",
+     "call": "add_argument",
+     "with": "--model",
+     "keyword": "default"
     }
    }
   ]
@@ -157,10 +157,10 @@
   "gloss": "the highest 95% bound, in thousandths, on the rate at which a blind reader reads a value off a place that is about another thing, for that reader to count as measured",
   "places": [
    {
-    "at": "pw-rules.json::a blind reader counts if measured.takes another thing for it at most",
+    "at": "pw-rules.json",
     "read": {
-     "as": "permille",
-     "find": "([\\d.]+)"
+     "data": "a blind reader counts if measured.takes another thing for it at most",
+     "as": "permille"
     }
    },
    {

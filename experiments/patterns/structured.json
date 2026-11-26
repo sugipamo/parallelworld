@@ -1,0 +1,140 @@
+{
+ "parallelworld|pw/lean_gate.py::ALLOWED_AXIOMS": {
+  "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+  "read": {
+   "python": "strings",
+   "sort": true
+  }
+ },
+ "parallelworld|pw/mcp_server.py": {
+  "at": "pw/mcp_server.py",
+  "read": {
+   "python": "names",
+   "decorator": "mcp.tool",
+   "sort": true
+  }
+ },
+ "parallelworld|pw/kernel.py::CONDITIONS": {
+  "at": "pw/kernel.py::CONDITIONS",
+  "read": {
+   "python": "keys",
+   "sort": true
+  }
+ },
+ "parallelworld|pw-rules.json::a reading stands if any of": {
+  "at": "pw-rules.json",
+  "read": {
+   "data": "a reading stands if any of.*",
+   "sort": true,
+   "unique": true
+  }
+ },
+ "parallelworld|pw/rules.json::a reading stands if any of": {
+  "at": "pw/rules.json",
+  "read": {
+   "data": "a reading stands if any of.*",
+   "sort": true,
+   "unique": true
+  }
+ },
+ "parallelworld|pw-rules.json::a blind reader counts if measured.read at least": {
+  "at": "pw-rules.json",
+  "read": {
+   "data": "a blind reader counts if measured.read at least",
+   "as": "permille"
+  }
+ },
+ "parallelworld|pw-rules.json::a blind reader counts if measured.stuck at most": {
+  "at": "pw-rules.json",
+  "read": {
+   "data": "a blind reader counts if measured.stuck at most",
+   "as": "permille"
+  }
+ },
+ "parallelworld|pw-rules.json::a blind reader counts if measured.takes another thing for it at most": {
+  "at": "pw-rules.json",
+  "read": {
+   "data": "a blind reader counts if measured.takes another thing for it at most",
+   "as": "permille"
+  }
+ },
+ "parallelworld|pw/maintain.py::main": {
+  "at": "pw/maintain.py::main",
+  "read": {
+   "python": "keyword",
+   "call": "add_argument",
+   "with": "--model",
+   "keyword": "default"
+  }
+ },
+ "parallelworld|pw/calibrate.py::main": {
+  "at": "pw/calibrate.py::main",
+  "read": {
+   "python": "keyword",
+   "call": "add_argument",
+   "with": "--model",
+   "keyword": "default"
+  }
+ },
+ "miclow|Cargo.toml|project_version": {
+  "at": "Cargo.toml",
+  "read": {
+   "data": "package.version"
+  }
+ },
+ "miclow|python/pyproject.toml": {
+  "at": "python/pyproject.toml",
+  "read": {
+   "data": "project.version"
+  }
+ },
+ "miclow|python/miclow/__init__.py::__version__": {
+  "at": "python/miclow/__init__.py::__version__",
+  "read": {
+   "python": "value"
+  }
+ },
+ "miclow|Cargo.lock": {
+  "at": "Cargo.lock",
+  "read": {
+   "data": "package[name=miclow].version"
+  }
+ },
+ "miclow|Cargo.toml|license": {
+  "at": "Cargo.toml",
+  "read": {
+   "data": "package.license"
+  }
+ },
+ "miclow|examples/config.toml": {
+  "at": "examples/config.toml",
+  "read": {
+   "data": "tasks.*",
+   "keys": true,
+   "sort": true,
+   "unique": true
+  }
+ },
+ "miclow|python/miclow/__init__.py::MiclowClient": {
+  "at": "python/miclow/__init__.py::MiclowClient",
+  "read": {
+   "python": "names",
+   "public": true,
+   "sort": true
+  }
+ },
+ "miclow|Cargo.toml|repository URL": {
+  "at": "Cargo.toml",
+  "read": {
+   "data": "package.repository"
+  }
+ },
+ "miclow|python/miclow/__init__.py|Python module-level functions": {
+  "at": "python/miclow/__init__.py",
+  "read": {
+   "python": "names",
+   "public": true,
+   "sort": true
+  }
+ }
+}

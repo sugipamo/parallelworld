@@ -353,3 +353,41 @@ def test_a_reader_states_a_value_not_a_computation(tmp_path):
                        ("List String", '"a"'), ("List Nat", '[1, "2"]'), ("Int", "(-3) + 1")]:
         with pytest.raises(KernelError):
             says(typ, value)
+
+
+def test_a_place_can_be_read_by_its_structure():
+    """By the syntax of Python or a path into TOML or JSON: spelling does not matter, an entry
+    added in another style is seen, and what is not written out as a literal is not guessed."""
+    from pw.kernel import compute, reader
+    py = lambda read, text: compute(reader(read, "m.py"), text)
+    assert py({"python": "value"}, 'MODE = "fast"') == py({"python": "value"}, "MODE='fast'  # x") == '"fast"'
+    assert py({"python": "value", "as": "nat"}, "LIMIT: int = 14") == "14"
+    assert py({"python": "strings", "sort": True}, 'A = frozenset({"b",\n  \'a\'})') == '["a", "b"]'
+    assert py({"python": "keys", "sort": True}, 'D = {"b": 1,\n     \'a\':2, "c" : 3}') == '["a", "b", "c"]'
+    src = "@mcp.tool()\ndef read(x): pass\n\n\n@mcp.tool()\nasync def decline(x): pass\n\ndef _helper(): pass\ndef other(): pass\n"
+    assert py({"python": "names", "decorator": "mcp.tool", "sort": True}, src) == '["decline", "read"]'
+    assert py({"python": "names", "public": True, "sort": True}, src) == '["decline", "other", "read"]'
+    assert py({"python": "names", "public": True}, "class C:\n    def a(self): pass\n    def _b(self): pass\n") == '["a"]'
+    call = {"python": "keyword", "call": "add_argument", "with": "--model", "keyword": "default"}
+    assert py(call, 'ap.add_argument("--n", default=3)\nap.add_argument(\n  "--model",\n  default = \'opus\')') == '"opus"'
+    for read, text in [({"python": "value"}, "MODE = DEFAULT"), ({"python": "value"}, 'A = 1\nB = 2'), (call, 'ap.add_argument("--model", default=M)'),
+                       (call, 'ap.add_argument("--model")'), ({"python": "strings"}, "A = frozenset()"), ({"python": "keys"}, "D = dict(a=1)"),
+                       ({"python": "value"}, "def f(:")]:
+        with pytest.raises(KernelError):
+            py(read, text)
+
+    toml = '[package]\nname = "x"\nversion = "0.1.0"\n\n[[tasks]]\nname = "a"\ncommand = "c"\n\n[[tasks]]\nname = "b"\nargs = []\n'
+    data = lambda read, text, at="f.toml": compute(reader(read, at), text)
+    assert data({"data": "package.version"}, toml) == '"0.1.0"'
+    assert data({"data": "tasks.*", "keys": True, "sort": True, "unique": True}, toml) == '["args", "command", "name"]'
+    assert data({"data": "tasks[name=b].name"}, toml) == '"b"' and data({"data": "tasks.*.name"}, toml) == '["a", "b"]'
+    js = '{"bar": {"read at least": 0.85}, "rules": [["a", "b"], ["b"]]}'
+    assert data({"data": "bar.read at least", "as": "permille"}, js, "r.json") == "850"
+    assert data({"data": "rules.*", "sort": True, "unique": True}, js, "r.json") == '["a", "b"]'
+    for read, text in [({"data": "package.license"}, toml), ({"data": "tasks.name"}, toml), ({"data": "package", "keys": True}, "x = ["), ({"data": "package.version", "as": "nat"}, toml)]:
+        with pytest.raises(KernelError):
+            data(read, text)
+    for read, at in [({"data": "a.b"}, "f.yaml"), ({"python": "value"}, "f.toml"), ({"data": "a"}, "f.json::a"), ({"python": "nope"}, "f.py"),
+                     ({"python": "value", "find": "x"}, "f.py"), ({"data": "a..b"}, "f.toml"), ({"python": "value", "public": True}, "f.py")]:
+        with pytest.raises(KernelError):
+            reader(read, at)
