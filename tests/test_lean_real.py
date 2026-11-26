@@ -11,6 +11,13 @@ from pw.lean_gate import LeanGate
 LAKE = os.environ.get("PW_LAKE") or shutil.which("lake")
 pytestmark = pytest.mark.skipif(not LAKE, reason="Lean not installed (set PW_LAKE)")
 
+@pytest.fixture(autouse=True)
+def every_comparison_by_lean(monkeypatch):
+    """These tests are about what Lean is asked and what is done with its answers: here every
+    comparison is put to it. (By default only what has to be worked out is; tests/test_plain.py.)"""
+    monkeypatch.setattr(Kernel, "compare", "always")
+
+
 COMM = "∀ a b : Nat, a + b = b + a"
 P = lambda *texts: [("Prop", t) for t in texts]
 
@@ -780,21 +787,21 @@ def test_checking_does_not_write_to_the_record(tmp_path, capsys):
         {"at": "k.py", "read": {"find": r"= (\d+)", "as": "nat"}},
         {"at": "doc.md::Limits", "read": {"find": r"most (\d+)", "as": "nat"}}]}]))
 
-    assert check.run(repo, record, unconfirmed="warn") is False       # (no blind reader has seen the patterns: a warning here)
+    assert check.run(repo, record, unconfirmed="warn", lean="always") is False       # (no blind reader has seen the patterns: a warning here)
     assert "WARN current" in capsys.readouterr().out
     assert not os.path.exists(record)                                 # not even created
 
     (tmp_path / "k.py").write_text("LIMIT = 15\n")                    # changed on purpose, to see the check fail
-    assert check.run(repo, record, unconfirmed="warn") is True
+    assert check.run(repo, record, unconfirmed="warn", lean="always") is True
     assert "FAIL violated" in capsys.readouterr().out and not os.path.exists(record)
 
-    assert check.run(repo, record, unconfirmed="warn", keep=True) is True          # asked to record: it does
+    assert check.run(repo, record, unconfirmed="warn", keep=True, lean="always") is True          # asked to record: it does
     kept = open(record).read()
     assert {json.loads(l)["type"] for l in kept.splitlines()} == {"claim", "reading", "agree", "proof"}
     assert all(json.loads(l)["actor"] == "check" for l in kept.splitlines())
 
     (tmp_path / "k.py").write_text("LIMIT = 16\n")
-    assert check.run(repo, record, verify=True, unconfirmed="warn") is True
+    assert check.run(repo, record, verify=True, unconfirmed="warn", lean="always") is True
     out = capsys.readouterr().out
     assert open(record).read() == kept                                # an existing record is read, and left as it was
     assert "1 recorded proof(s) verified again, 0 refused" in out     # the record's proof, not the one this check just made
@@ -804,7 +811,7 @@ def test_checking_does_not_write_to_the_record(tmp_path, capsys):
     fake = {"ts": 0, "actor": "x", "type": "proof", "relation": "holds", "args": [f], "proof": "decide", "proof_sha": "x", "axioms": [], "gamma": "x"}
     open(record, "a").write(json.dumps(fake) + "\n")
     forged = open(record).read()
-    assert check.run(repo, record, verify=True, unconfirmed="warn") is True
+    assert check.run(repo, record, verify=True, unconfirmed="warn", lean="always") is True
     assert "1 recorded proof(s) verified again, 1 refused" in capsys.readouterr().out and open(record).read() == forged
 
 

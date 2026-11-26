@@ -19,8 +19,10 @@ def k(tmp_path):
     return Kernel(str(tmp_path / "e.db"), gate=FakeGate())
 
 
-def test_gate_is_the_only_way_in(tmp_path):
-    """Without Lean nothing is accepted as agreeing or differing; and only what Lean settled is recorded."""
+def test_gate_is_the_only_way_in(tmp_path, monkeypatch):
+    """Where every comparison is put to Lean: without it nothing is accepted as agreeing or
+    differing, and only what Lean settled is recorded."""
+    monkeypatch.setattr(Kernel, "compare", "always")
     (tmp_path / "a.txt").write_text("v = 1\n")
     (tmp_path / "b.txt").write_text("v = 1\n")
     from pw.kernel import pattern

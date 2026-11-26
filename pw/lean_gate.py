@@ -156,6 +156,13 @@ class LeanGate:
         _READY[(lake, home)] = p.stdout.strip()
         return lake, home
 
+    def available(self):
+        try:
+            self._lake()
+            return True
+        except GateError:
+            return False
+
     def usable(self):
         """Raise GateError, saying why, if Lean cannot be run here. Whether values agree is settled
         by Lean and by nothing else, so without it nothing can be checked."""

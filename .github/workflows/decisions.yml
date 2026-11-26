@@ -38,6 +38,7 @@ jobs:
         if: always()
         run: pip install --require-hashes -r requirements-test.txt
 
+      # (this repository declares a definition, so the step above has fetched Lean; the tests need it too)
       - name: Tests
         if: always()
         run: python -m pytest -q tests

@@ -72,6 +72,9 @@ def needs(d):
     return d["state"]
 
 
+COMPARE = "needed"      # --lean: when Lean is asked (see Kernel.compare)
+
+
 def hold(tree, facts, record, lean_dir, read=None, budget=3.0):
     """The facts of `facts` held against the files in `tree`. Without `read`, on a copy of
     `record`; with it, on `record` itself, which takes the readings a blind reader makes."""
@@ -83,6 +86,7 @@ def hold(tree, facts, record, lean_dir, read=None, budget=3.0):
             if record and os.path.exists(record):
                 shutil.copy(record, scratch)
         kernel = Kernel(scratch, gate=LeanGate(lean_dir), actor="history")
+        kernel.compare = COMPARE
         kernel.sync_facts(facts)
         report, sessions = kernel.recheck(tree), []
         if read:
@@ -190,10 +194,14 @@ def main():
     ap.add_argument("--rev", default="HEAD")
     ap.add_argument("--facts", help="late: the declaration to hold against every commit (default: the one in --repo's working tree)")
     ap.add_argument("--record", help="late: the record whose readings count (default: the one in --repo's working tree)")
+    ap.add_argument("--lean", choices=("needed", "always"), default="needed",
+                    help="carried, late: put every comparison to Lean, or only what has to be worked out")
     ap.add_argument("--read", metavar="MODEL", help="late: have this model read, blind, each place whose content nobody has read")
     ap.add_argument("--lean-dir", default=LEAN_DIR)
     ap.add_argument("--out")
     args = ap.parse_args()
+    global COMPARE
+    COMPARE = args.lean
     repo = os.path.abspath(args.repo)
     if args.mode == "own":
         rows = replay(repo, args.rev, args.lean_dir, own=True)

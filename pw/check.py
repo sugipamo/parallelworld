@@ -88,7 +88,7 @@ def show(report, unconfirmed="fail"):
         print(f"{mark(ok, agree)} {d['state']:<15} {d['h']} fact: {d['fact']}")
         aside = [i for i in d.get("instructions", []) if "set aside" in i]
         if aside:
-            print("       people's instructions about this cannot both hold (verified by Lean). They are set aside until one is withdrawn:")
+            print("       people's instructions about this cannot both hold. They are set aside until one is withdrawn:")
             for i in aside:
                 words = f'  "{i["said"][:120]}"' if i.get("said") else ""
                 print(f"          {i['by']}{' (' + i['on'] + ')' if i.get('on') else ''}: {i['is'][:100]}{words}")
@@ -133,11 +133,11 @@ def show(report, unconfirmed="fail"):
         elif d["state"] == "conflict":
             print("       which instruction holds is for the people who gave them: take the other out of pw-facts.json")
         elif d["state"] == "violated" and any(p.get("against") for p in d["places"]):
-            print("       a place does not say what was laid down (verified by Lean): change the place, or have the instruction withdrawn")
+            print("       a place does not say what was laid down: change the place, or have the instruction withdrawn")
         elif d["state"] == "violated" and any(p.get("not in the whole") for p in d["places"]):
-            print("       a place lists something the others do not have (verified by Lean); which one is right is for a person to say")
+            print("       a place lists something the others do not have; which one is right is for a person to say")
         elif d["state"] == "violated":
-            print("       the places do not say the same thing (verified by Lean); which one is right is for a person to say")
+            print("       the places do not say the same thing; which one is right is for a person to say")
         elif d["state"] == "stale" and any(u.get("broken") for u in d["unread"]):
             print("       a declared place cannot be read as declared any more: python -m pw.discover (it looks for where the statement went)")
         elif d["state"] == "stale":
@@ -165,14 +165,28 @@ def main():
                     help="run every recorded proof through Lean again instead of believing the record (use this in CI)")
     ap.add_argument("--unconfirmed", choices=("fail", "warn"), default="fail",
                     help="what to do about facts whose places agree but that rest on a reading that does not stand by the rules")
+    ap.add_argument("--lean", choices=("needed", "always"), default="needed",
+                    help="when Lean is asked: only where a value has to be worked out (a definition), or for every comparison, with a recorded proof")
+    ap.add_argument("--needs-lean", action="store_true",
+                    help="only print yes or no: does anything declared here need Lean? (for a CI job, to know whether to fetch it)")
     ap.add_argument("--record", action="store_true",
                     help="append what this check computed and what Lean proved to the project's record (by default the record is only read)")
     args = ap.parse_args()
     repo = os.path.abspath(args.repo)
-    sys.exit(1 if run(repo, args.db or os.path.join(repo, LOG), args.lean_dir, args.verify, args.unconfirmed, args.record) else 0)
+    if args.needs_lean:
+        work = tempfile.mkdtemp(prefix="pw-check-")
+        try:
+            kernel = Kernel(os.path.join(work, LOG))                 # (no gate: only the declaration is looked at)
+            kernel.compare = args.lean
+            kernel.sync_facts(os.path.join(repo, FACTS))
+            print("yes" if kernel.needs_lean() else "no")
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+        return
+    sys.exit(1 if run(repo, args.db or os.path.join(repo, LOG), args.lean_dir, args.verify, args.unconfirmed, args.record, args.lean) else 0)
 
 
-def run(repo, record, lean_dir=LEAN_DIR, verify=False, unconfirmed="fail", keep=False):
+def run(repo, record, lean_dir=LEAN_DIR, verify=False, unconfirmed="fail", keep=False, lean="needed"):
     """Hold the facts of `repo` against its files and print where they stand. True if anything needs attention.
 
     Unless `keep`, the record is copied and the copy is what gets appended to.
@@ -185,12 +199,15 @@ def run(repo, record, lean_dir=LEAN_DIR, verify=False, unconfirmed="fail", keep=
         record = os.path.join(scratch, LOG)
     try:
         kernel = Kernel(record, gate=LeanGate(lean_dir), actor="check")
+        kernel.compare = lean
         before = kernel.state()
         recorded = list(before.proofs)              # what the project's record claims Lean proved, before this check adds anything
         ways = {(h, at, json.dumps(before.models[m]["binding"], sort_keys=True)) for h, f in before.facts.items()
                 for at, m in f["readings"] if before.models[m]["binding"]}
-        kernel.gate.usable()
         kernel.sync_facts(os.path.join(repo, FACTS))
+        with_lean = kernel.needs_lean()
+        if with_lean:
+            kernel.gate.usable()
         report = kernel.recheck(repo)
         bad = show(report, unconfirmed)
         if not keep:
@@ -207,7 +224,11 @@ def run(repo, record, lean_dir=LEAN_DIR, verify=False, unconfirmed="fail", keep=
                 print(f"note: the way {', '.join(fresh)[:300]} {'is' if len(fresh) == 1 else 'are'} read is not in the record yet. "
                       "It stands for the text as it is; to have it stand when the text changes, run `python -m pw.maintain` "
                       "(or `python -m pw.check --record`) now and commit pw-log.jsonl. No reader is called for that.")
-        if verify:
+        if verify and not with_lean and not kernel.gate.available():
+            # Nothing here is judged by a proof: the values are written out and compared as they stand.
+            # What the record says Lean once proved is not used, so it does not have to be run again.
+            print(f"{len(recorded)} recorded proof(s) not run again: Lean is not here, and nothing declared needs it")
+        elif verify:
             refused = kernel.verify(recorded)
             for r in refused:
                 print(f"FAIL the record contains a proof Lean does not accept: {r['relation']} {r['args']}\n       {r['reason'][:200]}")

@@ -137,8 +137,9 @@ def main():
     args = ap.parse_args()
     repo = os.path.abspath(args.repo)
     kernel = Kernel(os.path.join(repo, LOG), gate=LeanGate(args.lean_dir), actor="maintain")
-    kernel.gate.usable()
     kernel.sync_facts(os.path.join(repo, FACTS))
+    if kernel.needs_lean():
+        kernel.gate.usable()
     report = kernel.recheck(repo)
 
     def needs_agent(d, u):

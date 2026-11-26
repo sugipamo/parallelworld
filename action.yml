@@ -1,7 +1,8 @@
 name: parallelworld check
 description: >-
   Hold a repository's declared facts (pw-facts.json) against its files as they are checked out:
-  python -m pw.check, with the Python packages and Lean this needs. No agent is used.
+  python -m pw.check, with the Python packages it needs, and Lean if the declaration needs it.
+  No agent is used.
 
 # For another repository's workflow. Pin this action by commit; that one commit then fixes
 # everything else: the checker, its Python packages (by hash, requirements-ci.txt) and Lean
@@ -33,11 +34,22 @@ runs:
       shell: bash
       run: pip install --require-hashes -r "$GITHUB_ACTION_PATH/requirements-ci.txt"
 
-    - name: Lean, by checksum
+    # Written-out values are compared as they stand. Lean is fetched only where something has
+    # to be worked out: a fact defined from other facts, or every comparison if `args` asks for it.
+    - name: Lean, by checksum, if the declaration needs it
       shell: bash
+      env:
+        PYTHONPATH: ${{ github.action_path }}
+        PW_REPO: ${{ inputs.repo }}
+        PW_ARGS: ${{ inputs.args }}
       run: |
-        bin=$("$GITHUB_ACTION_PATH/ci/lean.sh" "$RUNNER_TEMP/parallelworld-lean")
-        echo "$bin" >> "$GITHUB_PATH"
+        needed=$(python -m pw.check --repo "$PW_REPO" --needs-lean)
+        case " $PW_ARGS " in *" --lean always "*) needed=yes ;; esac
+        echo "Lean needed: $needed"
+        if [ "$needed" = yes ]; then
+          bin=$("$GITHUB_ACTION_PATH/ci/lean.sh" "$RUNNER_TEMP/parallelworld-lean")
+          echo "$bin" >> "$GITHUB_PATH"
+        fi
 
     - name: Facts, held against the files
       shell: bash

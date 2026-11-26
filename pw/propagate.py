@@ -423,7 +423,7 @@ def main():
             mine = next(i for i in r["instructions"] if i["by"] == SUPPOSED)
             others = [i for i in r["instructions"] if i["by"] != SUPPOSED]
             print(f"{r['fact']}: supposing {mine['is']} is against what was laid down by "
-                  + ", ".join(f"{i['by']} ({i['is']})" for i in others) + " (verified by Lean). Nothing is written for it.")
+                  + ", ".join(f"{i['by']} ({i['is']})" for i in others) + ". Nothing is written for it.")
         else:
             print(f"{r['fact']}: the instructions of {', '.join(i['by'] for i in r['instructions'])} cannot both hold. Nothing is written for it.")
     for u in got["unread"]:

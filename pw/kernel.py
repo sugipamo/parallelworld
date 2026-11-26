@@ -606,6 +606,14 @@ def _literal(typ, text):
     return isinstance(value, list) and all(map(one, value)) if typ.startswith("List ") else one(value)
 
 
+def _written(typ, text):
+    """The value a written-out term stands for: (True, value), or (False, None) if the term is
+    not a plain value of a type that is written the same way in JSON and in Lean."""
+    if not _json_like(typ) or not _literal(typ, text):
+        return False, None
+    return True, json.loads(re.sub(r"\((-\d+)\)", r"\1", text) if typ.endswith("Int") else text)
+
+
 def unreadable(subject, cwd):
     """Why a declared place cannot be found as named, or None. `locate` falls back to the whole
     file when a part is not there; for a place someone declared, that fallback would quietly
@@ -752,6 +760,13 @@ class State:
 
 
 class Kernel:
+    # When Lean is asked. Two written-out values (numbers, strings, lists of them) are the same
+    # or not on their face: comparing them takes no proof, and with "needed" none is asked for.
+    # Lean is needed where a value has to be worked out: a definition, a type that is not
+    # written out as JSON, a term in an old record that is not a plain value. With "always",
+    # every comparison is put to Lean as a proposition and recorded with its proof.
+    compare = "needed"
+
     def __init__(self, db_path, gate=None, actor=None):
         self.db_path = db_path
         self.gate = gate
@@ -854,7 +869,7 @@ class Kernel:
                 raise KernelError(f'{name}: an instruction is {{"is": value, "by": who}}, optionally with "said" and "on"')
             term = _norm(i["is"])
             self._screen(term)
-            self._well_typed((typ, term))
+            self._typed(typ, term)
             said.append({"is": term, "by": _norm(str(i["by"])), **{k: _norm(str(i[k])) for k in ("said", "on") if i.get(k)}})
         if len({(i["is"], i["by"]) for i in said}) < len(said):
             raise KernelError(f"{name}: the same instruction by the same person is listed twice")
@@ -919,8 +934,8 @@ class Kernel:
             raise KernelError(f"state the value itself, written out: a {fact['type']} such as "
                               + {"S": '"fast"', "N": "14", "I": "-3", "L": '["a", "b"] or [1, 2]'}[fact["type"][0]])
         ob = {"id": "O:" + _sha(fact["type"], obj), "type": fact["type"], "text": obj}
-        if ob["id"] not in st.objs:                  # (a value read before was put to Lean then; what rests on it is settled by a proof either way)
-            self._well_typed((fact["type"], obj))
+        if ob["id"] not in st.objs:                  # (a value read before was looked at then)
+            self._typed(fact["type"], obj)
         version = subject_id(place, cwd)
         # a reading answers a question: the same place read for another fact is another hypothesis
         m = "M:" + _sha(h, version, ob["id"], json.dumps(how, sort_keys=True, ensure_ascii=False) if how else "")
@@ -974,6 +989,10 @@ class Kernel:
         """The proposition that the present readings agree; stated once, then settled by Lean."""
         fact = self.state().facts[h]
         t = fact["type"]
+        if self.compare == "needed":
+            values = [_written(t, x) for x in terms]
+            if all(ok for ok, _ in values):
+                return ("holds" if all(v == values[0][1] for _, v in values) else "not"), False
         parts = [f"((({terms[0]}) : {t}) = (({x}) : {t}))" for x in terms[1:]]
         return self._settle(h, guards, " ∧ ".join(parts) or "True")
 
@@ -987,12 +1006,12 @@ class Kernel:
         they differ, both are set aside as well. What is left says one and the same value.
         """
         fact = self.state().facts[h]
-        said, t = [dict(i) for i in fact.get("instructions", [])], fact["type"]
+        said = [dict(i) for i in fact.get("instructions", [])]
         for a in range(len(said)):
             for b in range(a + 1, len(said)):
                 if said[a]["is"] == said[b]["is"]:
                     continue
-                same, _ = self._settle(h, [], f"((({said[a]['is']}) : {t}) = (({said[b]['is']}) : {t}))")
+                same, _ = self._agreement(h, [], [said[a]["is"], said[b]["is"]])
                 if same != "holds":
                     for i, other in ((a, b), (b, a)):
                         said[i].setdefault("set aside", []).append(said[other]["by"])
@@ -1001,6 +1020,10 @@ class Kernel:
     def _contained(self, h, guards, part, whole):
         """The proposition that every entry a place lists is an entry of the whole list."""
         t = self.state().facts[h]["type"]
+        if self.compare == "needed":
+            (a, some), (b, every) = _written(t, part), _written(t, whole)
+            if a and b and isinstance(some, list) and isinstance(every, list):
+                return ("holds" if all(x in every for x in some) else "not"), False
         return self._settle(h, guards, f"(∀ x ∈ (({part}) : {t}), x ∈ (({whole}) : {t}))")
 
     def _settle(self, h, guards, lean):
@@ -1105,7 +1128,7 @@ class Kernel:
                     if v == "not":
                         p["not in the whole"] = outside(p, target)
                 else:
-                    v, fresh = self._settle(h, [p["m"]], f"((({p['reads as']}) : {t}) = (({target}) : {t}))")
+                    v, fresh = self._agreement(h, [p["m"]], [p["reads as"], target])
                 if v == "not" and usable:
                     p["against"] = who
                 elif v == "not":
@@ -1324,6 +1347,23 @@ class Kernel:
     def _screen(self, text):
         if self.gate is not None:
             self.gate.screen(text)
+
+    def _typed(self, typ, term):
+        """Refuse a value that is not of the fact's type. A written-out value shows its type on
+        its face; anything else is for Lean to say."""
+        if self.compare == "needed" and _json_like(typ):
+            if not _literal(typ, term):
+                raise KernelError(f"{term[:80]} is not a {typ} written out")
+            return
+        self._well_typed((typ, term))
+
+    def needs_lean(self):
+        """Does anything declared need Lean to be judged: a definition, or a type whose values
+        are not written out as JSON? (An old record may still hold a term that needs it; that
+        shows when the fact is held against the files.)"""
+        st = self.state()
+        return self.compare == "always" or any(f.get("defined") or not _json_like(f["type"])
+                                               for h, f in st.facts.items() if h not in st.withdrawn)
 
     def _well_typed(self, *items):
         """Refuse a value Lean does not accept as a term of the fact's type, at the moment it is stated."""
