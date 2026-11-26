@@ -69,6 +69,7 @@ python -m pw.check --repo . --verify
 - エージェントを使うもの（`pw.maintain`、`pw.calibrate`、`pw.discover`、`pw.propagate --agent`）には、加えて `mcp` パッケージと `claude` の CLI が要る（`pip install '/path/to/parallelworld[agents]'`。版とハッシュで固定するなら `pip install --require-hashes -r requirements-ci.txt -r requirements-agent.txt`）。どちらかが無ければ、読み手を呼ぶ前に止まり、課金は起きない。
 - `pw.maintain` は作業ツリーの内容をそのまま読む。文面の変更と、増えた `pw-log.jsonl` を、同じコミットに入れてよい。
 - `pw.check` は何もファイルを書き換えない。対象のリポジトリの記録が増えるのは、`pw.maintain`・`pw.confirm`・`pw.discover --apply`・`pw.propagate --apply` と、`pw.check --record` を回したとき。増えた行はコミットに含める。
+- 読み方（パターンなど）を替えたら、`pw.maintain` か `pw.check --record` を回して、増えた行をコミットする。読み手は呼ばれない。替えたまま記録に残さないと、その箇所を次に編集したときに読み直しになる（`pw.check` が note として挙げる）。
 
 ### CI で
 
