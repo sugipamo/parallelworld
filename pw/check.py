@@ -169,6 +169,7 @@ def main():
                     help="when Lean is asked: only where a value has to be worked out (a definition), or for every comparison, with a recorded proof")
     ap.add_argument("--needs-lean", action="store_true",
                     help="only print yes or no: does anything declared here need Lean? (for a CI job, to know whether to fetch it)")
+    ap.add_argument("--json", action="store_true", help="print what was found as JSON instead of text (one object: the decisions)")
     ap.add_argument("--record", action="store_true",
                     help="append what this check computed and what Lean proved to the project's record (by default the record is only read)")
     args = ap.parse_args()
@@ -183,10 +184,10 @@ def main():
         finally:
             shutil.rmtree(work, ignore_errors=True)
         return
-    sys.exit(1 if run(repo, args.db or os.path.join(repo, LOG), args.lean_dir, args.verify, args.unconfirmed, args.record, args.lean) else 0)
+    sys.exit(1 if run(repo, args.db or os.path.join(repo, LOG), args.lean_dir, args.verify, args.unconfirmed, args.record, args.lean, args.json) else 0)
 
 
-def run(repo, record, lean_dir=LEAN_DIR, verify=False, unconfirmed="fail", keep=False, lean="needed"):
+def run(repo, record, lean_dir=LEAN_DIR, verify=False, unconfirmed="fail", keep=False, lean="needed", as_json=False):
     """Hold the facts of `repo` against its files and print where they stand. True if anything needs attention.
 
     Unless `keep`, the record is copied and the copy is what gets appended to.
@@ -209,6 +210,13 @@ def run(repo, record, lean_dir=LEAN_DIR, verify=False, unconfirmed="fail", keep=
         if with_lean:
             kernel.gate.usable()
         report = kernel.recheck(repo)
+        if as_json:
+            import contextlib
+            import io
+            with contextlib.redirect_stdout(io.StringIO()):
+                bad = show(report, unconfirmed)
+            print(json.dumps(report, ensure_ascii=False, indent=1, default=sorted))
+            return bad
         bad = show(report, unconfirmed)
         if not keep:
             # A computed place stands because a blind reader once read the same off it as its way of

@@ -85,3 +85,16 @@ def test_a_definition_needs_lean(tmp_path):
         k.recheck(str(tmp_path))
     with pytest.raises(Exception, match="Lean"):                          # the command says so before anything else
         check.run(str(tmp_path), str(tmp_path / "pw-log.jsonl"), lean_dir=str(tmp_path / "no-such-lean-project"))
+
+
+def test_a_partial_place_with_an_entry_of_its_own_is_named(tmp_path, capsys):
+    """The places stating the whole agree, an example lists something they do not have: that is
+    said, with the entry (and not passed over as 'not judged')."""
+    repo(tmp_path, doc="## Limits\n\nAt most 14.\n\n## Modes\n\n`fast`, `bogus`\n")
+    two = [FACTS[0], {**FACTS[1], "places": FACTS[1]["places"] + [{"at": "k.py", "read": {"find_all": r"'(\w+)'|\"(\w+)\"".split("|")[0], "sort": True}, "some": True}]}]
+    _, got = states(tmp_path, [FACTS[0], FACTS[1]])
+    part = got["modes"]["places"][1]
+    assert got["modes"]["state"] == "violated" and part["not in the whole"] == ["bogus"] and not part.get("whole undecided")
+    (tmp_path / "pw-facts.json").write_text(json.dumps([FACTS[0], FACTS[1]]))
+    check.run(str(tmp_path), str(tmp_path / "pw-log.jsonl"), unconfirmed="warn")
+    assert "not among the entries the other places state: bogus" in capsys.readouterr().out and two

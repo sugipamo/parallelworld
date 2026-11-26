@@ -13,6 +13,7 @@
 - `pw/kernel.py` — 記録と、事実・読み・一致の判定・規則の適用
 - `pw/lean_gate.py` — Lean による等式の判定
 - `pw/check.py` — 宣言された事実を、いまのファイルに当て直す（言語モデルなし。記録は読むだけで、書き足さない）
+- `rust/` — 同じ `check` を Rust で書いたもの（移行の途中。下の「Rust 版」）
 - `pw/maintain.py` — 変わった箇所・未読の箇所を、目隠しの読み手に読ませる
 - `pw/mcp_server.py` — 読み手が答えるための道具
 - `pw/calibrate.py` — 読み手を測る
@@ -53,6 +54,20 @@ Lean が要るのに無い、または版が違うときは、`pw.check` は何�
 その版の Lean が手元になければ `ci/lean.sh` が取ってくる（`export PATH="$(ci/lean.sh):$PATH"`。Linux x86_64 のみ。`curl` と `zstd` が要る）。
 
 Lean は `lean/` の中では動かさない。`lean/` の中身を `~/.cache/parallelworld/`（`PW_LEAN_WORK` で変えられる）に写し、そこでビルドと判定をする。仕組みを置いた場所は読むだけなので、読み取り専用でも、ほかのジョブと共有していてもよい。
+
+## Rust 版
+
+この仕組みを Rust に移している途中。いまあるのは `check` だけで、Python 版と同じ宣言・記録・規則を読み、同じ判定と同じ表示を返す。
+
+```
+cargo build --release --manifest-path rust/Cargo.toml
+rust/target/release/pw check --repo .            # --verify、--unconfirmed warn、--json、--needs-lean も同じ
+```
+
+- 実行ファイル 1 つで動く。Python も Lean も要らない。miclow の確認は 0.1 秒（Python 版は 1.7 秒）。
+- **まだできないこと**：定義（`defined`）のある事実と `--lean always`。Lean を呼ぶ部分を移していないので、そういう事実は「needs Lean」と表示して終了コード 2 で終わる。このリポジトリ自身は定義を 1 つ宣言しているので、Python 版が要る。
+- 判定が Python 版と同じであることは、2 つのリポジトリの全履歴で突き合わせてある（`experiments/history/RESULTS.md`）。CI でも毎回、両方の出力を比べている（`tests/test_rust.py`）。
+- 記録に書くもの（`pw.maintain`、`pw.calibrate` など、エージェントを使う部分）は、まだ Python 版だけ。
 
 ## 他のリポジトリから使う
 

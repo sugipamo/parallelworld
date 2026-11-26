@@ -1,0 +1,246 @@
+//! pw check: hold every declared fact against the files as they are now.
+mod kernel;
+mod read;
+mod util;
+
+use serde_json::Value;
+use std::path::Path;
+use util::R;
+
+fn cut(s: &str, n: usize) -> String {
+    s.chars().take(n).collect()
+}
+
+fn s<'a>(v: &'a Value, key: &str) -> &'a str {
+    v.get(key).and_then(Value::as_str).unwrap_or("")
+}
+
+fn list(v: &Value, key: &str) -> Vec<Value> {
+    v.get(key).and_then(Value::as_array).cloned().unwrap_or_default()
+}
+
+fn show_str(v: &Value) -> String {
+    v.as_str().map(String::from).unwrap_or_else(|| v.to_string())
+}
+
+/// For a list whose places do not agree: which entries are not everywhere, and where they are.
+fn differences(d: &Value) -> Vec<String> {
+    let entries = |text: &str| serde_json::from_str::<Value>(text).ok().and_then(|v| v.as_array().cloned());
+    let mut whole = vec![];
+    for p in list(d, "places").iter().filter(|p| p.get("some").is_none()) {
+        match entries(s(p, "reads as")) {
+            Some(v) => whole.push((s(p, "at").to_string(), v)),
+            None => return vec![],
+        }
+    }
+    let show = |xs: &[Value]| {
+        let mut names: Vec<String> = xs.iter().map(show_str).collect();
+        names.sort();
+        cut(&names.join(", "), 300)
+    };
+    let laid = list(d, "instructions").iter().find(|i| i.get("set aside").is_none()).and_then(|i| entries(s(i, "is")));
+    if let Some(target) = laid {
+        let mut out = vec![];
+        for (at, v) in &whole {
+            let more: Vec<Value> = v.iter().filter(|x| !target.contains(x)).cloned().collect();
+            let less: Vec<Value> = target.iter().filter(|x| !v.contains(x)).cloned().collect();
+            if !more.is_empty() {
+                out.push(format!("{} has, beyond what was laid down: {}", at, show(&more)));
+            }
+            if !less.is_empty() {
+                out.push(format!("{} lacks, of what was laid down: {}", at, show(&less)));
+            }
+        }
+        return out;
+    }
+    let mut seen: Vec<(Value, Vec<String>)> = vec![];
+    for (at, v) in &whole {
+        for x in v {
+            match seen.iter_mut().find(|(y, _)| y == x) {
+                Some(e) => e.1.push(at.clone()),
+                None => seen.push((x.clone(), vec![at.clone()])),
+            }
+        }
+    }
+    let mut groups: std::collections::BTreeMap<Vec<String>, Vec<Value>> = Default::default();
+    for (x, mut places) in seen {
+        places.sort();
+        places.dedup();
+        if places.len() < whole.len() {
+            groups.entry(places).or_default().push(x);
+        }
+    }
+    groups.into_iter().map(|(places, xs)| format!("only in {}: {}", places.join(", "), show(&xs))).collect()
+}
+
+/// Print where every fact stands. Returns true if anything needs attention.
+fn show(report: &Value, warn: bool) -> bool {
+    let mut bad = false;
+    let declined = |by: &[Value]| {
+        for x in by {
+            let who = if s(x, "model").is_empty() { s(x, "actor") } else { s(x, "model") };
+            println!("          a blind reader ({}) says the place does not state this: {}", who, cut(s(x, "why"), 200));
+            println!("          if it is about something else, take the place out of pw-facts.json; if it says two things, make it say one");
+        }
+    };
+    let decisions = list(report, "decisions");
+    for d in &decisions {
+        let state = s(d, "state");
+        let agree = state == "current" || state == "re-established";
+        let places = list(d, "places");
+        let loose = places.iter().any(|p| !p["stands"].as_bool().unwrap_or(false));
+        let ok = agree && !loose;
+        bad |= !ok && !(agree && warn);
+        let mark = if ok { "ok  " } else if agree && warn { "WARN" } else { "FAIL" };
+        println!("{} {:<15} {} fact: {}", mark, state, s(d, "h"), s(d, "fact"));
+        let aside: Vec<Value> = list(d, "instructions").into_iter().filter(|i| i.get("set aside").is_some()).collect();
+        if !aside.is_empty() {
+            println!("       people's instructions about this cannot both hold. They are set aside until one is withdrawn:");
+            for i in &aside {
+                let on = if s(i, "on").is_empty() { String::new() } else { format!(" ({})", s(i, "on")) };
+                let words = if s(i, "said").is_empty() { String::new() } else { format!("  \"{}\"", cut(s(i, "said"), 120)) };
+                println!("          {}{}: {}{}", s(i, "by"), on, cut(s(i, "is"), 100), words);
+            }
+            if let Some(w) = d.get("without the instructions set aside") {
+                println!("       judged without them, the fact is: {}", show_str(w));
+            }
+        }
+        if !ok {
+            for i in list(d, "instructions").iter().filter(|i| i.get("set aside").is_none()) {
+                println!("       laid down by {}: {}", s(i, "by"), cut(s(i, "is"), 100));
+            }
+            for p in &places {
+                let part = if p.get("some").is_some() { "lists (in part) " } else { "reads as " };
+                if p.get("whole undecided").is_some() {
+                    println!("       {} {}{}   (not judged: the places that state the whole of it do not agree)", s(p, "at"), part, cut(s(p, "reads as"), 100));
+                    continue;
+                }
+                let stands = p["stands"].as_bool().unwrap_or(false);
+                println!("       {} {}{}   ({})", s(p, "at"), part, cut(s(p, "reads as"), 100), if stands { s(p, "why") } else { "does not stand" });
+                if let Some(a) = p.get("against").and_then(Value::as_array) {
+                    println!("          against the instruction of {}", a.iter().map(show_str).collect::<Vec<_>>().join(", "));
+                }
+                let out = list(p, "not in the whole");
+                if !out.is_empty() {
+                    println!("          not among the entries the other places state: {}", cut(&out.iter().map(show_str).collect::<Vec<_>>().join(", "), 200));
+                }
+                if !stands {
+                    let has = p["has"].as_object().cloned().unwrap_or_default();
+                    println!("          {}", has.iter().map(|(c, v)| format!("{}: {}", c, if v.as_bool().unwrap_or(false) { "yes" } else { "no" })).collect::<Vec<_>>().join(", "));
+                    let un = list(p, "unmeasured readers");
+                    if !un.is_empty() {
+                        println!("          read blind by {}: not a measured reader here, with the instructions it read this under (python -m pw.calibrate --model ...)", un.iter().map(show_str).collect::<Vec<_>>().join(", "));
+                    }
+                    for other in list(p, "read blind as") {
+                        println!("          a blind reader reads {} off it, not what the pattern computes", cut(&show_str(&other), 100));
+                    }
+                    declined(&list(p, "declined"));
+                }
+            }
+        }
+        if state == "violated" {
+            for line in differences(d) {
+                println!("       {}", line);
+            }
+        }
+        let unread = list(d, "unread");
+        for u in &unread {
+            println!("       {}: {}", s(u, "at"), cut(s(u, "why"), 160));
+            declined(&list(u, "declined"));
+        }
+        let any = |key: &str| places.iter().any(|p| p.get(key).map_or(false, |v| !v.is_null() && v.as_array().map_or(true, |a| !a.is_empty())));
+        match state {
+            "conflict" => println!("       which instruction holds is for the people who gave them: take the other out of pw-facts.json"),
+            "violated" if any("against") => println!("       a place does not say what was laid down: change the place, or have the instruction withdrawn"),
+            "violated" if any("not in the whole") => println!("       a place lists something the others do not have; which one is right is for a person to say"),
+            "violated" => println!("       the places do not say the same thing; which one is right is for a person to say"),
+            "stale" if unread.iter().any(|u| u.get("broken").is_some()) => println!("       a declared place cannot be read as declared any more: python -m pw.discover (it looks for where the statement went)"),
+            "stale" => println!("       read the place(s) again: python -m pw.maintain"),
+            "disputed" => println!("       a person has to say which reading is right: python -m pw.confirm --who NAME M:... and --reject M:..."),
+            "uncovered" => println!("       Lean could settle neither that the values are the same nor that they differ"),
+            "needs Lean" => println!("       {}", s(d, "why")),
+            _ if !ok => {
+                println!("       the places agree, but a reading does not stand by the rules (pw-rules.json):");
+                println!("       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)");
+            }
+            _ => {}
+        }
+    }
+    if decisions.is_empty() {
+        println!("no facts declared");
+    }
+    bad
+}
+
+fn run(args: &[String]) -> R<i32> {
+    let mut repo = ".".to_string();
+    let (mut verify, mut warn, mut as_json, mut needs) = (false, false, false, false);
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--repo" => { i += 1; repo = args.get(i).cloned().ok_or("--repo needs a directory")?; }
+            "--verify" => verify = true,
+            "--json" => as_json = true,
+            "--needs-lean" => needs = true,
+            "--unconfirmed" => { i += 1; warn = args.get(i).map(String::as_str) == Some("warn"); }
+            "--lean" => { i += 1; if args.get(i).map(String::as_str) == Some("always") { return Err("--lean always puts every comparison to Lean, which this build does not ask yet (python -m pw.check does)".into()); } }
+            other => return Err(format!("unknown argument {}; pw check [--repo DIR] [--verify] [--unconfirmed warn] [--json] [--needs-lean]", other)),
+        }
+        i += 1;
+    }
+    let cwd = Path::new(&repo);
+    let facts = kernel::declared(&cwd.join("pw-facts.json"))?;
+    if needs {
+        println!("{}", if kernel::needs_lean(&facts) { "yes" } else { "no" });
+        return Ok(0);
+    }
+    let mut st = kernel::replay(&cwd.join("pw-log.jsonl"))?;
+    let ways = st.ways.clone();
+    let report = kernel::recheck(&mut st, &facts, cwd)?;
+    if as_json {
+        let quiet = report["decisions"].as_array().unwrap().iter().any(|d| {
+            let agree = ["current", "re-established"].contains(&s(d, "state"));
+            let loose = list(d, "places").iter().any(|p| !p["stands"].as_bool().unwrap_or(false));
+            !(agree && !loose) && !(agree && warn)
+        });
+        println!("{}", serde_json::to_string_pretty(&report).unwrap());
+        return Ok(if quiet { 1 } else { 0 });
+    }
+    let bad = show(&report, warn);
+    let mut fresh: Vec<String> = vec![];
+    for (d, f) in report["decisions"].as_array().unwrap().iter().filter_map(|d| facts.iter().find(|f| f.h == s(d, "h")).map(|f| (d, f))) {
+        for p in list(d, "places") {
+            let decl = f.places.iter().find(|x| x.at == s(&p, "at"));
+            if let Some(Some(how)) = decl.map(|x| &x.reader) {
+                if p["stands"].as_bool().unwrap_or(false) && !ways.contains(&(f.h.clone(), s(&p, "at").to_string(), util::pyjson(how, true))) {
+                    fresh.push(s(&p, "at").to_string());
+                }
+            }
+        }
+    }
+    fresh.sort();
+    fresh.dedup();
+    if !fresh.is_empty() {
+        println!("note: the way {} {} read is not in the record yet. It stands for the text as it is; to have it stand when the text changes, run `python -m pw.maintain` (or `python -m pw.check --record`) now and commit pw-log.jsonl. No reader is called for that.",
+                 cut(&fresh.join(", "), 300), if fresh.len() == 1 { "is" } else { "are" });
+    }
+    if verify {
+        println!("{} recorded proof(s) not run again: Lean is not here, and nothing declared needs it", st.proofs);
+    }
+    if report["decisions"].as_array().unwrap().iter().any(|d| s(d, "state") == "needs Lean") {
+        return Err("some facts need Lean to be judged, and this build does not ask it yet: use python -m pw.check for them".into());
+    }
+    Ok(if bad { 1 } else { 0 })
+}
+
+fn main() {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let rest = if args.first().map(String::as_str) == Some("check") { &args[1..] } else { &args[..] };
+    match run(rest) {
+        Ok(code) => std::process::exit(code),
+        Err(e) => {
+            eprintln!("pw: {}", e);
+            std::process::exit(2);
+        }
+    }
+}

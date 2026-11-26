@@ -7,7 +7,8 @@ name: decisions
 #
 # Everything this job fetches is pinned to content, not to a name that can be moved:
 # the actions by commit, the Python packages by hash (requirements-ci.txt, requirements-test.txt),
-# Lean by checksum (ci/lean.sh).
+# Lean by checksum (ci/lean.sh), the Rust crates by checksum (rust/Cargo.lock). The Rust compiler
+# is the runner's own.
 # The job can read the repository and nothing else.
 
 on:
@@ -33,6 +34,12 @@ jobs:
       - name: What a person still has to confirm
         if: always()
         run: python -m pw.confirm | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # The check, written again in Rust. Its crates are pinned by rust/Cargo.lock (version and
+      # checksum); the tests hold its verdicts against the Python check's.
+      - name: The Rust check
+        if: always()
+        run: cargo build --release --locked --manifest-path rust/Cargo.toml
 
       - name: Packages the tests need, by hash
         if: always()

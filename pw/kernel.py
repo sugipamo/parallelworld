@@ -1145,6 +1145,10 @@ class Kernel:
             # the places that state the whole of it have to read the same; a place that states some
             # entries has to list nothing the whole does not have
             verdict, new = self._agreement(h, [p["m"] for p in whole], [p["reads as"] for p in whole])
+            if verdict != "holds":
+                for p in entry["places"]:               # nothing to hold a partial listing against yet
+                    if p.get("some"):
+                        p["whole undecided"] = True
             if verdict == "holds":
                 for p in entry["places"]:
                     if p.get("some"):
@@ -1158,10 +1162,6 @@ class Kernel:
                               "contested": "contested"}.get(verdict, "uncovered")
             if verdict == "holds":
                 entry["value"] = whole[0]["reads as"]
-            else:
-                for p in entry["places"]:               # nothing to hold a partial listing against yet
-                    if p.get("some"):
-                        p["whole undecided"] = True
         if len(usable) < len(said) and not unread:
             # Instructions that cannot both hold were set aside, and the places were judged without
             # them. That is as far as the kernel goes: the fact waits for a person, nothing else does.
