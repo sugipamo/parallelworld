@@ -417,3 +417,19 @@ def test_what_differs_between_lists_is_named():
     d = {"places": [place("README.md", ["a", "x"]), place("m.py", ["a", "b"])], "instructions": [{"is": '["a", "b"]', "by": "ann"}]}
     assert differences(d) == ["README.md has, beyond what was laid down: x", "README.md lacks, of what was laid down: b"]
     assert differences({"places": [place("a.md", 14), place("k.py", 15)]}) == []                # single values are shown as they are
+
+
+def test_the_documents_are_there_and_point_at_things_that_exist():
+    """The files a reader is sent to are not empty, and what they link to is in the repository."""
+    import os
+    import re
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    for name in ("README.md", "CHANGES.md", "docs/spec.md", "experiments/README.md"):
+        path = os.path.join(root, name)
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+        assert len(text) > 200, f"{name} is all but empty"
+        for target in re.findall(r"\]\(([^)#\s]+)(?:#[^)]*)?\)", text):
+            if "://" not in target:
+                there = os.path.join(os.path.dirname(path), target)
+                assert os.path.exists(there) and (os.path.isdir(there) or os.path.getsize(there) > 0), f"{name} links to {target}, which is not there"
