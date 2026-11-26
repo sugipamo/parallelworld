@@ -66,7 +66,8 @@ python -m pw.check --repo . --verify
 ```
 
 - `--lean-dir` は付けなくてよい（この仕組みに付いている Lean のプロジェクトを使う）。
-- エージェントを使うもの（`pw.maintain`、`pw.calibrate`、`pw.discover`、`pw.propagate --agent`）には、加えて `mcp` パッケージと `claude` の CLI が要る（`pip install '/path/to/parallelworld[agents]'`）。
+- エージェントを使うもの（`pw.maintain`、`pw.calibrate`、`pw.discover`、`pw.propagate --agent`）には、加えて `mcp` パッケージと `claude` の CLI が要る（`pip install '/path/to/parallelworld[agents]'`。版とハッシュで固定するなら `pip install --require-hashes -r requirements-ci.txt -r requirements-agent.txt`）。どちらかが無ければ、読み手を呼ぶ前に止まり、課金は起きない。
+- `pw.maintain` は作業ツリーの内容をそのまま読む。文面の変更と、増えた `pw-log.jsonl` を、同じコミットに入れてよい。
 - `pw.check` は何もファイルを書き換えない。対象のリポジトリの記録が増えるのは、`pw.maintain`・`pw.confirm`・`pw.discover --apply`・`pw.propagate --apply` と、`pw.check --record` を回したとき。増えた行はコミットに含める。
 
 ### CI で
@@ -91,3 +92,9 @@ jobs:
 - **使う側が固定するのは、このリポジトリのコミット 1 つ。** Lean の版もチェックサムもパッケージのハッシュも、そのコミットの中で決まる。使う側に写す値はない。
 - 入力は 2 つ。`repo`（確かめるディレクトリ。既定は `.`）と `args`（`pw.check` に渡す引数。既定は `--verify`。規則を満たさない読みを警告にとどめるなら `--verify --unconfirmed warn`）。
 - CI は記録を読むだけなので、手元で確かめたときと記録の中身がずれない。
+
+### 参照先を上げるとき
+
+1. 固定しているコミットを上げ、`python -m pw.check --repo . --verify` を回す。使う側で何かが要る変更は [CHANGES.md](CHANGES.md) に書いてある。
+2. 通れば終わり。読み手の指示文（`pw/reader.txt`）が変わった更新でも、すでにある読みは落ちない。読みは、それを読んだときの読み手のものとして数える。
+3. そのあと新しく読ませる（`pw.maintain`）前に、新しい指示文の読み手を測る：`python -m pw.calibrate --repo .`（モデルごと。基準に届かなければ `--seed` を変えて足す。1 回 $1〜2 ほど）。測る前に読ませた読みは、測るまで数えられない。

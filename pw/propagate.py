@@ -408,6 +408,9 @@ def main():
             suppose[name.strip()] = json.loads(value)
         except ValueError:
             suppose[name.strip()] = value.strip()
+    if args.agent:
+        from .maintain import ready
+        ready()
     editor = (lambda items: ask_editor(args.model, items, args.budget)) if args.agent else None
     reader = (lambda kernel, files, wanted: read_back(kernel, args.lean_dir, files, wanted, args.reader_model, args.budget)) if args.agent else None
     try:

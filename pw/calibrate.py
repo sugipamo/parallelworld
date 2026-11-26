@@ -15,8 +15,9 @@ known without anyone judging it:
 Unchanged texts are mixed in as controls.
 
 A reader also has to refuse. A decoy is a place of one fact shown with the question of another
-fact of the same type, where the place does not contain that other fact's value: whatever the
-reader reads off it is wrong, and the right answer is to say the place does not state the thing.
+fact of the same type, where the place does not contain that other fact's value (for a list:
+none of its entries): whatever the reader reads off it is wrong, and the right answer is to
+say the place does not state the thing.
 
   declined  the reader said so
   accepted  the reader read a value off a place that is about something else: the failure that
@@ -48,7 +49,7 @@ from concurrent.futures import ThreadPoolExecutor
 from .check import FACTS
 from .kernel import INSTRUCTIONS, LOG, Kernel, context, interval, locate, reader_measurements
 from .lean_gate import LEAN_DIR, LeanGate
-from .maintain import blind_read
+from .maintain import blind_read, ready
 
 RESULTS = "pw-calibration.json"
 _EDGE = r"A-Za-z0-9_."
@@ -131,7 +132,9 @@ def decoys(facts, st, repo, rng, n):
                 if b is a or st.facts[b["h"]]["type"] != st.facts[a["h"]]["type"]:
                     continue
                 value = json.loads(next(q for q in b["places"] if not q.get("some"))["reads as"])
-                stated = all(_whole(e).search(text) for e in value) if isinstance(value, list) else bool(_whole(value).search(text))
+                # (of a list, one entry is enough: a place that names an entry does state part of the
+                # thing, and a reader who reads that entry off it has read it right)
+                stated = any(_whole(e).search(text) for e in value) if isinstance(value, list) else bool(_whole(value).search(text))
                 if stated or any(overlap(p["at"], q["at"]) for q in st.facts[b["h"]]["places"]):
                     continue                                   # the place may well state it: not a decoy
                 found.setdefault(b["fact"], []).append({
@@ -216,6 +219,7 @@ def main():
     ap.add_argument("--budget", type=float, default=2.0)
     ap.add_argument("--parallel", type=int, default=4)
     args = ap.parse_args()
+    ready()
     repo = os.path.abspath(args.repo)
     scratch = os.path.join(tempfile.mkdtemp(prefix="pw-calibrate-"), LOG)       # the project's record is only read
     if os.path.exists(os.path.join(repo, LOG)):

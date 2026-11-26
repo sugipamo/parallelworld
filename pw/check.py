@@ -74,7 +74,7 @@ def show(report, unconfirmed="fail"):
                 if not p["stands"]:
                     print("          " + ", ".join(f"{c}: {'yes' if v else 'no'}" for c, v in p["has"].items()))
                     if p["unmeasured readers"]:
-                        print(f"          read blind by {', '.join(p['unmeasured readers'])}: not a measured reader here (python -m pw.calibrate --model ...)")
+                        print(f"          read blind by {', '.join(p['unmeasured readers'])}: not a measured reader here, with the instructions it read this under (python -m pw.calibrate --model ...)")
                     for other in p.get("read blind as", []):
                         print(f"          a blind reader reads {other[:100]} off it, not what the pattern computes")
                     declined(p.get("declined", []))

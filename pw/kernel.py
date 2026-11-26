@@ -243,18 +243,20 @@ def interval(k, n, level=0.95):
     return (0.0 if k == 0 else float(beta.ppf(a, k, n - k + 1)), 1.0 if k == n else float(beta.ppf(1 - a, k + 1, n - k)))
 
 
-def reader_measurements(cwd):
-    """Per reader model: every measurement made in this repository under the instructions
-    readers are given now, added up. Not the latest run alone: measuring again until a run
-    comes out well must not help. The rates are computed here from the counts."""
+def reader_measurements(cwd, instructions=INSTRUCTIONS):
+    """Per reader model: every measurement made in this repository under the given instructions
+    (by default the ones readers are given now), added up. Not the latest run alone: measuring
+    again until a run comes out well must not help. The rates are computed here from the counts.
+    With instructions=None: per (model, instructions), for every instructions measured under."""
     path = os.path.join(cwd, CALIBRATION)
     if not os.path.exists(path):
         return {}
     with open(path, encoding="utf-8") as fh:
-        runs = [r for r in json.load(fh) if r.get("instructions") == INSTRUCTIONS]
+        runs = [r for r in json.load(fh) if instructions is None or r.get("instructions") == instructions]
     out = {}
     for r in runs:
-        m = out.setdefault(r["model"], {"runs": 0, "planted": 0, "read": 0, "stuck": 0, "decoys": 0, "accepted": 0})
+        who = r["model"] if instructions is not None else (r["model"], r.get("instructions"))
+        m = out.setdefault(who, {"runs": 0, "planted": 0, "read": 0, "stuck": 0, "decoys": 0, "accepted": 0})
         m["runs"] += 1
         for key, src, name in (("planted", "planted", "n"), ("read", "planted", "read"), ("stuck", "planted", "stuck"),
                                ("decoys", "decoys", "n"), ("accepted", "decoys", "accepted")):
@@ -268,8 +270,8 @@ def reader_measurements(cwd):
 
 
 def measured_readers(cwd, rules):
-    """The reader models whose measurements in this repository, taken together, meet the rules' bar."""
-    latest = reader_measurements(cwd)
+    """The readers whose measurements in this repository, taken together, meet the rules' bar.
+    A reader is a model with the instructions it was given: {(model, instructions)}."""
     bar = rules["a blind reader counts if measured"]
     limits = {"read at least": ("read rate", 0, 1), "stuck at most": ("stuck rate", 1, -1),
               "takes another thing for it at most": ("accept rate", 1, -1)}
@@ -277,8 +279,16 @@ def measured_readers(cwd, rules):
     if unknown:
         raise KernelError(f"a reader can be asked for {sorted(limits)}; not {sorted(unknown)}")
     # a rate that was not measured does not meet a bar on it
-    return {m for m, run in latest.items()
+    return {reader for reader, run in reader_measurements(cwd, None).items()
             if all(key in run and sign * run[key][end] >= sign * bar[name] for name, (key, end, sign) in limits.items() if name in bar)}
+
+
+def _counted(info, measured):
+    """The models among a reading's blind readers that count: those measured under the
+    instructions they read it under. A reading recorded before instructions were noted counts
+    if its model is measured under any."""
+    return {m for m in info["models"]
+            if any((m, i) in measured if i else any(x == m for x, _ in measured) for i in info.get("under", {}).get(m) or [None])}
 
 
 def _md_section(text, title):
@@ -473,16 +483,17 @@ class State:
             if p["m"] not in self.models:
                 self.models[p["m"]] = {"subject": p["subject"], "obj": p["obj"]["id"], "binding": p.get("binding"),
                                        "quote": p.get("quote"), "anchor": p.get("anchor", False),
-                                       "by": set(), "blind": set(), "models": set(), "literal": False, "asked": {}}
+                                       "by": set(), "blind": set(), "models": set(), "under": {}, "literal": False, "asked": {}}
             # A reading answers a question: the fact's description as it was when the place was read.
             # Who read it is kept per question, so that an answer to another question is not counted.
             asked = p.get("asked") or self.facts[p["h"]]["asked"]
-            for info in (self.models[p["m"]], self.models[p["m"]]["asked"].setdefault(asked, {"by": set(), "blind": set(), "models": set()})):
+            for info in (self.models[p["m"]], self.models[p["m"]]["asked"].setdefault(asked, {"by": set(), "blind": set(), "models": set(), "under": {}})):
                 info["by"].add(p.get("actor", "anon"))                 # who read it this way
                 if p.get("blind"):
                     info["blind"].add(p.get("actor", "anon"))          # ...shown nothing but the place
                     if p.get("model"):
                         info["models"].add(p["model"])                 # ...and which model that reader was
+                        info["under"].setdefault(p["model"], set()).add(p.get("instructions"))     # ...given which instructions
             info = self.models[p["m"]]
             info["literal"] = info["literal"] or bool(p.get("literal"))
             if (p["place"], p["m"]) not in self.facts[p["h"]]["readings"]:
@@ -695,11 +706,13 @@ class Kernel:
             # who read it matters only for a reading someone stated; a computed one is the same whoever runs it
             if ((place, m) not in st.facts[h]["readings"]
                     or (how is None and (self.actor not in known.get("by", ()) or (blind and self.actor not in known.get("blind", ()))
-                                         or (blind and model and model not in known.get("models", ()))))):
+                                         or (blind and model and INSTRUCTIONS not in known.get("under", {}).get(model, ()))))):
                 self._append(con, st, "reading", {
                     "h": h, "place": place, "subject": version, "m": m, "obj": ob, "binding": how, "quote": quote,
                     "asked": asked,
-                    "blind": bool(blind) and how is None, "model": model if blind and how is None else None, "literal": literal,
+                    "blind": bool(blind) and how is None, "model": model if blind and how is None else None,
+                    # a reader is a model with its instructions: which ones it had is kept with what it read
+                    **({"instructions": INSTRUCTIONS} if blind and how is None and model else {}), "literal": literal,
                     "anchor": quote is not None and "List" not in fact["type"]})
         return {"m": m, "o": ob["id"], "read as": obj}
 
@@ -912,10 +925,10 @@ class Kernel:
             info, asked = view(p["m"], p["at"]), asked_at[p["at"]][1]
             # agreeing with another place means something between places that state the whole of it
             others = [view(q["m"], q["at"]) for q in whole if q is not p and not p.get("some") and st.models[q["m"]]["obj"] == info["obj"]]
-            readers = info["models"] & measured
+            readers = _counted(info, measured)
             # a computed place: was the pattern ever checked against a reader who saw only the place?
             mine = [v for at, m in fact["readings"] if at == p["at"] for v in [view(m, at)] if v]
-            stated = [s for s in mine if not s["binding"] and s["models"] & measured]
+            stated = [s for s in mine if not s["binding"] and _counted(s, measured)]
             same_blind = bool(info["binding"]) and any(
                 s["subject"] == c["subject"] and value(s["obj"]) == value(c["obj"])
                 for s in stated for c in mine if c["binding"] == info["binding"])
@@ -925,7 +938,7 @@ class Kernel:
                 "blind": bool(readers),
                 "words occur in the place": info["literal"],
                 "agrees with a computed place": any(o["binding"] for o in others),
-                "agrees with another place read blind": any(not o["binding"] and o["models"] & measured and o["blind"] - info["blind"] for o in others),
+                "agrees with another place read blind": any(not o["binding"] and _counted(o, measured) and o["blind"] - info["blind"] for o in others),
                 "read the same by a second model": len(readers) > 1,
                 "read the same blind": same_blind,
                 "contained in a computed place": bool(p.get("contained")) and any(st.models[q["m"]]["binding"] for q in whole),
@@ -936,12 +949,12 @@ class Kernel:
             if not info["binding"]:
                 skip = ("agrees with a computed place", "agrees with another place read blind") if p.get("some") else ("contained in a computed place",)
                 p["has"] = {c: v for c, v in has.items() if c not in ("computed", "read the same blind", *skip)}
-                p["unmeasured readers"] = sorted(info["models"] - measured) + (
+                p["unmeasured readers"] = sorted(info["models"] - readers) + (
                     ["a reader whose model was not recorded"] if info["blind"] and not info["models"] else [])
             else:
                 now = subject_id(p["at"], cwd)
                 p["has"] = {"read the same blind": same_blind}
-                p["unmeasured readers"] = sorted({r for s in mine if not s["binding"] for r in s["models"]} - measured)
+                p["unmeasured readers"] = sorted({r for s in mine if not s["binding"] for r in s["models"] - _counted(s, measured)})
                 p["read blind as"] = sorted({st.objs[s["obj"]]["text"] for s in stated if s["subject"] == now} - {p["reads as"]})
                 p["declined"] = [d for d in fact["declined"] if d["place"] == p["at"] and d["subject"] == now and d["asked"] == asked]
         return entry

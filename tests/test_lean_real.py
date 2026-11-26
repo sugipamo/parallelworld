@@ -832,3 +832,67 @@ def test_lean_is_not_run_where_the_tool_is_kept(tmp_path, monkeypatch):
     os.remove(project / "lakefile.toml")
     v = gate.check("holds", P("(1 : Nat) = 1"), "rfl")
     assert not v["ok"] and "is not the Lean project" in v["reason"]
+
+
+def test_a_reading_counts_by_the_reader_that_made_it(tmp_path, monkeypatch):
+    """A reader is a model with its instructions. When the instructions change, what was read
+    under the earlier ones still rests on the reader that read it, as measured then; only what
+    is read from now on needs the new reader measured."""
+    import pw.kernel as K
+    from pw.kernel import pattern
+    (tmp_path / "k.py").write_text("LIMIT = 14\nSIZE = 3\n")
+    (tmp_path / "doc.md").write_text("## Limits\n\nAt most 14 atoms.\n\n## Size\n\nThree, that is 3, parts.\n")
+    cwd = str(tmp_path)
+    k = Kernel(str(tmp_path / "pw-log.jsonl"), gate=LeanGate(), actor="reader-1")
+    limit = k.claim_fact("limit", "Nat", ["doc.md::Limits", {"at": "k.py", "reader": pattern(find=r"LIMIT = (\d+)", kind="nat")}])["h"]
+    size = k.claim_fact("size", "Nat", ["doc.md::Size", {"at": "k.py", "reader": pattern(find=r"SIZE = (\d+)", kind="nat")}])["h"]
+    stands = lambda h: next(p["stands"] for d in k.recheck(cwd)["decisions"] if d["h"] == h for p in d["places"] if p["by"] == "stated")
+
+    monkeypatch.setattr(K, "INSTRUCTIONS", "first")
+    k.read_place(limit, "doc.md::Limits", "14", cwd=cwd, quote="At most 14 atoms.", blind=True, model="opus")
+    assert not stands(limit)                                           # nobody measured yet
+    _measure(cwd, instructions="first", opus=27)
+    assert stands(limit)
+
+    monkeypatch.setattr(K, "INSTRUCTIONS", "second")                   # the instructions are reworded
+    assert stands(limit)                                               # ...what was read before stays as it was
+    Kernel(k.db_path, gate=LeanGate(), actor="reader-2").read_place(size, "doc.md::Size", "3", cwd=cwd, quote="Three, that is 3, parts.", blind=True, model="opus")
+    assert not stands(size)                                            # ...what is read now is by a reader not yet measured
+    r = next(p for d in k.recheck(cwd)["decisions"] if d["h"] == size for p in d["places"] if p["by"] == "stated")
+    assert r["unmeasured readers"] == ["opus"]
+    _measure(cwd, keep=True, instructions="second", opus=27)
+    assert stands(size) and stands(limit)
+
+    _measure(cwd, instructions="second", opus=27)                      # the earlier measurement is taken out of the file
+    assert stands(size) and not stands(limit)                          # ...and the earlier reading has nothing to rest on
+
+
+def test_a_decoy_is_a_place_that_states_none_of_it(tmp_path):
+    """A place that names one entry of a list states part of it: showing it with that list's
+    question is not a decoy, and a reader who reads the entry off it is right."""
+    import random
+    from pw import calibrate
+    (tmp_path / "methods.md").write_text("## Methods\n\n`send`, `receive`.\n\n## Start\n\nCall `connect()` first, then `send`.\n")
+    (tmp_path / "functions.md").write_text("## Functions\n\n`connect`, `version`.\n\n## Notes\n\nNothing here.\n")
+    cwd = str(tmp_path)
+    _measure(cwd, opus=27)
+    k = Kernel(str(tmp_path / "pw-log.jsonl"), gate=LeanGate(), actor="reader")
+    m = k.claim_fact("methods", "List String", ["methods.md::Methods", {"at": "methods.md::Start", "some": True}])["h"]
+    f = k.claim_fact("functions", "List String", ["functions.md::Functions"])["h"]
+    k.read_place(m, "methods.md::Methods", '["receive", "send"]', cwd=cwd, quote="`send`, `receive`.", blind=True, model="opus")
+    k.read_place(m, "methods.md::Start", '["send"]', cwd=cwd, quote="Call `connect()` first, then `send`.", blind=True, model="opus")
+    k.read_place(f, "functions.md::Functions", '["connect", "version"]', cwd=cwd, quote="`connect`, `version`.", blind=True, model="opus")
+    facts = [d for d in k.recheck(cwd)["decisions"]]
+    got = {(t["place"], t["fact"]) for t in calibrate.decoys(facts, k.state(), cwd, random.Random(0), 10)}
+    assert ("methods.md::Start", "functions") not in got               # it names `connect`, which is one of the functions
+    assert ("methods.md::Methods", "functions") in got and ("functions.md::Functions", "methods") in got
+
+
+def test_agents_are_not_started_without_what_they_answer_with(monkeypatch, capsys):
+    import importlib.util
+    from pw import maintain
+    real = importlib.util.find_spec
+    monkeypatch.setattr(importlib.util, "find_spec", lambda name, *a: None if name == "mcp" else real(name, *a))
+    with pytest.raises(SystemExit) as e:
+        maintain.ready()
+    assert "mcp" in str(e.value) and "Nothing was read" in str(e.value)

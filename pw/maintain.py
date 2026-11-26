@@ -17,6 +17,9 @@ One round of the loop that keeping a project consistent comes down to:
      other places, have a second model read the place, blind as well;
   5. hold everything against the files once more and report.
 
+The files are read as they are in the working tree, so a change and the readings of it can be
+committed together.
+
 What is left after that is for a person: places that do not say the same thing, and readers
 who disagree about a place. Exit status 1 if anything is left.
 """
@@ -34,6 +37,21 @@ from .kernel import LOG, READER, Kernel, _sha, context, locate, question
 from .lean_gate import LEAN_DIR, LeanGate
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def ready():
+    """Stop before any session is paid for, if a reader could not answer: the readers' tools are
+    served over MCP by this package, and the sessions are run by the claude command."""
+    import importlib.util
+    import shutil
+    missing = []
+    if importlib.util.find_spec("mcp") is None:
+        missing.append("the Python package `mcp` is not installed (pip install mcp): without it a reader has no tool to answer with, "
+                       "and every place comes back unanswered")
+    if shutil.which("claude") is None:
+        missing.append("the `claude` command is not on PATH: it runs the readers' sessions")
+    if missing:
+        sys.exit("Nothing was read. " + "; ".join(missing) + ".")
 
 
 def blind_read(repo, lean_dir, model, actor, items, budget, db=None):
@@ -132,10 +150,14 @@ def main():
     unread = [(d, u["at"]) for d in report["decisions"] for u in d.get("unread", [])
               if needs_agent(d, u) and not any(x["model"] == args.model for x in u.get("declined", []))]
     if unread or unchecked(report):
+        ready()
+        # A reading is of the text that was read, whatever commit that text ends up in. So the
+        # files are read as they are now, committed or not, and a change and the readings of it
+        # can go into one commit. If a file is edited again before committing, its readings are
+        # of text that is gone, and the check says so.
         dirty = subprocess.run(["git", "status", "--porcelain", "--", ".", f":(exclude){LOG}"], cwd=repo, capture_output=True, text=True).stdout.strip()
         if dirty:
-            show(report)
-            sys.exit("\nCommit the changes first: what is read has to be what is committed.")
+            print("Reading the files as they are now, uncommitted changes included. Commit them together with pw-log.jsonl.", flush=True)
     silent = []
     if unread:
         silent += read_blind(kernel, repo, args, unread, args.model, "first")
@@ -158,6 +180,9 @@ def main():
     failed = [r for r in silent if r.get("error") or r["no answer"]]
     if failed:
         print(f"\n{len(failed)} reader session(s) failed or left a place unanswered (see above). That is not a finding: run this again.")
+        if all(r.get("turns") in (None, 1) for r in silent):
+            print("Every session ended after one turn without answering. The readers' tools may not have started: "
+                  "try `python -m pw.mcp_server` by hand; it should start and wait, not fail.")
     sys.exit(1 if bad or failed else 0)
 
 
