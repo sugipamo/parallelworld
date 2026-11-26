@@ -3,7 +3,8 @@
  "a blind reader counts if measured": {
   "read at least": 0.85,
   "stuck at most": 0.15,
-  "takes another thing for it at most": 0.15
+  "takes another thing for it at most": 0.15,
+  "picks one of two values at most": 0.15
  },
  "a reading stands if any of": [
   [

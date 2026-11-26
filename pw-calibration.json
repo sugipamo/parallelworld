@@ -18197,5 +18197,1864 @@
     "why": "The passage covers the rules for when a reading holds (the rules table, the conditions, blind readers and calibration thresholds). It does not mention which axioms an accepted proof may depend on."
    }
   ]
+ },
+ {
+  "model": "claude-opus-5-5",
+  "instructions": "17345a9de3",
+  "date": "2026-11-26",
+  "seed": 21,
+  "cost_usd": 1.35,
+  "no answer": 0,
+  "planted": {
+   "n": 10,
+   "read": 10,
+   "stuck": 0,
+   "other": 0,
+   "declined": 0
+  },
+  "unchanged": {
+   "n": 3,
+   "read": 3
+  },
+  "decoys": {
+   "n": 18,
+   "declined": 17,
+   "accepted": 1
+  },
+  "twice": {
+   "n": 17,
+   "declined": 17,
+   "picked": 0
+  },
+  "read rate": [
+   0.692,
+   1.0
+  ],
+  "stuck rate": [
+   0.0,
+   0.308
+  ],
+  "accept rate": [
+   0.001,
+   0.273
+  ],
+  "pick rate": [
+   0.0,
+   0.195
+  ],
+  "trials": [
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "docs/spec.md::3. Lean Gate",
+    "kind": "entry renamed",
+    "planted": [
+     "Classical.choice",
+     "Quot.sound",
+     "sivevu"
+    ],
+    "before": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "about": "axioms a proof may depend on",
+    "read": [
+     "Classical.choice",
+     "Quot.sound",
+     "sivevu"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "docs/spec.md::3. Lean Gate",
+    "kind": "entry renamed",
+    "planted": [
+     "Classical.choice",
+     "Quot.sound_dun",
+     "propext"
+    ],
+    "before": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "about": "axioms a proof may depend on",
+    "read": [
+     "Classical.choice",
+     "Quot.sound_dun",
+     "propext"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "docs/spec.md::3. Lean Gate",
+    "kind": "entry renamed",
+    "planted": [
+     "Classical.choice_fab",
+     "Quot.sound",
+     "propext"
+    ],
+    "before": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "about": "axioms a proof may depend on",
+    "read": [
+     "Classical.choice_fab",
+     "Quot.sound",
+     "propext"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "docs/spec.md::3. Lean Gate",
+    "kind": "unchanged",
+    "planted": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "before": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "about": "axioms a proof may depend on",
+    "read": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "names of the MCP tools",
+    "asked": "names of the MCP tools: the names of the MCP tools offered to a reader, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::4. 読み手の道具（MCP）",
+    "kind": "entry renamed",
+    "planted": [
+     "not_stated_poc",
+     "read_place"
+    ],
+    "before": [
+     "not_stated",
+     "read_place"
+    ],
+    "about": "names of the MCP tools",
+    "read": [
+     "not_stated_poc",
+     "read_place"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "names of the MCP tools",
+    "asked": "names of the MCP tools: the names of the MCP tools offered to a reader, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::4. 読み手の道具（MCP）",
+    "kind": "entry renamed",
+    "planted": [
+     "not_stated",
+     "read_place_def"
+    ],
+    "before": [
+     "not_stated",
+     "read_place"
+    ],
+    "about": "names of the MCP tools",
+    "read": [
+     "not_stated",
+     "read_place_def"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "names of the MCP tools",
+    "asked": "names of the MCP tools: the names of the MCP tools offered to a reader, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::4. 読み手の道具（MCP）",
+    "kind": "unchanged",
+    "planted": [
+     "not_stated",
+     "read_place"
+    ],
+    "before": [
+     "not_stated",
+     "read_place"
+    ],
+    "about": "names of the MCP tools",
+    "read": [
+     "not_stated",
+     "read_place"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "entry renamed",
+    "planted": [
+     "agrees with a computed place",
+     "agrees with another place read zofi",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same by a second model",
+     "read the same zofi",
+     "words occur in the place",
+     "zofi"
+    ],
+    "before": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "about": "conditions a rule may ask for",
+    "read": [
+     "agrees with a computed place",
+     "agrees with another place read zofi",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same by a second model",
+     "read the same zofi",
+     "words occur in the place",
+     "zofi"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "entry renamed",
+    "planted": [
+     "agrees with a computed place",
+     "agrees with another place read blind_bes",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "before": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "about": "conditions a rule may ask for",
+    "read": [
+     "agrees with a computed place",
+     "agrees with another place read blind_bes",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "entry renamed",
+    "planted": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place_cat"
+    ],
+    "before": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "about": "conditions a rule may ask for",
+    "read": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place_cat"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "entry renamed",
+    "planted": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model_bod",
+     "words occur in the place"
+    ],
+    "before": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "about": "conditions a rule may ask for",
+    "read": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model_bod",
+     "words occur in the place"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "entry renamed",
+    "planted": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person_nil",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "before": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "about": "conditions a rule may ask for",
+    "read": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person_nil",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "unchanged",
+    "planted": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "before": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "about": "conditions a rule may ask for",
+    "read": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "asked": "calibration bar: read rate, in thousandths: the lowest 95% bound, in thousandths, on the rate at which a blind reader reads the altered value, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.85",
+    "other": "0.89",
+    "about": "calibration bar: read rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage repeats the measured-reader bullet twice with conflicting bars for the altered-value read rate: 0.85 (850) in one and 0.89 (890) in the other."
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "asked": "calibration bar: read rate, in thousandths: the lowest 95% bound, in thousandths, on the rate at which a blind reader reads the altered value, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.85",
+    "other": "0.87",
+    "about": "calibration bar: read rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself. It has two versions of the calibrated-reader paragraph, and both are written as the current rule: one gives the read-rate bar as 0.85 (850) and the other as 0.87 (870)."
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "asked": "calibration bar: read rate, in thousandths: the lowest 95% bound, in thousandths, on the rate at which a blind reader reads the altered value, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.85",
+    "other": "0.86",
+    "about": "calibration bar: read rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage repeats the measured-reader paragraph twice, and the two copies give different bars for the read rate: 0.85 or more (850) in one, 0.86 or more (860) in the other."
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "asked": "calibration bar: read rate, in thousandths: the lowest 95% bound, in thousandths, on the rate at which a blind reader reads the altered value, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.85",
+    "other": "0.88",
+    "about": "calibration bar: read rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "Two duplicated bullets give conflicting read-rate bars: 0.85 (850) in one and 0.88 (880) in the other."
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "asked": "calibration bar: stuck rate, in thousandths: the highest 95% bound, in thousandths, on the rate at which a blind reader is stuck on the original value, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.15",
+    "other": "0.19",
+    "about": "calibration bar: stuck rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage repeats the measured-reader bullet twice with conflicting bars for the stuck-on-original rate: 0.15 (150) in one and 0.19 (190) in the other."
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "asked": "calibration bar: stuck rate, in thousandths: the highest 95% bound, in thousandths, on the rate at which a blind reader is stuck on the original value, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.15",
+    "other": "0.18",
+    "about": "calibration bar: stuck rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself. It has two versions of the calibrated-reader paragraph, and both are written as the current rule: one gives the stuck-rate bar as 0.15 (150) and the other as 0.18 (180)."
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "asked": "calibration bar: stuck rate, in thousandths: the highest 95% bound, in thousandths, on the rate at which a blind reader is stuck on the original value, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.15",
+    "other": "0.16",
+    "about": "calibration bar: stuck rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage repeats the measured-reader paragraph twice, and the two copies give different bars for the stuck rate: 0.15 or less (150) in one, 0.16 or less (160) in the other."
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "asked": "calibration bar: stuck rate, in thousandths: the highest 95% bound, in thousandths, on the rate at which a blind reader is stuck on the original value, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.15",
+    "other": "0.17",
+    "about": "calibration bar: stuck rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "Two duplicated bullets give conflicting stuck-rate bars: 0.15 (150) in one and 0.17 (170) in the other."
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "asked": "calibration bar: accept rate, in thousandths: the highest 95% bound, in thousandths, on the rate at which a blind reader reads a value off a place that is about another thing, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.15",
+    "other": "0.18",
+    "about": "calibration bar: accept rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage repeats the measured-reader bullet twice with conflicting bars for the decoy-accept rate: 0.15 (150) in one and 0.18 (180) in the other."
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "asked": "calibration bar: accept rate, in thousandths: the highest 95% bound, in thousandths, on the rate at which a blind reader reads a value off a place that is about another thing, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.15",
+    "other": "0.17",
+    "about": "calibration bar: accept rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself. It has two versions of the calibrated-reader paragraph, and both are written as the current rule: one gives the decoy-accept-rate bar as 0.15 (150) and the other as 0.17 (170)."
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "asked": "calibration bar: accept rate, in thousandths: the highest 95% bound, in thousandths, on the rate at which a blind reader reads a value off a place that is about another thing, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.15",
+    "other": "0.16",
+    "about": "calibration bar: accept rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage repeats the measured-reader paragraph twice, and the two copies give different bars for the decoy accept rate: 0.15 or less (150) in one, 0.16 or less (160) in the other."
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "asked": "calibration bar: accept rate, in thousandths: the highest 95% bound, in thousandths, on the rate at which a blind reader reads a value off a place that is about another thing, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.15",
+    "other": "0.19",
+    "about": "calibration bar: accept rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "Two duplicated bullets give conflicting decoy-accept bars: 0.15 (150) in one and 0.19 (190) in the other."
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "asked": "number of conditions a rule may ask for: how many conditions a rule of the table may ask for",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "9",
+    "other": "16",
+    "about": "number of conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "Two consecutive sentences give the number of conditions a rule may use as 9 and as 16 (the table lists 9)."
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "asked": "number of conditions a rule may ask for: how many conditions a rule of the table may ask for",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "9",
+    "other": "10",
+    "about": "number of conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself. Two lines next to each other give the number of conditions a rule may use: one says 9 and the other says 10."
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "asked": "number of conditions a rule may ask for: how many conditions a rule of the table may ask for",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "9",
+    "other": "14",
+    "about": "number of conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "Two lines next to each other give different counts: \"次の 9 つ\" (9) and \"次の 14 つ\" (14). The table lists 9."
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "asked": "number of conditions a rule may ask for: how many conditions a rule of the table may ask for",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "9",
+    "other": "19",
+    "about": "number of conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "Two adjacent sentences give conflicting counts: 9 conditions and 19 conditions."
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "asked": "number of conditions a rule may ask for: how many conditions a rule of the table may ask for",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "9",
+    "other": "12",
+    "about": "number of conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself: one line says a rule may use 9 conditions (規則に使える条件は次の 9 つ) and the very next line says 12 (次の 12 つ). The table lists 9."
+   },
+   {
+    "fact": "Lean version",
+    "asked": "Lean version: the version of Lean that the Lean projects in this repository and its CI are pinned to, as a bare version number without a leading v",
+    "type": "String",
+    "place": "pw/maintain.py::main",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "default reader model",
+    "read": null,
+    "outcome": "declined",
+    "why": "This is the maintain script's main() (argument parsing, blind-reader sessions, model defaults); it mentions a Lean directory but states no Lean version."
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "pw/mcp_server.py",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "names of the MCP tools",
+    "read": null,
+    "outcome": "declined",
+    "why": "This is the code for the MCP server that gives readers the read_place and not_stated tools. It never names any axioms a proof may depend on."
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::3. Lean Gate",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "axioms a proof may depend on",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage describes the Lean Gate: how theorems are written and checked by running Lean twice, and the axiom allow-list. It does not list the conditions a rule in the rules table may require."
+   },
+   {
+    "fact": "default reader model",
+    "asked": "default reader model: the model ID of the Claude model that reads places by default, in pw.maintain and pw.calibrate",
+    "type": "String",
+    "place": "lean/lean-toolchain",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "Lean version",
+    "read": null,
+    "outcome": "declined",
+    "why": "This passage is a Lean toolchain version string (leanprover/lean4:v4.14.0). It is not the model ID of a Claude reader."
+   },
+   {
+    "fact": "names of the MCP tools",
+    "asked": "names of the MCP tools: the names of the MCP tools offered to a reader, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::3. Lean Gate",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "axioms a proof may depend on",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage is about the Lean Gate (how theorem statements are built, the two-pass Lean check, the axiom allowlist). It names no MCP tools offered to a reader."
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "asked": "number of conditions a rule may ask for: how many conditions a rule of the table may ask for",
+    "type": "Nat",
+    "place": "pw-rules.json",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "calibration bar: read rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "This is the rules table for this repository: the thresholds for readers and the rows that are in use. It only shows which conditions the current rows use. It never says how many conditions a rule may ask for."
+   },
+   {
+    "fact": "Lean version",
+    "asked": "Lean version: the version of Lean that the Lean projects in this repository and its CI are pinned to, as a bare version number without a leading v",
+    "type": "String",
+    "place": "pw/calibrate.py::main",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "default reader model",
+    "read": null,
+    "outcome": "declined",
+    "why": "This is the main() of the calibration script: its arguments, how trials are grouped into sessions, and how rates are summed. It never gives a Lean version."
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "pw/rules.json",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage is about when a reading of a place stands: thresholds for blind readers and the conditions for accepting a reading. It doesn't list any axioms a proof may depend on."
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "pw/lean_gate.py::ALLOWED_AXIOMS",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "axioms a proof may depend on",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage defines ALLOWED_AXIOMS, the Lean axioms a proof may depend on (propext, Classical.choice, Quot.sound). It doesn't say which conditions a row of the rules table may require."
+   },
+   {
+    "fact": "default reader model",
+    "asked": "default reader model: the model ID of the Claude model that reads places by default, in pw.maintain and pw.calibrate",
+    "type": "String",
+    "place": "experiments/selfcheck/lean/lean-toolchain",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "Lean version",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage is a Lean toolchain version string (leanprover/lean4:v4.14.0), not a Claude reader model ID."
+   },
+   {
+    "fact": "names of the MCP tools",
+    "asked": "names of the MCP tools: the names of the MCP tools offered to a reader, sorted alphabetically",
+    "type": "List String",
+    "place": "pw/kernel.py::CONDITIONS",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage defines CONDITIONS, a dict mapping labels for how a reading is checked (e.g. \"computed\", \"blind\", \"confirmed by a person\") to their descriptions; it does not list any MCP tool names."
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "asked": "number of conditions a rule may ask for: how many conditions a rule of the table may ask for",
+    "type": "Nat",
+    "place": "pw-rules.json",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "calibration bar: stuck rate, in thousandths",
+    "read": 8,
+    "outcome": "accepted"
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage covers the rules for when a reading holds (rule table, conditions, blind readers, calibration). It does not list any axioms an accepted proof may depend on."
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::4. 読み手の道具（MCP）",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "names of the MCP tools",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage covers the two MCP tools given to the reader (read_place and not_stated). It does not list any conditions that a row of the rules table may require."
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "docs/spec.md::4. 読み手の道具（MCP）",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "names of the MCP tools",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage describes the reader's MCP tools (read_place and not_stated). It does not list any axioms that an accepted proof may depend on."
+   },
+   {
+    "fact": "names of the MCP tools",
+    "asked": "names of the MCP tools: the names of the MCP tools offered to a reader, sorted alphabetically",
+    "type": "List String",
+    "place": "pw/lean_gate.py::ALLOWED_AXIOMS",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "axioms a proof may depend on",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage defines ALLOWED_AXIOMS, the Lean axioms that are permitted (propext, Classical.choice, Quot.sound). It does not name any MCP tools."
+   },
+   {
+    "fact": "names of the MCP tools",
+    "asked": "names of the MCP tools: the names of the MCP tools offered to a reader, sorted alphabetically",
+    "type": "List String",
+    "place": "pw/rules.json",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage is a rules file that says when a reading of a place stands: thresholds for blind readers and combinations of conditions. It does not name any MCP tools."
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "pw/kernel.py::CONDITIONS",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage is a CONDITIONS dict that describes reading conditions (computed, confirmed by a person, blind, and so on). It does not list any axioms an accepted proof may depend on."
+   }
+  ]
+ },
+ {
+  "model": "claude-opus-5-5",
+  "instructions": "17345a9de3",
+  "date": "2026-11-26",
+  "seed": 22,
+  "cost_usd": 1.26,
+  "no answer": 0,
+  "planted": {
+   "n": 10,
+   "read": 10,
+   "stuck": 0,
+   "other": 0,
+   "declined": 0
+  },
+  "unchanged": {
+   "n": 3,
+   "read": 3
+  },
+  "decoys": {
+   "n": 18,
+   "declined": 18,
+   "accepted": 0
+  },
+  "twice": {
+   "n": 17,
+   "declined": 17,
+   "picked": 0
+  },
+  "read rate": [
+   0.692,
+   1.0
+  ],
+  "stuck rate": [
+   0.0,
+   0.308
+  ],
+  "accept rate": [
+   0.0,
+   0.185
+  ],
+  "pick rate": [
+   0.0,
+   0.195
+  ],
+  "trials": [
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "docs/spec.md::3. Lean Gate",
+    "kind": "entry renamed",
+    "planted": [
+     "Classical.choice",
+     "Quot.sound_bum",
+     "propext"
+    ],
+    "before": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "about": "axioms a proof may depend on",
+    "read": [
+     "Classical.choice",
+     "Quot.sound_bum",
+     "propext"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "docs/spec.md::3. Lean Gate",
+    "kind": "entry renamed",
+    "planted": [
+     "Classical.choice",
+     "Quot.sound",
+     "hapaki"
+    ],
+    "before": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "about": "axioms a proof may depend on",
+    "read": [
+     "Classical.choice",
+     "Quot.sound",
+     "hapaki"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "docs/spec.md::3. Lean Gate",
+    "kind": "entry renamed",
+    "planted": [
+     "Classical.choice_bip",
+     "Quot.sound",
+     "propext"
+    ],
+    "before": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "about": "axioms a proof may depend on",
+    "read": [
+     "Classical.choice_bip",
+     "Quot.sound",
+     "propext"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "docs/spec.md::3. Lean Gate",
+    "kind": "unchanged",
+    "planted": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "before": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "about": "axioms a proof may depend on",
+    "read": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "names of the MCP tools",
+    "asked": "names of the MCP tools: the names of the MCP tools offered to a reader, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::4. 読み手の道具（MCP）",
+    "kind": "entry renamed",
+    "planted": [
+     "not_stated",
+     "read_place_nos"
+    ],
+    "before": [
+     "not_stated",
+     "read_place"
+    ],
+    "about": "names of the MCP tools",
+    "read": [
+     "not_stated",
+     "read_place_nos"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "names of the MCP tools",
+    "asked": "names of the MCP tools: the names of the MCP tools offered to a reader, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::4. 読み手の道具（MCP）",
+    "kind": "entry renamed",
+    "planted": [
+     "not_stated_bub",
+     "read_place"
+    ],
+    "before": [
+     "not_stated",
+     "read_place"
+    ],
+    "about": "names of the MCP tools",
+    "read": [
+     "not_stated_bub",
+     "read_place"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "names of the MCP tools",
+    "asked": "names of the MCP tools: the names of the MCP tools offered to a reader, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::4. 読み手の道具（MCP）",
+    "kind": "unchanged",
+    "planted": [
+     "not_stated",
+     "read_place"
+    ],
+    "before": [
+     "not_stated",
+     "read_place"
+    ],
+    "about": "names of the MCP tools",
+    "read": [
+     "not_stated",
+     "read_place"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "entry renamed",
+    "planted": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model_sip",
+     "words occur in the place"
+    ],
+    "before": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "about": "conditions a rule may ask for",
+    "read": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model_sip",
+     "words occur in the place"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "entry renamed",
+    "planted": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind_kid",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "before": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "about": "conditions a rule may ask for",
+    "read": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind_kid",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "entry renamed",
+    "planted": [
+     "agrees with a computed place",
+     "agrees with another place read riwe",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same by a second model",
+     "read the same riwe",
+     "riwe",
+     "words occur in the place"
+    ],
+    "before": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "about": "conditions a rule may ask for",
+    "read": [
+     "agrees with a computed place",
+     "agrees with another place read riwe",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same by a second model",
+     "read the same riwe",
+     "riwe",
+     "words occur in the place"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "entry renamed",
+    "planted": [
+     "agrees with a computed place_gir",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "before": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "about": "conditions a rule may ask for",
+    "read": [
+     "agrees with a computed place_gir",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "entry renamed",
+    "planted": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place_sel",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "before": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "about": "conditions a rule may ask for",
+    "read": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place_sel",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "unchanged",
+    "planted": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "before": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "about": "conditions a rule may ask for",
+    "read": [
+     "agrees with a computed place",
+     "agrees with another place read blind",
+     "blind",
+     "computed",
+     "confirmed by a person",
+     "contained in a computed place",
+     "read the same blind",
+     "read the same by a second model",
+     "words occur in the place"
+    ],
+    "outcome": "read"
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "asked": "calibration bar: read rate, in thousandths: the lowest 95% bound, in thousandths, on the rate at which a blind reader reads the altered value, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.85",
+    "other": "0.86",
+    "about": "calibration bar: read rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself: two copies of the \"measured reader\" paragraph give the read-rate bar as 0.85 (850) in one and 0.86 (860) in the other."
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "asked": "calibration bar: read rate, in thousandths: the lowest 95% bound, in thousandths, on the rate at which a blind reader reads the altered value, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.85",
+    "other": "0.88",
+    "about": "calibration bar: read rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage has two copies of the measured-reader bullet that disagree. One gives the read-rate bar as 0.85 or more (850) and the other as 0.88 or more (880)."
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "asked": "calibration bar: read rate, in thousandths: the lowest 95% bound, in thousandths, on the rate at which a blind reader reads the altered value, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.85",
+    "other": "0.89",
+    "about": "calibration bar: read rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself. Two paragraphs, both about the current threshold, give the read-rate bar as 0.85 (850) in one and 0.89 (890) in the other."
+   },
+   {
+    "fact": "calibration bar: read rate, in thousandths",
+    "asked": "calibration bar: read rate, in thousandths: the lowest 95% bound, in thousandths, on the rate at which a blind reader reads the altered value, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.85",
+    "other": "0.87",
+    "about": "calibration bar: read rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself: one 測定済みの読み手 bullet sets the read-rate bar at 0.85 (850) and a duplicate bullet sets it at 0.87 (870)."
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "asked": "calibration bar: stuck rate, in thousandths: the highest 95% bound, in thousandths, on the rate at which a blind reader is stuck on the original value, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.15",
+    "other": "0.16",
+    "about": "calibration bar: stuck rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself: two copies of the \"measured reader\" paragraph give the stuck-rate bar as 0.15 (150) in one and 0.16 (160) in the other."
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "asked": "calibration bar: stuck rate, in thousandths: the highest 95% bound, in thousandths, on the rate at which a blind reader is stuck on the original value, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.15",
+    "other": "0.19",
+    "about": "calibration bar: stuck rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage has two copies of the measured-reader bullet that disagree. One gives the stuck-rate bar as 0.15 or less (150) and the other as 0.19 or less (190)."
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "asked": "calibration bar: stuck rate, in thousandths: the highest 95% bound, in thousandths, on the rate at which a blind reader is stuck on the original value, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.15",
+    "other": "0.17",
+    "about": "calibration bar: stuck rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself. Two paragraphs, both about the current threshold, give the stuck-rate bar as 0.15 (150) in one and 0.17 (170) in the other."
+   },
+   {
+    "fact": "calibration bar: stuck rate, in thousandths",
+    "asked": "calibration bar: stuck rate, in thousandths: the highest 95% bound, in thousandths, on the rate at which a blind reader is stuck on the original value, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.15",
+    "other": "0.18",
+    "about": "calibration bar: stuck rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself: one bullet sets the stuck-on-original rate bar at 0.15 (150) and a duplicate bullet sets it at 0.18 (180)."
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "asked": "calibration bar: accept rate, in thousandths: the highest 95% bound, in thousandths, on the rate at which a blind reader reads a value off a place that is about another thing, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.15",
+    "other": "0.16",
+    "about": "calibration bar: accept rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself: two copies of the \"measured reader\" paragraph give the decoy-accept-rate bar as 0.15 (150) in one and 0.16 (160) in the other."
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "asked": "calibration bar: accept rate, in thousandths: the highest 95% bound, in thousandths, on the rate at which a blind reader reads a value off a place that is about another thing, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.15",
+    "other": "0.17",
+    "about": "calibration bar: accept rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage has two copies of the measured-reader bullet that disagree. One gives the decoy accept-rate bar as 0.15 or less (150) and the other as 0.17 or less (170)."
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "asked": "calibration bar: accept rate, in thousandths: the highest 95% bound, in thousandths, on the rate at which a blind reader reads a value off a place that is about another thing, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.15",
+    "other": "0.19",
+    "about": "calibration bar: accept rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself. Two paragraphs, both about the current threshold, give the decoy accept-rate bar as 0.15 (150) in one and 0.19 (190) in the other."
+   },
+   {
+    "fact": "calibration bar: accept rate, in thousandths",
+    "asked": "calibration bar: accept rate, in thousandths: the highest 95% bound, in thousandths, on the rate at which a blind reader reads a value off a place that is about another thing, for that reader to count as measured",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "0.15",
+    "other": "0.18",
+    "about": "calibration bar: accept rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself: one bullet sets the decoy-accept rate bar at 0.15 (150) and a duplicate bullet sets it at 0.18 (180)."
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "asked": "number of conditions a rule may ask for: how many conditions a rule of the table may ask for",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "9",
+    "other": "10",
+    "about": "number of conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself: two lines next to each other say there are 9 conditions and 10 conditions (the table below it lists 9)."
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "asked": "number of conditions a rule may ask for: how many conditions a rule of the table may ask for",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "9",
+    "other": "16",
+    "about": "number of conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage has two sentences next to each other that disagree. One says a rule may use 9 conditions and the other says 16."
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "asked": "number of conditions a rule may ask for: how many conditions a rule of the table may ask for",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "9",
+    "other": "12",
+    "about": "number of conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself. Two lines next to each other say there are 9 conditions and 12 conditions."
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "asked": "number of conditions a rule may ask for: how many conditions a rule of the table may ask for",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "9",
+    "other": "11",
+    "about": "number of conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself: two lines next to each other give the number of conditions as 9 and as 11. The table lists 9."
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "asked": "number of conditions a rule may ask for: how many conditions a rule of the table may ask for",
+    "type": "Nat",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "said twice",
+    "planted": null,
+    "before": "9",
+    "other": "19",
+    "about": "number of conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage contradicts itself: two consecutive sentences say the conditions a rule may use number 9 (\"次の 9 つ\") and 19 (\"次の 19 つ\"). The table that follows lists 9."
+   },
+   {
+    "fact": "Lean version",
+    "asked": "Lean version: the version of Lean that the Lean projects in this repository and its CI are pinned to, as a bare version number without a leading v",
+    "type": "String",
+    "place": "pw/maintain.py::main",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "default reader model",
+    "read": null,
+    "outcome": "declined",
+    "why": "This is the main() function of the maintain script. It sets up arguments, models and blind-reading sessions, and never states a Lean version."
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "pw/rules.json",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage sets when a reading of a place stands: thresholds for blind readers and combinations of conditions. It does not mention which axioms a proof may depend on."
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::4. 読み手の道具（MCP）",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "names of the MCP tools",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage describes the two MCP tools a reader gets (read_place and not_stated). It doesn't mention the rules table or any conditions a rule may require."
+   },
+   {
+    "fact": "default reader model",
+    "asked": "default reader model: the model ID of the Claude model that reads places by default, in pw.maintain and pw.calibrate",
+    "type": "String",
+    "place": "lean/lean-toolchain",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "Lean version",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage is a Lean toolchain version string (leanprover/lean4:v4.14.0). It does not name a Claude reader model."
+   },
+   {
+    "fact": "names of the MCP tools",
+    "asked": "names of the MCP tools: the names of the MCP tools offered to a reader, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::3. Lean Gate",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "axioms a proof may depend on",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage describes the Lean Gate: how theorem statements are written, the two Lean runs, the axiom allowlist and the tactics. It does not name any MCP tools offered to a reader."
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "asked": "number of conditions a rule may ask for: how many conditions a rule of the table may ask for",
+    "type": "Nat",
+    "place": "pw-rules.json",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "calibration bar: stuck rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The JSON lists this repository's rules and the bar for blind readers. It uses some conditions, but it never says how many conditions a rule may ask for in total."
+   },
+   {
+    "fact": "Lean version",
+    "asked": "Lean version: the version of Lean that the Lean projects in this repository and its CI are pinned to, as a bare version number without a leading v",
+    "type": "String",
+    "place": "pw/calibrate.py::main",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "default reader model",
+    "read": null,
+    "outcome": "declined",
+    "why": "This is the calibration script's main(). It parses arguments, runs blind sessions and works out rate intervals. It never gives a Lean version."
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "pw/kernel.py::CONDITIONS",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage defines CONDITIONS, a dictionary that maps the names of reading conditions (computed, confirmed by a person, blind, etc.) to their descriptions. It doesn't mention axioms that a proof may depend on."
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "pw/lean_gate.py::ALLOWED_AXIOMS",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "axioms a proof may depend on",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage defines ALLOWED_AXIOMS, the Lean axioms a proof may use (propext, Classical.choice, Quot.sound). It does not list the conditions a row of the rules table may require."
+   },
+   {
+    "fact": "default reader model",
+    "asked": "default reader model: the model ID of the Claude model that reads places by default, in pw.maintain and pw.calibrate",
+    "type": "String",
+    "place": "experiments/selfcheck/lean/lean-toolchain",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "Lean version",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage is a Lean toolchain version string (leanprover/lean4:v4.14.0). It does not name a Claude reader model."
+   },
+   {
+    "fact": "names of the MCP tools",
+    "asked": "names of the MCP tools: the names of the MCP tools offered to a reader, sorted alphabetically",
+    "type": "List String",
+    "place": "pw/kernel.py::CONDITIONS",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage is a CONDITIONS dict that maps the names of reading conditions (computed, blind, confirmed by a person, ...) to descriptions. It does not list any MCP tool names."
+   },
+   {
+    "fact": "number of conditions a rule may ask for",
+    "asked": "number of conditions a rule may ask for: how many conditions a rule of the table may ask for",
+    "type": "Nat",
+    "place": "pw-rules.json",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "calibration bar: read rate, in thousandths",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage lists the rules for when a reading stands. Its rules have 1 to 3 conditions each, but it never says how many conditions a rule may ask for at most."
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "pw/mcp_server.py",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "names of the MCP tools",
+    "read": null,
+    "outcome": "declined",
+    "why": "This is the MCP server code that exposes read_place and not_stated to readers. It says nothing about which axioms a proof may depend on."
+   },
+   {
+    "fact": "conditions a rule may ask for",
+    "asked": "conditions a rule may ask for: the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
+    "type": "List String",
+    "place": "docs/spec.md::3. Lean Gate",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "axioms a proof may depend on",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage describes the Lean Gate: how agreement between places is written as a Lean equation, the two-run check, the axiom allow-list (propext, Classical.choice, Quot.sound) and how disputes are shown. It never mentions a rules table or the conditions a rule's row may require."
+   },
+   {
+    "fact": "names of the MCP tools",
+    "asked": "names of the MCP tools: the names of the MCP tools offered to a reader, sorted alphabetically",
+    "type": "List String",
+    "place": "pw/rules.json",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage is a rules file that says when a reading of a place stands (thresholds for blind readers and combinations of conditions). It names no MCP tools."
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "docs/spec.md::4. 読み手の道具（MCP）",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "names of the MCP tools",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage describes the two MCP tools given to the reader session (read_place and not_stated). It does not list any axioms that an accepted proof may depend on."
+   },
+   {
+    "fact": "names of the MCP tools",
+    "asked": "names of the MCP tools: the names of the MCP tools offered to a reader, sorted alphabetically",
+    "type": "List String",
+    "place": "pw/lean_gate.py::ALLOWED_AXIOMS",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "axioms a proof may depend on",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage defines the set of Lean axioms that are allowed (propext, Classical.choice, Quot.sound). These are not names of MCP tools."
+   },
+   {
+    "fact": "axioms a proof may depend on",
+    "asked": "axioms a proof may depend on: the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
+    "type": "List String",
+    "place": "docs/spec.md::読みが成り立つ条件",
+    "kind": "decoy",
+    "planted": null,
+    "before": null,
+    "about": "conditions a rule may ask for",
+    "read": null,
+    "outcome": "declined",
+    "why": "The passage covers the rules table that decides whether a reading holds, and how readers are calibrated. It never mentions proof axioms."
+   }
+  ]
  }
 ]

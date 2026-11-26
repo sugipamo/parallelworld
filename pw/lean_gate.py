@@ -184,6 +184,66 @@ class LeanGate:
                 return {"ok": False, "reason": "timeout"}
         return self.judge(r.returncode, r.stdout + r.stderr, self.gamma())
 
+    def check_many(self, jobs, batch=50):
+        """Check many proofs, [(relation, items, proof)], and return a verdict for each.
+
+        Proofs that are expected to pass (the ones in a record) are compiled together: one
+        module with every statement and proof, each in a namespace of its own, and one audit
+        file, free of caller text as ever, that prints the axioms of each. A batch is accepted
+        only as a whole: if the module does not compile, or the audit's output is anything but
+        one report per theorem in order, every proof of the batch is checked alone instead. So
+        a batch can only say yes where each of its proofs was compiled and audited; what it
+        saves is starting Lean twice per proof.
+        """
+        out = [None] * len(jobs)
+        for at in range(0, len(jobs), batch):
+            part = list(range(at, min(at + batch, len(jobs))))
+            verdicts = self._together([jobs[i] for i in part]) if len(part) > 1 else None
+            for n, i in enumerate(part):
+                out[i] = verdicts[n] if verdicts else self.check(*jobs[i])
+        return out
+
+    def _together(self, jobs):
+        """The verdicts of a batch compiled as one module, or None if it has to be done one by one."""
+        try:
+            parts = []
+            for i, (relation, items, proof) in enumerate(jobs):
+                src = self.render(relation, items, proof)
+                head, body = src.split("\n\n", 1)
+                if head != "import Gamma":
+                    return None
+                parts.append(f"namespace PW{i}\n{body}\nend PW{i}\n")
+            lake, home = self._lake()
+        except GateError:
+            return None
+        src = "import Gamma\n\n" + "\n".join(parts)
+        with tempfile.TemporaryDirectory(prefix="run-", dir=home) as work:
+            mod = "PWProofs_" + hashlib.sha256(src.encode()).hexdigest()[:16]
+            with open(os.path.join(work, mod + ".lean"), "w") as fh:
+                fh.write(src)
+            with open(os.path.join(work, mod + "_audit.lean"), "w") as fh:
+                fh.write(f"import {mod}\n" + "".join(f"#print axioms PW{i}.pw_goal\n" for i in range(len(jobs))))
+            lean = os.path.join(os.path.dirname(lake), "lean")
+            env = dict(os.environ, LEAN_PATH=f"{_READY[(lake, home)]}:{work}")
+            try:
+                r = subprocess.run([lean, "-o", os.path.join(work, mod + ".olean"), os.path.join(work, mod + ".lean")],
+                                   cwd=home, capture_output=True, text=True, timeout=self.timeout, env=env)
+                if r.returncode != 0:
+                    return None
+                r = subprocess.run([lean, os.path.join(work, mod + "_audit.lean")], cwd=home, capture_output=True, text=True,
+                                   timeout=self.timeout, env=env)
+            except subprocess.TimeoutExpired:
+                return None
+        if r.returncode != 0:
+            return None
+        # the whole output has to be the reports, one per theorem, in order, and nothing else
+        reports = re.findall(r"'PW(\d+)\.pw_goal' (does not depend on any axioms|depends on axioms: \[[^\]]*\])", r.stdout + r.stderr)
+        rebuilt = " ".join(f"'PW{n}.pw_goal' {rest}" for n, rest in reports)
+        if [int(n) for n, _ in reports] != list(range(len(jobs))) or rebuilt != " ".join((r.stdout + r.stderr).split()):
+            return None
+        gamma = self.gamma()
+        return [self.judge(0, f"'pw_goal' {' '.join(rest.split())}", gamma) for _, rest in reports]
+
     def _run_file(self, src, lake, home):
         """Run Lean on a file of ours that nothing imports. None if it does not finish in time."""
         with tempfile.TemporaryDirectory(prefix="run-", dir=home) as work:      # (Lean wants its input under the project)

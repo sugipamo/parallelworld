@@ -425,16 +425,18 @@ def reader_measurements(cwd, instructions=INSTRUCTIONS):
     out = {}
     for r in runs:
         who = r["model"] if instructions is not None else (r["model"], r.get("instructions"))
-        m = out.setdefault(who, {"runs": 0, "planted": 0, "read": 0, "stuck": 0, "decoys": 0, "accepted": 0})
+        m = out.setdefault(who, {"runs": 0, "planted": 0, "read": 0, "stuck": 0, "decoys": 0, "accepted": 0, "twice": 0, "picked": 0})
         m["runs"] += 1
         for key, src, name in (("planted", "planted", "n"), ("read", "planted", "read"), ("stuck", "planted", "stuck"),
-                               ("decoys", "decoys", "n"), ("accepted", "decoys", "accepted")):
+                               ("decoys", "decoys", "n"), ("accepted", "decoys", "accepted"), ("twice", "twice", "n"), ("picked", "twice", "picked")):
             m[key] += r.get(src, {}).get(name, 0)
     for m in out.values():
         if m["planted"]:
             m["read rate"], m["stuck rate"] = interval(m["read"], m["planted"]), interval(m["stuck"], m["planted"])
         if m["decoys"]:
             m["accept rate"] = interval(m["accepted"], m["decoys"])
+        if m["twice"]:
+            m["pick rate"] = interval(m["picked"], m["twice"])
     return out
 
 
@@ -443,7 +445,8 @@ def measured_readers(cwd, rules):
     A reader is a model with the instructions it was given: {(model, instructions)}."""
     bar = rules["a blind reader counts if measured"]
     limits = {"read at least": ("read rate", 0, 1), "stuck at most": ("stuck rate", 1, -1),
-              "takes another thing for it at most": ("accept rate", 1, -1)}
+              "takes another thing for it at most": ("accept rate", 1, -1),
+              "picks one of two values at most": ("pick rate", 1, -1)}
     unknown = set(bar) - set(limits)
     if unknown:
         raise KernelError(f"a reader can be asked for {sorted(limits)}; not {sorted(unknown)}")
@@ -746,8 +749,9 @@ class Kernel:
             raise KernelError("no Lean gate configured; proofs cannot be verified")
         st = self.state()
         refused = []
-        for p in st.proofs if proofs is None else proofs:
-            verdict = self.gate.check(p["relation"], [("Prop", st.props[p["args"][0]])], p.get("proof", ""))
+        proofs = list(st.proofs if proofs is None else proofs)
+        verdicts = self.gate.check_many([(p["relation"], [("Prop", st.props[p["args"][0]])], p.get("proof", "")) for p in proofs])
+        for p, verdict in zip(proofs, verdicts):
             if not verdict["ok"]:
                 refused.append({"relation": p["relation"], "args": p["args"], "reason": verdict["reason"][-300:]})
         return refused
@@ -1072,6 +1076,10 @@ class Kernel:
                               "contested": "contested"}.get(verdict, "uncovered")
             if verdict == "holds":
                 entry["value"] = whole[0]["reads as"]
+            else:
+                for p in entry["places"]:               # nothing to hold a partial listing against yet
+                    if p.get("some"):
+                        p["whole undecided"] = True
         if len(usable) < len(said) and not unread:
             # Instructions that cannot both hold were set aside, and the places were judged without
             # them. That is as far as the kernel goes: the fact waits for a person, nothing else does.

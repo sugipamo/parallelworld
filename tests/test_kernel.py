@@ -391,3 +391,29 @@ def test_a_place_can_be_read_by_its_structure():
                      ({"python": "value", "find": "x"}, "f.py"), ({"data": "a..b"}, "f.toml"), ({"python": "value", "public": True}, "f.py")]:
         with pytest.raises(KernelError):
             reader(read, at)
+
+
+def test_a_proposed_pattern_must_not_spell_out_the_value(tmp_path):
+    """A pattern that fits only the present value turns a changed value into an unreadable place."""
+    from pw import discover
+    (tmp_path / "ch.rs").write_text('fn topics() -> Vec<&str> {\n    vec!["system.return"]\n}\nconst LIMIT: u32 = 14;\n')
+    repo = str(tmp_path)
+    with pytest.raises(discover.Refused, match="fits only the value"):
+        discover.screen(repo, "String", "ch.rs", "system.return", 'vec!["system.return"]', find=r'vec!\["(system\.return)"')
+    with pytest.raises(discover.Refused, match="fits only the value"):
+        discover.screen(repo, "Nat", "ch.rs", 14, "const LIMIT: u32 = 14;", find=r"LIMIT: u32 = (14);", kind="nat")
+    kept = discover.screen(repo, "String", "ch.rs", "system.return", 'vec!["system.return"]', find=r'vec!\["(system\.[a-z]+)"')
+    assert kept["read"]["find"] == r'vec!\["(system\.[a-z]+)"'
+    assert discover.screen(repo, "Nat", "ch.rs", 14, "const LIMIT: u32 = 14;", find=r"LIMIT: u32 = (\d+);", kind="nat")["read"]["as"] == "nat"
+    assert discover.screen(repo, "List String", "ch.rs", ["system.return"], 'vec!["system.return"]', find_all=r'"([a-z.]+)"')["read"]["find_all"]
+
+
+def test_what_differs_between_lists_is_named():
+    from pw.check import differences
+    place = lambda at, v, **more: {"at": at, "reads as": __import__("json").dumps(v), **more}
+    d = {"places": [place("README.md", ["a", "b", "z"]), place("m.py", ["a", "b", "c", "z"]), place("all.py", ["a", "b", "c", "z"]),
+                    place("start.md", ["a"], some=True)]}
+    assert differences(d) == ["only in all.py, m.py: c"]
+    d = {"places": [place("README.md", ["a", "x"]), place("m.py", ["a", "b"])], "instructions": [{"is": '["a", "b"]', "by": "ann"}]}
+    assert differences(d) == ["README.md has, beyond what was laid down: x", "README.md lacks, of what was laid down: b"]
+    assert differences({"places": [place("a.md", 14), place("k.py", 15)]}) == []                # single values are shown as they are

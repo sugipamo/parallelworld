@@ -14,6 +14,7 @@ again the next time. With --record, what it computed and what Lean proved is app
 project's record, as `pw.maintain` does for what the readers say.
 """
 import argparse
+import json
 import os
 import shutil
 import sys
@@ -24,6 +25,44 @@ from .lean_gate import LEAN_DIR, LeanGate
 
 
 FACTS = "pw-facts.json"      # a project's list of facts and the places that state them
+
+
+def differences(d):
+    """For a list whose places do not agree: which entries are not everywhere, and where they are.
+    With something laid down or defined: what each place has beyond it, and what it lacks."""
+    def entries(text):
+        try:
+            v = json.loads(text)
+        except (ValueError, TypeError):
+            return None
+        return v if isinstance(v, list) else None
+
+    whole = [(p["at"], entries(p["reads as"])) for p in d["places"] if not p.get("some")]
+    if any(v is None for _, v in whole):
+        return []
+    key = lambda x: json.dumps(x, ensure_ascii=False)
+    show_ = lambda xs: ", ".join(sorted(map(str, xs)))[:300]
+    laid = next((entries(i["is"]) for i in d.get("instructions", []) if "set aside" not in i), None)
+    target = laid if laid is not None else entries(d.get("gives") or "")
+    out = []
+    if target is not None:
+        what = "what was laid down" if laid is not None else "what the definition gives"
+        for at, v in whole:
+            more, less = [x for x in v if x not in target], [x for x in target if x not in v]
+            if more:
+                out.append(f"{at} has, beyond {what}: {show_(more)}")
+            if less:
+                out.append(f"{at} lacks, of {what}: {show_(less)}")
+        return out
+    where = {}
+    for at, v in whole:
+        for x in v:
+            where.setdefault(key(x), (x, []))[1].append(at)
+    groups = {}
+    for x, places in where.values():
+        if len(set(places)) < len(whole):
+            groups.setdefault(tuple(sorted(set(places))), []).append(x)
+    return [f"only in {', '.join(places)}: {show_(xs)}" for places, xs in sorted(groups.items())]
 
 
 def show(report, unconfirmed="fail"):
@@ -64,6 +103,9 @@ def show(report, unconfirmed="fail"):
         if not ok:
             for p in d["places"]:
                 part = "lists (in part) " if p.get("some") else "reads as "
+                if p.get("whole undecided"):
+                    print(f"       {p['at']} {part}{p['reads as'][:100]}   (not judged: the places that state the whole of it do not agree)")
+                    continue
                 print(f"       {p['at']} {part}{p['reads as'][:100]}   ({p['why'] if p['stands'] else 'does not stand'})")
                 if p.get("against"):
                     print(f"          against the instruction of {', '.join(p['against'])}")
@@ -78,6 +120,9 @@ def show(report, unconfirmed="fail"):
                     for other in p.get("read blind as", []):
                         print(f"          a blind reader reads {other[:100]} off it, not what the pattern computes")
                     declined(p.get("declined", []))
+        if d["state"] == "violated":
+            for line in differences(d):
+                print(f"       {line}")
         for u in d.get("unread", []):
             print(f"       {u['at']}: {u['why'][:160]}")
             declined(u.get("declined", []))
@@ -140,10 +185,28 @@ def run(repo, record, lean_dir=LEAN_DIR, verify=False, unconfirmed="fail", keep=
         record = os.path.join(scratch, LOG)
     try:
         kernel = Kernel(record, gate=LeanGate(lean_dir), actor="check")
-        recorded = list(kernel.state().proofs)      # what the project's record claims Lean proved, before this check adds anything
+        before = kernel.state()
+        recorded = list(before.proofs)              # what the project's record claims Lean proved, before this check adds anything
+        ways = {(h, at, json.dumps(before.models[m]["binding"], sort_keys=True)) for h, f in before.facts.items()
+                for at, m in f["readings"] if before.models[m]["binding"]}
         if os.path.exists(os.path.join(repo, FACTS)):
             kernel.sync_facts(os.path.join(repo, FACTS))
-        bad = show(kernel.recheck(repo), unconfirmed)
+        report = kernel.recheck(repo)
+        bad = show(report, unconfirmed)
+        if not keep:
+            # A computed place stands because a blind reader once read the same off it as its way of
+            # reading computes. That holds on when the place changes only if the record has what
+            # this way of reading computed for the text the reader saw. A check does not write, so
+            # a way of reading that is new to the record is fine now and loses that when the place
+            # is next edited: say so while it costs nothing to keep.
+            now = kernel.state()
+            fresh = sorted({p["at"] for d in report["decisions"] for p in d["places"]
+                            if p["by"] == "reader" and p["stands"]
+                            and (d["h"], p["at"], json.dumps(now.models[p["m"]]["binding"], sort_keys=True)) not in ways})
+            if fresh:
+                print(f"note: the way {', '.join(fresh)[:300]} {'is' if len(fresh) == 1 else 'are'} read is not in the record yet. "
+                      "It stands for the text as it is; to have it stand when the text changes, run `python -m pw.maintain` "
+                      "(or `python -m pw.check --record`) now and commit pw-log.jsonl. No reader is called for that.")
         if verify:
             refused = kernel.verify(recorded)
             for r in refused:

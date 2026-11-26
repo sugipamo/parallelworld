@@ -118,6 +118,9 @@ What to report for a place
   with "as" (string, nat, int, permille), and "sort": true for a list, as needed.
   Read the place that really determines the thing, even if it writes the value differently:
   do not settle for another line that merely happens to spell it the same way.
+  Never spell the value itself in the pattern. Write what stands around it, and let the group
+  take any value of its kind: "topic == \"([a-z.]+)\"", not "topic == \"(system\\.return)\"". A pattern
+  that fits only the present value cannot tell that the value has changed.
 
 Each report is checked against the file, and you are told what is wrong: fix it and report again.
 Ignore pw-facts.json, pw-log.jsonl, pw-calibration.json and anything under .git.
@@ -166,7 +169,10 @@ apart and would mislead someone if they did; leave out anything stated only once
   type   one of String, Nat, Int, List String, List Nat
   gloss  one sentence saying exactly what the value is, precise enough that someone shown a
          single place and nothing else could read the value off it (for a list: what the entries
-         are, and that they are sorted)
+         are, and that they are sorted). Say what the value is, not how it is used elsewhere:
+         each place is shown alone to a reader who has to recognise it as stating this, and
+         "the words a response starts with, which the client parses" cannot be checked from
+         the one file that defines the words. "the status words of a response" can.
   places at least two, each {"at", "value", "quote"} and, for code and configuration, a pattern
 
 When you have finished, call `finished("", searched)` saying where you looked, whether or not
@@ -234,6 +240,36 @@ def _json_value(typ, value):
     return value
 
 
+def _reads_another(read, text):
+    """Does the pattern still read the place when the value there is another one of its kind?
+    A pattern that spells the value out can only ever find that one value."""
+    found = text
+    start = 0
+    for step in [*read.get("within", []), read.get("find") or read["find_all"]]:
+        m = re.search(step, found, re.M)
+        if m is None:
+            return True                                  # (not for this check to say)
+        start, found = start + m.start(1), m.group(1)
+    old = found
+    if re.fullmatch(r"\d+", old):
+        others = [str(int(old) + 1), str(int(old) + 10)]
+    elif re.fullmatch(r"[\d.]*\d", old):
+        others = [re.sub(r"\d$", lambda d: str((int(d.group(0)) + 1) % 10), old)]
+    else:
+        last = old[-1:]
+        others = [old[:-1] + ("Q" if last.isupper() else "q" if last != "q" else "z"), old + "x", old + "X", old + "_x", old + "9",
+                  re.sub(r"[A-Za-z]", lambda c: "Q" if c.group(0).isupper() else "q", old)]
+    for new in others:
+        try:
+            got = json.loads(_read_pattern(read, text[:start] + new + text[start + len(old):]))
+        except KernelError:
+            continue
+        want = new if read["as"] == "string" else None
+        if want is None or got == want or (isinstance(got, list) and want in got):
+            return True
+    return False
+
+
 def screen(repo, typ, at, value, quote, find=None, find_all=None, kind=None, within=None, rewrite=None, structure=None):
     """Check one reported place against the files. Returns the place as pw-facts.json lists it,
     with the value and quote kept alongside for whoever looks at the proposal."""
@@ -267,6 +303,10 @@ def screen(repo, typ, at, value, quote, find=None, find_all=None, kind=None, wit
         same = sorted(computed) == sorted(value) if isinstance(value, list) else computed == value
         if not same:
             raise Refused(f"the pattern reads {json.dumps(computed, ensure_ascii=False)[:200]} off the place, not the value you gave")
+        if not rewrite and not _reads_another(read, text):
+            raise Refused("the pattern fits only the value that is there now: were the value to change, the place would count as "
+                          "unreadable instead of as saying something else. Do not spell the value in the pattern; write what is "
+                          "around it and let the group take any value of its kind, e.g. \"([a-z.]+)\" or (\\d+)")
         read = {k: v for k, v in read.items() if k in ("find", "find_all", "as", "within", "rewrite") or (k == "sort" and v)}
     else:
         where = text if isinstance(value, list) else quote

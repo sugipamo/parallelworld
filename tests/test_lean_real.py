@@ -896,3 +896,58 @@ def test_agents_are_not_started_without_what_they_answer_with(monkeypatch, capsy
     with pytest.raises(SystemExit) as e:
         maintain.ready()
     assert "mcp" in str(e.value) and "Nothing was read" in str(e.value)
+
+
+def test_a_way_of_reading_new_to_the_record_is_pointed_out(tmp_path, capsys):
+    """A check does not write. A computed place whose way of reading is not in the record stands
+    for the text as it is, and would stop standing at the next edit: the check says so, and
+    recording once (no reader is called) keeps it."""
+    import json
+    from pw import check
+    repo, record = str(tmp_path), str(tmp_path / "pw-log.jsonl")
+    (tmp_path / "k.py").write_text("LIMIT = 14\n")
+    (tmp_path / "doc.md").write_text("## Limits\n\nAt most 14 atoms.\n")
+    _measure(repo, opus=27)
+    declare = lambda find: (tmp_path / "pw-facts.json").write_text(json.dumps([{"name": "limit", "type": "Nat", "places": [
+        "doc.md::Limits", {"at": "k.py", "read": {"find": find, "as": "nat"}}]}]))
+    declare(r"= (\d+)")
+    k = Kernel(record, gate=LeanGate(), actor="reader")
+    k.sync_facts(str(tmp_path / "pw-facts.json"))
+    h = next(iter(k.state().facts))
+    k.read_place(h, "doc.md::Limits", "14", cwd=repo, quote="At most 14 atoms.", blind=True, model="opus")
+    k.read_place(h, "k.py", "14", cwd=repo, quote="LIMIT = 14", blind=True, model="opus")      # a blind reader has looked at what the pattern reads
+    k.recheck(repo)
+    assert check.run(repo, record) is False and "note:" not in capsys.readouterr().out
+
+    declare(r"LIMIT = (\d+)")                                          # the pattern is rewritten; it reads the same value
+    assert check.run(repo, record) is False
+    assert "note: the way k.py is read is not in the record yet" in capsys.readouterr().out
+    kept = open(record).read()
+    (tmp_path / "k.py").write_text("# the limit\nLIMIT = 14\n")        # an edit that leaves the value alone
+    assert check.run(repo, record) is True                             # ...and the place no longer stands
+    capsys.readouterr()
+
+    (tmp_path / "k.py").write_text("LIMIT = 14\n")
+    assert open(record).read() == kept and check.run(repo, record, keep=True) is False         # recorded once, as the note says
+    assert "note:" not in capsys.readouterr().out
+    (tmp_path / "k.py").write_text("# the limit\nLIMIT = 14\n")
+    assert check.run(repo, record) is False                            # ...the same edit now leaves it standing
+
+
+def test_proofs_checked_together_are_each_checked(gate):
+    """Many proofs in one module: the same verdicts as one by one, and one bad proof among
+    them does not pass, nor does it take the others down with it."""
+    good = [("holds", P("(14 : Nat) = 14"), "rfl"), ("not", P('("a" : String) = "b"'), "decide"),
+            ("holds", P("∀ p : Prop, p ∨ ¬p"), "intro p\nexact Classical.em p"), ("holds", P('(["a", "b"] : List String) = ["a", "b"]'), "decide")]
+    got = gate.check_many(good)
+    assert [v["ok"] for v in got] == [True] * 4 and got == [gate.check(*j) for j in good]
+    assert got[2]["axioms"] and got[0]["axioms"] == []                  # each with its own axioms
+    bad = good[:2] + [("holds", P("(1 : Nat) = 2"), "rfl"), ("holds", P("(1 : Nat) = 2"), "exact sorryAx _")] + good[2:]
+    got = gate.check_many(bad)
+    assert [v["ok"] for v in got] == [True, True, False, False, True, True]
+    forged = [good[0], ("holds", P("(1 : Nat) = 2"), "trace \"'PW1.pw_goal' does not depend on any axioms\"\nexact sorryAx _"), good[1]]
+    assert [v["ok"] for v in gate.check_many(forged)] == [True, False, True]
+    assert gate.check_many([]) == [] and gate.check_many(good[:1])[0]["ok"]
+    # a proof that passes alone only by what another one leaves behind does not pass: nothing is left behind
+    leak = [("holds", P("True"), "have h : (1 : Nat) = 1 := rfl\ntrivial"), ("holds", P("(1 : Nat) = 2"), "exact h")]
+    assert [v["ok"] for v in gate.check_many(leak)] == [True, False]

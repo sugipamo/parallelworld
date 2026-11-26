@@ -191,5 +191,26 @@
     }
    }
   ]
+ },
+ {
+  "name": "calibration bar: pick rate, in thousandths",
+  "type": "Nat",
+  "gloss": "the highest 95% bound, in thousandths, on the rate at which a blind reader reads one of the two values off a passage that states two, for that reader to count as measured",
+  "places": [
+   {
+    "at": "pw-rules.json",
+    "read": {
+     "data": "a blind reader counts if measured.picks one of two values at most",
+     "as": "permille"
+    }
+   },
+   {
+    "at": "docs/spec.md::読みが成り立つ条件",
+    "read": {
+     "as": "permille",
+     "find": "片方を読んでしまう率が (0\\.\\d+) 以下"
+    }
+   }
+  ]
  }
 ]
