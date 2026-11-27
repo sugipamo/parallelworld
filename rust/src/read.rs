@@ -158,8 +158,9 @@ pub fn reader(read: &Value, at: &str) -> R<Value> {
         return Err(format!("a value is one of {:?}, not {:?}", KINDS, kind));
     }
     let known = |allowed: &[&str]| -> R<()> {
-        let extra: Vec<&String> = r.keys().filter(|k| !allowed.contains(&k.as_str())).collect();
-        if extra.is_empty() { Ok(()) } else { Err(format!("{}: unknown keys in \"read\": {:?}", at, extra)) }
+        let mut extra: Vec<&String> = r.keys().filter(|k| !allowed.contains(&k.as_str())).collect();
+        extra.sort();
+        if extra.is_empty() { Ok(()) } else { Err(format!("{}: unknown keys in \"read\": {}", at, pylist(&extra))) }
     };
     let ext = Path::new(at.split("::").next().unwrap()).extension().and_then(|e| e.to_str()).unwrap_or("");
     if r.contains_key("python") || r.contains_key("data") {

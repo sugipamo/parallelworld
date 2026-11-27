@@ -212,5 +212,31 @@
     }
    }
   ]
+ },
+ {
+  "name": "version of this tool",
+  "type": "String",
+  "gloss": "the version number of this tool (parallelworld): the one its Python package and its Rust crate are published as, and the newest entry of its change log",
+  "places": [
+   {
+    "at": "pyproject.toml",
+    "read": {
+     "data": "project.version"
+    }
+   },
+   {
+    "at": "rust/Cargo.toml",
+    "read": {
+     "data": "package.version"
+    }
+   },
+   {
+    "at": "CHANGES.md",
+    "read": {
+     "find": "\\A[\\s\\S]*?^## ([0-9]+\\.[0-9]+\\.[0-9]+)",
+     "as": "string"
+    }
+   }
+  ]
  }
 ]

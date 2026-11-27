@@ -1,49 +1,31 @@
 name: parallelworld check
 description: >-
   Hold a repository's declared facts (pw-facts.json) against its files as they are checked out:
-  python -m pw.check, with the Python packages it needs, and Lean if the declaration needs it.
+  the check built from this repository's Rust source, and Lean if the declaration needs it.
   No agent is used.
 
 # For another repository's workflow. Pin this action by commit; that one commit then fixes
-# everything else: the checker, its Python packages (by hash, requirements-ci.txt) and Lean
-# (the version in lean/lean-toolchain, by checksum, ci/lean.sh).
-#
-#     - uses: actions/checkout@<commit>
-#     - uses: sugipamo/parallelworld@<commit>
-#
-# The job needs nothing beyond reading the repository (permissions: contents: read).
-
-inputs:
-  repo:
-    description: The directory whose pw-facts.json is checked, relative to the workspace.
-    default: "."
-  args:
-    description: >-
-      Further arguments to pw.check. The default runs the proofs in the record through Lean
-      again instead of believing them.
-    default: "--verify"
-
-runs:
+# everything else: the checker's source, its crates (by checksum, rust/Cargo.lock) and Lean
+# (the version in lean/lean-toolchain, by checksum, ci/lean.sh). The Rust compiler is the
+# runner's own. Nothing built is cached between runs:
   using: composite
   steps:
-    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0    # v7.1.0
-      with:
-        python-version: "3.13"     # requirements-ci.txt pins wheels for this version
-
-    - name: Python packages, by hash
+    - name: The check, built from source
       shell: bash
-      run: pip install --require-hashes -r "$GITHUB_ACTION_PATH/requirements-ci.txt"
+      run: |
+        cargo build --release --locked --quiet --manifest-path "$GITHUB_ACTION_PATH/rust/Cargo.toml" --target-dir "$RUNNER_TEMP/parallelworld-target"
+        echo "PW_BIN=$RUNNER_TEMP/parallelworld-target/release/pw" >> "$GITHUB_ENV"
+        echo "PW_LEAN_DIR=$GITHUB_ACTION_PATH/lean" >> "$GITHUB_ENV"
 
     # Written-out values are compared as they stand. Lean is fetched only where something has
     # to be worked out: a fact defined from other facts, or every comparison if `args` asks for it.
     - name: Lean, by checksum, if the declaration needs it
       shell: bash
       env:
-        PYTHONPATH: ${{ github.action_path }}
         PW_REPO: ${{ inputs.repo }}
         PW_ARGS: ${{ inputs.args }}
       run: |
-        needed=$(python -m pw.check --repo "$PW_REPO" --needs-lean)
+        needed=$("$PW_BIN" check --repo "$PW_REPO" --needs-lean)
         case " $PW_ARGS " in *" --lean always "*) needed=yes ;; esac
         echo "Lean needed: $needed"
         if [ "$needed" = yes ]; then
@@ -54,7 +36,6 @@ runs:
     - name: Facts, held against the files
       shell: bash
       env:
-        PYTHONPATH: ${{ github.action_path }}
         PW_REPO: ${{ inputs.repo }}
         PW_ARGS: ${{ inputs.args }}
-      run: python -m pw.check --repo "$PW_REPO" $PW_ARGS
+      run: '"$PW_BIN" check --repo "$PW_REPO" $PW_ARGS'

@@ -1,6 +1,6 @@
 [package]
 name = "pw"
-version = "0.10.0"
+version = "0.11.0"
 edition = "2021"
 description = "Declare what a project states in several places, and keep the places saying the same thing"
 license = "MIT"
@@ -10,6 +10,7 @@ name = "pw"
 path = "src/main.rs"
 
 [dependencies]
+serde = "1"
 serde_json = { version = "1", features = ["preserve_order"] }
 toml = { version = "0.8", features = ["preserve_order"] }
 regex = "1"

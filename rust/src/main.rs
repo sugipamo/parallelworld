@@ -1,5 +1,6 @@
 //! pw check: hold every declared fact against the files as they are now.
 mod kernel;
+mod lean;
 mod read;
 mod util;
 
@@ -39,16 +40,17 @@ fn differences(d: &Value) -> Vec<String> {
         cut(&names.join(", "), 300)
     };
     let laid = list(d, "instructions").iter().find(|i| i.get("set aside").is_none()).and_then(|i| entries(s(i, "is")));
-    if let Some(target) = laid {
+    let what = if laid.is_some() { "what was laid down" } else { "what the definition gives" };
+    if let Some(target) = laid.or_else(|| entries(s(d, "gives"))) {
         let mut out = vec![];
         for (at, v) in &whole {
             let more: Vec<Value> = v.iter().filter(|x| !target.contains(x)).cloned().collect();
             let less: Vec<Value> = target.iter().filter(|x| !v.contains(x)).cloned().collect();
             if !more.is_empty() {
-                out.push(format!("{} has, beyond what was laid down: {}", at, show(&more)));
+                out.push(format!("{} has, beyond {}: {}", at, what, show(&more)));
             }
             if !less.is_empty() {
-                out.push(format!("{} lacks, of what was laid down: {}", at, show(&less)));
+                out.push(format!("{} lacks, of {}: {}", at, what, show(&less)));
             }
         }
         return out;
@@ -105,6 +107,11 @@ fn show(report: &Value, warn: bool) -> bool {
                 println!("       judged without them, the fact is: {}", show_str(w));
             }
         }
+        if let (Some(how), false) = (d.get("defined"), ok) {
+            let from: Vec<String> = list(how, "from").iter().map(show_str).collect();
+            let gives = if s(d, "gives").is_empty() { String::new() } else { format!("; that gives {}", cut(s(d, "gives"), 100)) };
+            println!("       defined from {} as {}{}", from.join(", "), cut(s(how, "as"), 100), gives);
+        }
         if !ok {
             for i in list(d, "instructions").iter().filter(|i| i.get("set aside").is_none()) {
                 println!("       laid down by {}: {}", s(i, "by"), cut(s(i, "is"), 100));
@@ -119,6 +126,9 @@ fn show(report: &Value, warn: bool) -> bool {
                 println!("       {} {}{}   ({})", s(p, "at"), part, cut(s(p, "reads as"), 100), if stands { s(p, "why") } else { "does not stand" });
                 if let Some(a) = p.get("against").and_then(Value::as_array) {
                     println!("          against the instruction of {}", a.iter().map(show_str).collect::<Vec<_>>().join(", "));
+                }
+                if p.get("differs from the definition").is_some() {
+                    println!("          not what the definition gives");
                 }
                 let out = list(p, "not in the whole");
                 if !out.is_empty() {
@@ -150,6 +160,8 @@ fn show(report: &Value, warn: bool) -> bool {
         }
         let any = |key: &str| places.iter().any(|p| p.get(key).map_or(false, |v| !v.is_null() && v.as_array().map_or(true, |a| !a.is_empty())));
         match state {
+            "waits" => println!("       nothing to hold its places against yet: {}", cut(&list(d, "waits for").iter().map(show_str).collect::<Vec<_>>().join("; "), 200)),
+            "violated" if any("differs from the definition") => println!("       a place does not say what the definition gives (verified by Lean): the place, or one of the facts it is defined from, has to change"),
             "conflict" => println!("       which instruction holds is for the people who gave them: take the other out of pw-facts.json"),
             "violated" if any("against") => println!("       a place does not say what was laid down: change the place, or have the instruction withdrawn"),
             "violated" if any("not in the whole") => println!("       a place lists something the others do not have; which one is right is for a person to say"),
@@ -157,8 +169,8 @@ fn show(report: &Value, warn: bool) -> bool {
             "stale" if unread.iter().any(|u| u.get("broken").is_some()) => println!("       a declared place cannot be read as declared any more: python -m pw.discover (it looks for where the statement went)"),
             "stale" => println!("       read the place(s) again: python -m pw.maintain"),
             "disputed" => println!("       a person has to say which reading is right: python -m pw.confirm --who NAME M:... and --reject M:..."),
+            "contested" => println!("       the record holds proofs both that the values agree and that they differ; one is not Lean's: python -m pw.check --verify"),
             "uncovered" => println!("       Lean could settle neither that the values are the same nor that they differ"),
-            "needs Lean" => println!("       {}", s(d, "why")),
             _ if !ok => {
                 println!("       the places agree, but a reading does not stand by the rules (pw-rules.json):");
                 println!("       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)");
@@ -174,39 +186,56 @@ fn show(report: &Value, warn: bool) -> bool {
 
 fn run(args: &[String]) -> R<i32> {
     let mut repo = ".".to_string();
-    let (mut verify, mut warn, mut as_json, mut needs) = (false, false, false, false);
+    let (mut verify, mut warn, mut as_json, mut needs, mut always) = (false, false, false, false, false);
+    let mut lean_dir = lean::lean_dir();
+    let usage = "pw check [--repo DIR] [--lean-dir DIR] [--verify] [--unconfirmed fail|warn] [--lean needed|always] [--json] [--needs-lean]";
     let mut i = 0;
     while i < args.len() {
-        match args[i].as_str() {
-            "--repo" => { i += 1; repo = args.get(i).cloned().ok_or("--repo needs a directory")?; }
+        let flag = args[i].clone();
+        let mut value = |what: &str| { i += 1; args.get(i).cloned().ok_or(format!("{} needs {}", flag, what)) };
+        match flag.as_str() {
+            "--repo" => repo = value("a directory")?,
+            "--lean-dir" => lean_dir = value("a directory")?.into(),
             "--verify" => verify = true,
             "--json" => as_json = true,
             "--needs-lean" => needs = true,
-            "--unconfirmed" => { i += 1; warn = args.get(i).map(String::as_str) == Some("warn"); }
-            "--lean" => { i += 1; if args.get(i).map(String::as_str) == Some("always") { return Err("--lean always puts every comparison to Lean, which this build does not ask yet (python -m pw.check does)".into()); } }
-            other => return Err(format!("unknown argument {}; pw check [--repo DIR] [--verify] [--unconfirmed warn] [--json] [--needs-lean]", other)),
+            "--unconfirmed" => warn = match value("fail or warn")?.as_str() { "warn" => true, "fail" => false, x => return Err(format!("--unconfirmed is fail or warn, not {}", x)) },
+            "--lean" => always = match value("needed or always")?.as_str() { "always" => true, "needed" => false, x => return Err(format!("--lean is needed or always, not {}", x)) },
+            other => return Err(format!("unknown argument {}; {}", other, usage)),
         }
         i += 1;
     }
     let cwd = Path::new(&repo);
     let facts = kernel::declared(&cwd.join("pw-facts.json"))?;
     if needs {
-        println!("{}", if kernel::needs_lean(&facts) { "yes" } else { "no" });
+        println!("{}", if kernel::needs_lean(&facts, always) { "yes" } else { "no" });
         return Ok(0);
     }
-    let mut st = kernel::replay(&cwd.join("pw-log.jsonl"))?;
+    let judge = kernel::Judge { always, gate: lean::Gate::new(lean_dir) };
+    // (named as the Python check names it: the directory made absolute)
+    let mut st = kernel::replay(&std::fs::canonicalize(cwd).unwrap_or_else(|_| cwd.to_path_buf()).join("pw-log.jsonl"))?;
+    let recorded = st.proofs.clone();       // what the project's record claims Lean proved, before this check adds anything
     let ways = st.ways.clone();
-    let report = kernel::recheck(&mut st, &facts, cwd)?;
+    kernel::premises(&facts, &judge, "pw-facts.json")?;
+    let with_lean = kernel::needs_lean(&facts, always);
+    if with_lean {
+        judge.gate.usable()?;
+    }
+    let report = kernel::recheck(&mut st, &judge, &facts, cwd)?;
     if as_json {
         let quiet = report["decisions"].as_array().unwrap().iter().any(|d| {
             let agree = ["current", "re-established"].contains(&s(d, "state"));
             let loose = list(d, "places").iter().any(|p| !p["stands"].as_bool().unwrap_or(false));
             !(agree && !loose) && !(agree && warn)
         });
-        println!("{}", serde_json::to_string_pretty(&report).unwrap());
+        // printed as the Python check prints it (indent 1), so that the two can be compared as text
+        let mut out = Vec::new();
+        let mut ser = serde_json::Serializer::with_formatter(&mut out, serde_json::ser::PrettyFormatter::with_indent(b" "));
+        serde::Serialize::serialize(&report, &mut ser).map_err(|e| e.to_string())?;
+        println!("{}", String::from_utf8_lossy(&out));
         return Ok(if quiet { 1 } else { 0 });
     }
-    let bad = show(&report, warn);
+    let mut bad = show(&report, warn);
     let mut fresh: Vec<String> = vec![];
     for (d, f) in report["decisions"].as_array().unwrap().iter().filter_map(|d| facts.iter().find(|f| f.h == s(d, "h")).map(|f| (d, f))) {
         for p in list(d, "places") {
@@ -224,11 +253,24 @@ fn run(args: &[String]) -> R<i32> {
         println!("note: the way {} {} read is not in the record yet. It stands for the text as it is; to have it stand when the text changes, run `python -m pw.maintain` (or `python -m pw.check --record`) now and commit pw-log.jsonl. No reader is called for that.",
                  cut(&fresh.join(", "), 300), if fresh.len() == 1 { "is" } else { "are" });
     }
-    if verify {
-        println!("{} recorded proof(s) not run again: Lean is not here, and nothing declared needs it", st.proofs);
-    }
-    if report["decisions"].as_array().unwrap().iter().any(|d| s(d, "state") == "needs Lean") {
-        return Err("some facts need Lean to be judged, and this build does not ask it yet: use python -m pw.check for them".into());
+    if verify && !with_lean && !judge.gate.available() {
+        // Nothing here is judged by a proof: the values are written out and compared as they stand.
+        println!("{} recorded proof(s) not run again: Lean is not here, and nothing declared needs it", recorded.len());
+    } else if verify {
+        let jobs: Vec<(String, Vec<(String, String)>, String)> = recorded.iter().map(|p| {
+            let f = p["args"][0].as_str().unwrap_or("");
+            (s(p, "relation").to_string(), vec![("Prop".to_string(), st.prop(f).cloned().unwrap_or_default())], s(p, "proof").to_string())
+        }).collect();
+        let verdicts = judge.gate.check_many(&jobs, 50);
+        let mut refused = 0;
+        for (p, v) in recorded.iter().zip(&verdicts).filter(|(_, v)| !v.ok) {
+            let args: Vec<String> = list(p, "args").iter().map(|a| format!("'{}'", show_str(a))).collect();
+            let reason: String = v.reason.chars().rev().take(300).collect::<Vec<_>>().into_iter().rev().collect();
+            println!("FAIL the record contains a proof Lean does not accept: {} [{}]\n       {}", s(p, "relation"), args.join(", "), cut(&reason, 200));
+            refused += 1;
+        }
+        println!("{} recorded proof(s) verified again, {} refused", recorded.len() - refused, refused);
+        bad |= refused > 0;
     }
     Ok(if bad { 1 } else { 0 })
 }

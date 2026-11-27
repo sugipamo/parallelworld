@@ -25,6 +25,15 @@ pub fn pystr(s: &str) -> String {
     serde_json::to_string(s).unwrap()
 }
 
+/// Python's repr of a list of strings, `['a', 'b']`: how the Python check names keys in its messages.
+pub fn pylist<S: AsRef<str>>(items: &[S]) -> String {
+    let one = |x: &str| {
+        let x = x.replace('\\', "\\\\");
+        if x.contains('\'') && !x.contains('"') { format!("\"{}\"", x) } else { format!("'{}'", x.replace('\'', "\\'")) }
+    };
+    format!("[{}]", items.iter().map(|x| one(x.as_ref())).collect::<Vec<_>>().join(", "))
+}
+
 /// `json.dumps(v, ensure_ascii=False[, sort_keys=True])`: ", " and ": " as separators.
 pub fn pyjson(v: &Value, sort_keys: bool) -> String {
     match v {

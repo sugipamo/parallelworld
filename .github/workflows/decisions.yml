@@ -27,17 +27,27 @@ jobs:
           persist-credentials: false
 
       # The same steps another repository gets by using this one as an action (action.yml):
-      # Python and its packages, the Lean that lean/lean-toolchain names, then pw.check --verify.
+      # the Rust check built from source, the Lean that lean/lean-toolchain names, then pw check --verify.
       - name: Facts and decisions, with the recorded proofs verified again
         uses: ./
+
+      # The agents' side and the tests are Python.
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0    # v7.1.0
+        if: always()
+        with:
+          python-version: "3.13"     # requirements-ci.txt pins wheels for this version
+
+      - name: Python packages, by hash
+        if: always()
+        run: pip install --require-hashes -r requirements-ci.txt
 
       - name: What a person still has to confirm
         if: always()
         run: python -m pw.confirm | tee -a "$GITHUB_STEP_SUMMARY"
 
-      # The check, written again in Rust. Its crates are pinned by rust/Cargo.lock (version and
-      # checksum); the tests hold its verdicts against the Python check's.
-      - name: The Rust check
+      # The tests hold the Rust check's verdicts against the Python check's; they use the binary
+      # built where they expect it.
+      - name: The Rust check, where the tests look for it
         if: always()
         run: cargo build --release --locked --manifest-path rust/Cargo.toml
 

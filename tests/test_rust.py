@@ -73,14 +73,96 @@ def test_what_people_laid_down(pw, tmp_path):
         assert py.returncode == rs.returncode == 1 and py.stdout == rs.stdout
 
 
-def test_this_repository_and_what_needs_lean(pw):
-    py, rs = both(pw, ROOT, "--json")
-    a, b = trimmed(json.loads(py.stdout)), trimmed(json.loads(rs.stdout))
-    beyond = [name for name, d in b.items() if d["state"] == "needs Lean"]
-    assert beyond == ["number of conditions a rule may ask for"]           # the one definition: not judged by this build yet
-    assert {n: d for n, d in a.items() if n not in beyond} == {n: d for n, d in b.items() if n not in beyond}
-    assert both(pw, ROOT)[1].returncode == 2                               # ...and it says so by its exit status
+LAKE = os.environ.get("PW_LAKE") or shutil.which("lake")
+lean = pytest.mark.skipif(not LAKE, reason="Lean not installed (set PW_LAKE)")
+
+
+@lean
+@pytest.mark.parametrize("args", [(), ("--lean", "always"), ("--verify",)])
+def test_this_repository(pw, args):
+    """Its one definition is worked out by Lean; with --lean always every comparison is; --verify runs the record's proofs again."""
+    py, rs = both(pw, ROOT, "--json", *args)
+    assert py.returncode == rs.returncode == 0 and py.stdout == rs.stdout          # the same JSON, byte for byte (the question asked included)
+    py, rs = both(pw, ROOT, *args)
+    assert py.stdout == rs.stdout and py.returncode == rs.returncode == 0
     assert both(pw, ROOT, "--needs-lean")[1].stdout == both(pw, ROOT, "--needs-lean")[0].stdout == "yes\n"
+
+
+@lean
+@pytest.mark.parametrize("change", [{}, {"k.py": "LIMIT = 15\nMODES = {'fast': 1, 'safe': 2}\n"},
+                                    {"doc.md": "## Limits\n\nAt most 14.\n\n## Modes\n\n`fast`, `bogus`\n"}])
+def test_every_comparison_put_to_lean(pw, tmp_path, change):
+    """With no proof in the record, both ask Lean the same propositions and come to the same verdicts."""
+    repo = declare(tmp_path, [LIMIT, MODES], **{**FILES, **change})
+    py, rs = both(pw, repo, "--json", "--unconfirmed", "warn", "--lean", "always")
+    assert py.returncode == rs.returncode and trimmed(json.loads(py.stdout)) == trimmed(json.loads(rs.stdout))
+
+
+@lean
+def test_definitions(pw, tmp_path):
+    """A count and a first entry worked out from other facts: agreeing, differing, waiting, following an instruction."""
+    modes = {"name": "modes", "type": "List String", "places": [{"at": "app.py::MODES", "read": {"find_all": '"(\\w+)"', "sort": True}}]}
+    versions = {"name": "versions", "type": "List String", "places": [
+        {"at": "app.py::VERSIONS", "read": {"find_all": '"([0-9.]+)"', "sort": True}},
+        {"at": "pyproject.toml", "read": {"within": "versions = \\[([^\\]]*)\\]", "find_all": '"([0-9.]+)"', "sort": True}}]}
+    count = {"name": "number of modes", "type": "Nat", "defined": {"from": ["modes"], "as": "fun ms => ms.length"},
+             "places": [{"at": "doc.md::Modes", "read": {"find": "There are (\\d+) modes", "as": "nat"}}]}
+    oldest = {"name": "oldest version", "type": "String", "defined": {"from": ["versions"], "as": 'fun vs => vs.headD ""'},
+              "places": [{"at": "pyproject.toml", "read": {"find": 'requires-python = ">=([0-9.]+)"'}}]}
+    twice = {"name": "twice the modes", "type": "Nat", "defined": {"from": ["number of modes"], "as": "fun n => 2 * n"},
+             "places": [{"at": "doc.md::Modes", "read": {"find": "There are (\\d+) modes", "as": "nat"}}]}
+    app, doc = 'MODES = ["fast", "safe"]\nVERSIONS = ["3.10", "3.11"]\n', "## Modes\n\nThere are 2 modes.\n"
+    toml = 'requires-python = ">=3.10"\nversions = ["3.10", "3.11"]\n'
+    laid = {**versions, "instructions": [{"is": ["3.9", "3.10", "3.11"], "by": "alice"}]}
+    states = []
+    for facts, files in [
+        ([count, modes, versions, oldest], {}),                                                       # all agree
+        ([count, modes, versions, oldest], {"app.py": app.replace('"safe"]', '"safe", "turbo"]')}),   # the count is now wrong
+        ([count, modes, versions, oldest], {"pyproject.toml": toml.replace('["3.10"', '["3.9", "3.10"')}),   # what it is built on disagrees
+        ([count, modes, laid, oldest], {"pyproject.toml": toml.replace('["3.10"', '["3.9", "3.10"')}),       # a person settles it
+        ([count, modes, twice], {"doc.md": doc.replace("2 modes", "4 modes")}),                       # a definition of a definition
+        ([count, modes, twice], {}),
+    ]:
+        repo = declare(tmp_path, facts, **{"app.py": app, "doc.md": doc, "pyproject.toml": toml, **files})
+        py, rs = both(pw, repo, "--json", "--unconfirmed", "warn")
+        a, b = trimmed(json.loads(py.stdout)), trimmed(json.loads(rs.stdout))
+        assert py.returncode == rs.returncode and a == b, (files, a, b)
+        py, rs = both(pw, repo, "--unconfirmed", "warn")
+        assert py.stdout == rs.stdout
+        states.append(sorted((n, d["state"]) for n, d in b.items()))
+    assert ("number of modes", "violated") in states[1] and ("oldest version", "waits") in states[2] and ("oldest version", "violated") in states[3]
+    assert ("number of modes", "violated") in states[4] and ("twice the modes", "current") in states[4]
+    assert ("number of modes", "current") in states[5] and ("twice the modes", "violated") in states[5]
+
+
+@lean
+def test_definitions_that_cannot_be_used(pw, tmp_path):
+    modes = {"name": "modes", "type": "List String", "places": [{"at": "app.py::MODES", "read": {"find_all": '"(\\w+)"'}}]}
+    count = {"name": "count", "type": "Nat", "defined": {"from": ["modes"], "as": "fun ms => ms.length"}, "places": ["doc.md"]}
+    twice = {"name": "twice", "type": "Nat", "defined": {"from": ["count"], "as": "fun n => 2 * n"}, "places": ["doc.md"]}
+    for bad in ({**count, "defined": {"from": ["nothing"], "as": "fun ms => ms.length"}},     # from a fact that is not declared
+                {**count, "defined": {"from": ["modes"], "as": "fun ms => ms"}},               # not a Nat
+                {**count, "defined": {"from": ["count"], "as": "fun n => n"}},                 # from itself
+                {**count, "instructions": [{"is": 2, "by": "alice"}]},                         # a definition takes no instruction
+                {**count, "defined": {"from": ["twice"], "as": "fun n => n"}},                 # in a circle
+                {**count, "defined": {"from": ["modes"], "as": "fun ms => by sorry"}}):        # not Lean we take
+        repo = declare(tmp_path, [bad, modes, twice], **{"app.py": 'MODES = ["a"]\n', "doc.md": "1\n"})
+        py, rs = both(pw, repo)
+        assert py.returncode == rs.returncode == 2 and rs.stderr.startswith("pw: "), (bad, py.stderr, rs.stderr)
+
+
+def test_without_lean_what_needs_it_is_not_checked(pw, tmp_path):
+    """Where Lean is needed and is not there, neither judges anything: the check could not be made."""
+    count = {"name": "count", "type": "Nat", "defined": {"from": ["limit"], "as": "fun n => n"}, "places": [LIMIT["places"][1]]}
+    repo = declare(tmp_path, [LIMIT, count], **FILES)
+    env = {**os.environ, "PW_LAKE": str(tmp_path / "no-lake")}
+    py = subprocess.run([sys.executable, "-m", "pw.check", "--repo", repo], capture_output=True, text=True, env={**env, "PYTHONPATH": ROOT})
+    rs = subprocess.run([pw, "check", "--repo", repo], capture_output=True, text=True, env=env)
+    assert py.returncode == rs.returncode == 2 and py.stderr == rs.stderr, (py.stderr, rs.stderr)
+    for args in [(), ("--verify",)]:                     # ...while what is written out is still compared as written
+        py = subprocess.run([sys.executable, "-m", "pw.check", "--repo", declare(tmp_path, [LIMIT], **FILES), *args], capture_output=True, text=True, env={**env, "PYTHONPATH": ROOT})
+        rs = subprocess.run([pw, "check", "--repo", str(tmp_path), *args], capture_output=True, text=True, env=env)
+        assert py.returncode == rs.returncode and py.stdout == rs.stdout
 
 
 def test_a_declaration_that_cannot_be_used(pw, tmp_path):
@@ -92,3 +174,16 @@ def test_a_declaration_that_cannot_be_used(pw, tmp_path):
     os.remove(tmp_path / "pw-facts.json")
     py, rs = both(pw, str(tmp_path))
     assert py.returncode == rs.returncode == 2 and py.stderr == rs.stderr
+
+
+def test_what_is_wrong_is_said_alike(pw, tmp_path):
+    """A key nobody reads, and a record cut off in the middle of a line: the same words, and the
+    project's record named (not the copy a check works on)."""
+    for facts in ([{**LIMIT, "glos": "x"}], [{**LIMIT, "places": [{**LIMIT["places"][0], "read": {**LIMIT["places"][0]["read"], "sortt": True}}]}]):
+        py, rs = both(pw, declare(tmp_path, facts, **FILES))
+        assert py.returncode == rs.returncode == 2 and py.stderr == rs.stderr, (py.stderr, rs.stderr)
+    repo = declare(tmp_path, [LIMIT], **FILES)
+    (tmp_path / "pw-log.jsonl").write_text('{"type": "withdraw", "h": "H:1", "justification": "x"}\n{"type": "rea')
+    py, rs = both(pw, repo)
+    cut = lambda e: e.split(" (")[0]                       # (what the JSON parser says is its own)
+    assert py.returncode == rs.returncode == 2 and cut(py.stderr) == cut(rs.stderr) == f"pw: {tmp_path}/pw-log.jsonl, line 2: not a readable event"

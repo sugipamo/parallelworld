@@ -57,17 +57,17 @@ Lean は `lean/` の中では動かさない。`lean/` の中身を `~/.cache/pa
 
 ## Rust 版
 
-この仕組みを Rust に移している途中。いまあるのは `check` だけで、Python 版と同じ宣言・記録・規則を読み、同じ判定と同じ表示を返す。
+この仕組みを Rust に移している途中。`check` は移し終えた。Python 版と同じ宣言・記録・規則を読み、同じ判定と同じ表示を返す。アクション（`action.yml`）は Rust 版を使う。
 
 ```
 cargo build --release --manifest-path rust/Cargo.toml
-rust/target/release/pw check --repo .            # --verify、--unconfirmed warn、--json、--needs-lean も同じ
+rust/target/release/pw check --repo .            # --verify、--unconfirmed warn、--lean always、--json、--needs-lean、--lean-dir も同じ
 ```
 
-- 実行ファイル 1 つで動く。Python も Lean も要らない。miclow の確認は 0.1 秒（Python 版は 1.7 秒）。
-- **まだできないこと**：定義（`defined`）のある事実と `--lean always`。Lean を呼ぶ部分を移していないので、そういう事実は「needs Lean」と表示して終了コード 2 で終わる。このリポジトリ自身は定義を 1 つ宣言しているので、Python 版が要る。
+- 実行ファイル 1 つで動く。Python は要らない。Lean は Python 版と同じく、定義のある事実か `--lean always` のときだけ要る（同じ `~/.cache/parallelworld` の写しを使うので、ビルドは両方で 1 回）。
+- このリポジトリの確認は 0.5 秒（Python 版は 1.8 秒）、`--verify` つきで 1.3 秒（2.6 秒）。
 - 判定が Python 版と同じであることは、2 つのリポジトリの全履歴で突き合わせてある（`experiments/history/RESULTS.md`）。CI でも毎回、両方の出力を比べている（`tests/test_rust.py`）。
-- 記録に書くもの（`pw.maintain`、`pw.calibrate` など、エージェントを使う部分）は、まだ Python 版だけ。
+- Rust 版にないのは `--record` と `--db`（記録に書くこと）。記録に書くもの（`pw.maintain`、`pw.calibrate` など、エージェントを使う部分）は、まだ Python 版だけ。
 
 ## 他のリポジトリから使う
 
@@ -106,9 +106,9 @@ jobs:
       - uses: sugipamo/parallelworld@<このリポジトリのコミット>
 ```
 
-- することは、Python 3.13 の用意、パッケージの導入（`requirements-ci.txt`、ハッシュで固定）、宣言に定義があるときだけ Lean の取得（`lean/lean-toolchain` の版、`ci/lean.sh` のチェックサムで固定）、`python -m pw.check --repo . --verify`。エージェントは使わない。
-- **使う側が固定するのは、このリポジトリのコミット 1 つ。** Lean の版もチェックサムもパッケージのハッシュも、そのコミットの中で決まる。使う側に写す値はない。
-- 入力は 2 つ。`repo`（確かめるディレクトリ。既定は `.`）と `args`（`pw.check` に渡す引数。既定は `--verify`。規則を満たさない読みを警告にとどめるなら `--verify --unconfirmed warn`）。
+- することは、Rust 版の `check` をソースからビルドすること（ランナーにある `cargo`。クレートは `rust/Cargo.lock` のチェックサムで固定。4 コアで 1 分半ほど）、宣言に定義があるときだけ Lean の取得（`lean/lean-toolchain` の版、`ci/lean.sh` のチェックサムで固定）、`pw check --repo . --verify`。Python は使わない。エージェントも使わない。ビルドしたものをキャッシュしないので、動くのはいつも、固定したコミットのソースからできたもの。
+- **使う側が固定するのは、このリポジトリのコミット 1 つ。** Lean の版もチェックサムもクレートのチェックサムも、そのコミットの中で決まる。使う側に写す値はない。
+- 入力は 2 つ。`repo`（確かめるディレクトリ。既定は `.`）と `args`（`pw check` に渡す引数。既定は `--verify`。規則を満たさない読みを警告にとどめるなら `--verify --unconfirmed warn`）。Python 版にしかない `--record` と `--db` は渡せない。
 - CI は記録を読むだけなので、手元で確かめたときと記録の中身がずれない。
 
 ### 参照先を上げるとき

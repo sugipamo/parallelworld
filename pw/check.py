@@ -20,7 +20,7 @@ import shutil
 import sys
 import tempfile
 
-from .kernel import LOG, Kernel
+from .kernel import LOG, Kernel, KernelError
 from .lean_gate import LEAN_DIR, LeanGate
 
 
@@ -192,60 +192,68 @@ def run(repo, record, lean_dir=LEAN_DIR, verify=False, unconfirmed="fail", keep=
 
     Unless `keep`, the record is copied and the copy is what gets appended to.
     """
-    scratch = None
+    scratch, kept = None, record
     if not keep:
         scratch = tempfile.mkdtemp(prefix="pw-check-")
         if os.path.exists(record):
             shutil.copy(record, os.path.join(scratch, LOG))
         record = os.path.join(scratch, LOG)
     try:
-        kernel = Kernel(record, gate=LeanGate(lean_dir), actor="check")
-        kernel.compare = lean
-        before = kernel.state()
-        recorded = list(before.proofs)              # what the project's record claims Lean proved, before this check adds anything
-        ways = {(h, at, json.dumps(before.models[m]["binding"], sort_keys=True)) for h, f in before.facts.items()
-                for at, m in f["readings"] if before.models[m]["binding"]}
-        kernel.sync_facts(os.path.join(repo, FACTS))
-        with_lean = kernel.needs_lean()
-        if with_lean:
-            kernel.gate.usable()
-        report = kernel.recheck(repo)
-        if as_json:
-            import contextlib
-            import io
-            with contextlib.redirect_stdout(io.StringIO()):
-                bad = show(report, unconfirmed)
-            print(json.dumps(report, ensure_ascii=False, indent=1, default=sorted))
-            return bad
-        bad = show(report, unconfirmed)
-        if not keep:
-            # A computed place stands because a blind reader once read the same off it as its way of
-            # reading computes. That holds on when the place changes only if the record has what
-            # this way of reading computed for the text the reader saw. A check does not write, so
-            # a way of reading that is new to the record is fine now and loses that when the place
-            # is next edited: say so while it costs nothing to keep.
-            now = kernel.state()
-            fresh = sorted({p["at"] for d in report["decisions"] for p in d["places"]
-                            if p["by"] == "reader" and p["stands"]
-                            and (d["h"], p["at"], json.dumps(now.models[p["m"]]["binding"], sort_keys=True)) not in ways})
-            if fresh:
-                print(f"note: the way {', '.join(fresh)[:300]} {'is' if len(fresh) == 1 else 'are'} read is not in the record yet. "
-                      "It stands for the text as it is; to have it stand when the text changes, run `python -m pw.maintain` "
-                      "(or `python -m pw.check --record`) now and commit pw-log.jsonl. No reader is called for that.")
-        if verify and not with_lean and not kernel.gate.available():
-            # Nothing here is judged by a proof: the values are written out and compared as they stand.
-            # What the record says Lean once proved is not used, so it does not have to be run again.
-            print(f"{len(recorded)} recorded proof(s) not run again: Lean is not here, and nothing declared needs it")
-        elif verify:
-            refused = kernel.verify(recorded)
-            for r in refused:
-                print(f"FAIL the record contains a proof Lean does not accept: {r['relation']} {r['args']}\n       {r['reason'][:200]}")
-            print(f"{len(recorded) - len(refused)} recorded proof(s) verified again, {len(refused)} refused")
-            bad |= bool(refused)
-        return bad
+        return _run(repo, record, lean_dir, verify, unconfirmed, keep, lean, as_json)
+    except KernelError as e:
+        if scratch:                  # say which file is wrong: the project's record, not the copy of it
+            raise KernelError(str(e).replace(record, kept)) from None
+        raise
     finally:
         if scratch:
             shutil.rmtree(scratch, ignore_errors=True)
+
+
+def _run(repo, record, lean_dir, verify, unconfirmed, keep, lean, as_json):
+    kernel = Kernel(record, gate=LeanGate(lean_dir), actor="check")
+    kernel.compare = lean
+    before = kernel.state()
+    recorded = list(before.proofs)              # what the project's record claims Lean proved, before this check adds anything
+    ways = {(h, at, json.dumps(before.models[m]["binding"], sort_keys=True)) for h, f in before.facts.items()
+            for at, m in f["readings"] if before.models[m]["binding"]}
+    kernel.sync_facts(os.path.join(repo, FACTS))
+    with_lean = kernel.needs_lean()
+    if with_lean:
+        kernel.gate.usable()
+    report = kernel.recheck(repo)
+    if as_json:
+        import contextlib
+        import io
+        with contextlib.redirect_stdout(io.StringIO()):
+            bad = show(report, unconfirmed)
+        print(json.dumps(report, ensure_ascii=False, indent=1, default=sorted))
+        return bad
+    bad = show(report, unconfirmed)
+    if not keep:
+        # A computed place stands because a blind reader once read the same off it as its way of
+        # reading computes. That holds on when the place changes only if the record has what
+        # this way of reading computed for the text the reader saw. A check does not write, so
+        # a way of reading that is new to the record is fine now and loses that when the place
+        # is next edited: say so while it costs nothing to keep.
+        now = kernel.state()
+        fresh = sorted({p["at"] for d in report["decisions"] for p in d["places"]
+                        if p["by"] == "reader" and p["stands"]
+                        and (d["h"], p["at"], json.dumps(now.models[p["m"]]["binding"], sort_keys=True)) not in ways})
+        if fresh:
+            print(f"note: the way {', '.join(fresh)[:300]} {'is' if len(fresh) == 1 else 'are'} read is not in the record yet. "
+                  "It stands for the text as it is; to have it stand when the text changes, run `python -m pw.maintain` "
+                  "(or `python -m pw.check --record`) now and commit pw-log.jsonl. No reader is called for that.")
+    if verify and not with_lean and not kernel.gate.available():
+        # Nothing here is judged by a proof: the values are written out and compared as they stand.
+        # What the record says Lean once proved is not used, so it does not have to be run again.
+        print(f"{len(recorded)} recorded proof(s) not run again: Lean is not here, and nothing declared needs it")
+    elif verify:
+        refused = kernel.verify(recorded)
+        for r in refused:
+            print(f"FAIL the record contains a proof Lean does not accept: {r['relation']} {r['args']}\n       {r['reason'][:200]}")
+        print(f"{len(recorded) - len(refused)} recorded proof(s) verified again, {len(refused)} refused")
+        bad |= bool(refused)
+    return bad
 
 
 if __name__ == "__main__":

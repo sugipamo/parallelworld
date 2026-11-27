@@ -1,4 +1,5 @@
 //! The record replayed, and every declared fact held against the files.
+use crate::lean::Gate;
 use crate::read::*;
 use crate::util::*;
 use serde_json::{json, Map, Value};
@@ -9,6 +10,8 @@ const CONDITIONS: [&str; 9] = [
     "computed", "confirmed by a person", "blind", "words occur in the place", "agrees with a computed place",
     "agrees with another place read blind", "read the same by a second model", "read the same blind", "contained in a computed place",
 ];
+/// Added to the question a place is asked when it states only some entries of a list (pw/kernel.py SOME).
+const SOME: &str = " This passage is only expected to mention some of them (it is an example, an excerpt, a list of highlights): give the ones it mentions, and none it does not.";
 const DEFAULT_RULES: &str = include_str!("../../pw/rules.json");
 
 #[derive(Clone, Default, Debug)]
@@ -56,8 +59,18 @@ pub struct State {
     declined: HashMap<String, Vec<Value>>,
     confirmations: Vec<(String, Value)>,
     order: Vec<String>,
-    pub proofs: usize,
+    props: HashMap<String, String>,
+    verdict: HashMap<String, BTreeSet<String>>,
+    agreed: HashMap<String, Vec<(Vec<String>, String)>>,
+    pub proofs: Vec<Value>,
     pub ways: HashSet<(String, String, String)>,
+}
+
+impl State {
+    /// The Lean proposition a recorded proof is about.
+    pub fn prop(&self, f: &str) -> Option<&String> {
+        self.props.get(f)
+    }
 }
 
 fn s<'a>(v: &'a Value, key: &str) -> &'a str {
@@ -145,8 +158,22 @@ pub fn replay(path: &Path) -> R<State> {
                 st.confirmations.retain(|(e, _)| *e != eid);
                 st.confirmations.push((eid, p));
             }
-            "proof" => st.proofs += 1,
-            "agree" | "withdraw" => {}
+            "proof" => {
+                let relation = s(&p, "relation").to_string();
+                if relation != "holds" && relation != "not" {
+                    return Err(bad(format!("a proof of {}", relation)));
+                }
+                let f = p.get("args").and_then(|a| a.get(0)).and_then(Value::as_str).ok_or_else(|| bad("a proof of nothing".into()))?.to_string();
+                st.verdict.entry(f).or_default().insert(relation);
+                st.proofs.push(p);
+            }
+            "agree" => {
+                let f = s(&p, "f").to_string();
+                st.props.entry(f.clone()).or_insert_with(|| s(&p, "lean").to_string());
+                let guards: Vec<String> = p.get("guards").and_then(Value::as_array).map(|g| g.iter().filter_map(Value::as_str).map(String::from).collect()).unwrap_or_default();
+                st.agreed.entry(h).or_default().push((guards, f));
+            }
+            "withdraw" => {}
             other => return Err(bad(format!("an event of type {}", other))),
         }
     }
@@ -169,7 +196,9 @@ pub fn declared(path: &Path) -> R<Vec<Fact>> {
         let places = d.get("places").and_then(Value::as_array).filter(|p| !p.is_empty()).ok_or_else(|| format!("{}: it needs \"places\", the list of places that state it", what))?;
         let unknown: Vec<&String> = d.as_object().unwrap().keys().filter(|k| !["name", "type", "gloss", "places", "instructions", "defined", "value"].contains(&k.as_str())).collect();
         if !unknown.is_empty() {
-            return Err(format!("{}: unknown keys {:?}; a fact has name, type, places and optionally gloss, instructions, defined", what, unknown));
+            let mut unknown = unknown;
+            unknown.sort();
+            return Err(format!("{}: unknown keys {}; a fact has name, type, places and optionally gloss, instructions, defined", what, pylist(&unknown)));
         }
         if out.iter().any(|f| f.name == fname) {
             return Err(format!("{}: {} is declared more than once; a fact is declared once, with all its places", name, fname));
@@ -227,11 +256,97 @@ pub fn declared(path: &Path) -> R<Vec<Fact>> {
             defined: d.get("defined").cloned(),
         });
     }
+    // a definition has to make sense before anything is judged
+    let shape = |n: &str| format!("{}: a definition is {{\"from\": [names of facts], \"as\": a Lean function of their values}}", n);
+    for i in 0..out.len() {
+        let Some(how) = out[i].defined.clone() else { continue };
+        let name = out[i].name.clone();
+        let from: Vec<String> = match (how.get("from").and_then(Value::as_array), how.get("as").and_then(Value::as_str)) {
+            (Some(f), Some(_)) => f.iter().map(|x| x.as_str().map(String::from).ok_or_else(|| shape(&name))).collect::<R<_>>()?,
+            _ => return Err(shape(&name)),
+        };
+        if let Some(missing) = from.iter().find(|x| !out.iter().any(|f| f.name == **x)) {
+            return Err(format!("{} is defined from '{}', which is not declared", name, missing));
+        }
+        let (mut seen, mut todo) = (HashSet::new(), from.clone());
+        while let Some(x) = todo.pop() {                // nothing may be defined, however indirectly, from itself
+            if x == name {
+                return Err(format!("{} is defined in a circle", name));
+            }
+            if seen.insert(x.clone()) {
+                if let Some(Some(d)) = out.iter().find(|f| f.name == x).map(|f| f.defined.as_ref()) {
+                    todo.extend(d.get("from").and_then(Value::as_array).into_iter().flatten().filter_map(Value::as_str).map(String::from));
+                }
+            }
+        }
+        if how.as_object().map_or(true, |o| o.len() != 2) || from.is_empty() {
+            return Err(shape(&name));
+        }
+        if !out[i].instructions.is_empty() {
+            return Err(format!("{}: its value comes from its definition; an instruction belongs to the facts it is defined from", name));
+        }
+        out[i].defined = Some(json!({ "from": from, "as": norm(how["as"].as_str().unwrap()) }));
+    }
     Ok(out)
 }
 
-pub fn needs_lean(facts: &[Fact]) -> bool {
-    facts.iter().any(|f| f.defined.is_some() || !json_like(&f.typ))
+/// Does anything declared need Lean to be judged: a definition, or a type whose values are not
+/// written out as JSON? With `always`, every comparison is put to Lean.
+pub fn needs_lean(facts: &[Fact], always: bool) -> bool {
+    always || facts.iter().any(|f| f.defined.is_some() || !json_like(&f.typ))
+}
+
+/// How values are compared: as written (Lean only where a value has to be worked out), or all by Lean.
+pub struct Judge {
+    pub always: bool,
+    pub gate: Gate,
+}
+
+impl Judge {
+    /// Refuse a value that is not of the fact's type. A written-out value shows its type on its
+    /// face; anything else is for Lean to say.
+    fn typed(&self, typ: &str, term: &str) -> R<()> {
+        if !self.always && json_like(typ) {
+            if written(typ, term).is_none() {
+                return Err(format!("{} is not a {} written out", term.chars().take(80).collect::<String>(), typ));
+            }
+            return Ok(());
+        }
+        self.well_typed(&[(typ, term)])
+    }
+
+    fn well_typed(&self, items: &[(&str, &str)]) -> R<()> {
+        let (ok, reason) = self.gate.typecheck(items);
+        if ok { Ok(()) } else { Err(format!("Lean does not accept this under Gamma: {}", reason)) }
+    }
+}
+
+/// What has to hold of the declaration before it is judged, and can only be said with Lean at
+/// hand: that its types are types, its definitions functions of the right type, its instructions
+/// values of the fact's type. (Without Lean, an unknown type passes here and is caught later.)
+pub fn premises(facts: &[Fact], judge: &Judge, file: &str) -> R<()> {
+    let types: BTreeSet<&str> = facts.iter().map(|f| f.typ.as_str()).collect();
+    for t in types.into_iter().filter(|t| !json_like(t)) {
+        let (ok, reason) = judge.gate.typecheck(&[("Type", t)]);
+        if !ok && !reason.contains("is not installed") && !reason.contains("Gamma pins") {
+            return Err(format!("{}: '{}' is not a type Lean knows here; the usual ones are String, Nat, Int, List String, List Nat", file, t));
+        }
+    }
+    for f in facts {
+        let Some(how) = &f.defined else { continue };
+        let from: Vec<&str> = how["from"].as_array().unwrap().iter().filter_map(Value::as_str).collect();
+        let fun = from.iter().map(|x| format!("({})", facts.iter().find(|g| g.name == *x).unwrap().typ)).collect::<Vec<_>>().join(" → ");
+        judge.gate.screen(s(how, "as"))?;
+        judge.well_typed(&[(&format!("{} → ({})", fun, f.typ), s(how, "as"))])?;
+    }
+    for f in facts {
+        for i in &f.instructions {
+            let term = i["is"].as_str().unwrap_or("");
+            judge.gate.screen(term)?;
+            judge.typed(&f.typ, term)?;
+        }
+    }
+    Ok(())
 }
 
 // ---- who may be believed ----------------------------------------------------------------------
@@ -304,17 +419,56 @@ fn counted(w: &Who, measured: &HashSet<(String, Option<String>)>) -> BTreeSet<St
 
 // ---- holding a fact against the files -----------------------------------------------------------
 
-fn agreement(typ: &str, terms: &[&str]) -> R<&'static str> {
-    let values: Option<Vec<Value>> = terms.iter().map(|t| written(typ, t)).collect();
-    let values = values.ok_or("a term that is not a written-out value: this needs Lean, which this build does not ask yet (python -m pw.check does)")?;
-    Ok(if values.iter().all(|v| *v == values[0]) { "holds" } else { "not" })
+type Said = Option<&'static str>;     // holds, not, contested, or nothing settled
+
+/// The proposition that the given readings agree: compared as written where they are written
+/// out, else stated once and settled by Lean. Also says whether the proposition is new to the fact.
+fn agreement(st: &mut State, judge: &Judge, h: &str, typ: &str, guards: &[String], terms: &[&str]) -> (Said, bool) {
+    if !judge.always {
+        let values: Option<Vec<Value>> = terms.iter().map(|t| written(typ, t)).collect();
+        if let Some(v) = values {
+            return (Some(if v.iter().all(|x| *x == v[0]) { "holds" } else { "not" }), false);
+        }
+    }
+    let parts: Vec<String> = terms[1..].iter().map(|x| format!("((({}) : {}) = (({}) : {}))", terms[0], typ, x, typ)).collect();
+    let lean = if parts.is_empty() { "True".to_string() } else { parts.join(" ∧ ") };
+    settle(st, judge, h, guards, &lean)
 }
 
-fn contained(typ: &str, part: &str, whole: &str) -> R<&'static str> {
-    match (written(typ, part), written(typ, whole)) {
-        (Some(Value::Array(a)), Some(Value::Array(b))) => Ok(if a.iter().all(|x| b.contains(x)) { "holds" } else { "not" }),
-        _ => Err("a list that is not written out: this needs Lean, which this build does not ask yet (python -m pw.check does)".into()),
+/// The proposition that every entry a place lists is an entry of the whole list.
+fn contained(st: &mut State, judge: &Judge, h: &str, typ: &str, guards: &[String], part: &str, whole: &str) -> (Said, bool) {
+    if !judge.always {
+        if let (Some(Value::Array(a)), Some(Value::Array(b))) = (written(typ, part), written(typ, whole)) {
+            return (Some(if a.iter().all(|x| b.contains(x)) { "holds" } else { "not" }), false);
+        }
     }
+    settle(st, judge, h, guards, &format!("(∀ x ∈ (({}) : {}), x ∈ (({}) : {}))", part, typ, whole, typ))
+}
+
+/// What the record's proofs say of a proposition; where they say nothing, ask Lean.
+fn settle(st: &mut State, judge: &Judge, h: &str, guards: &[String], lean: &str) -> (Said, bool) {
+    let f = format!("F:{}", sha(&[lean]));
+    let key = (guards.to_vec(), f.clone());
+    let agreed = st.agreed.entry(h.to_string()).or_default();
+    let new = !agreed.contains(&key);
+    if new {
+        agreed.push(key);
+    }
+    let prop = st.props.entry(f.clone()).or_insert_with(|| lean.to_string()).clone();
+    if !st.verdict.contains_key(&f) {
+        let tries = [("holds", "rfl"), ("holds", "decide"), ("holds", "simp"), ("not", "decide"), ("not", "simp")];
+        for (relation, tactic) in tries {
+            let v = judge.gate.check(relation, &[("Prop", &prop)], tactic);
+            if v.ok {
+                st.verdict.entry(f.clone()).or_default().insert(relation.to_string());
+                st.proofs.push(json!({ "type": "proof", "relation": relation, "args": [f], "proof": tactic, "axioms": v.axioms, "gamma": v.gamma }));
+                break;
+            }
+        }
+    }
+    let said = st.verdict.get(&f).cloned().unwrap_or_default();
+    let verdict = if said.len() > 1 { Some("contested") } else if said.contains("holds") { Some("holds") } else if said.contains("not") { Some("not") } else { None };
+    (verdict, new)
 }
 
 fn outside(part: &str, whole: &str) -> Vec<Value> {
@@ -335,8 +489,12 @@ fn view<'a>(st: &'a State, m: &str, asked: &str) -> Option<(&'a Model, &'a Who)>
     if info.binding.is_some() { Some((info, &info.who)) } else { info.asked.get(asked).map(|w| (info, w)) }
 }
 
-pub fn recheck_fact(st: &mut State, fact: &Fact, cwd: &Path) -> R<Value> {
+/// What a fact a definition builds on is settled as: (name, type, value), or why it is not.
+pub type Given = (String, String, Result<String, String>);
+
+pub fn recheck_fact(st: &mut State, judge: &Judge, fact: &Fact, cwd: &Path, given: Option<&[Given]>) -> R<Value> {
     let h = &fact.h;
+    let mut reread = false;
     let asked_of = |p: &Place| if p.some { sha(&[&fact.asked, "some"]) } else { fact.asked.clone() };
     let mut places: Vec<Map<String, Value>> = vec![];
     let mut unread: Vec<Value> = vec![];
@@ -346,6 +504,7 @@ pub fn recheck_fact(st: &mut State, fact: &Fact, cwd: &Path) -> R<Value> {
         let now = subject_id(at, cwd);
         let mut about = Map::new();
         about.insert("at".into(), json!(at));
+        about.insert("question".into(), json!(format!("{}: {}{}", fact.name, fact.text, if decl.some { SOME } else { "" })));
         if decl.some {
             about.insert("some".into(), json!(true));
         }
@@ -387,8 +546,9 @@ pub fn recheck_fact(st: &mut State, fact: &Fact, cwd: &Path) -> R<Value> {
             let text = String::from_utf8_lossy(&locate(at, cwd).unwrap_or_default()).into_owned();
             let computed = compute(how, &text).and_then(|obj| {
                 let obj = norm(&obj);
-                if json_like(&fact.typ) && written(&fact.typ, &obj).is_none() {
-                    return Err(format!("{} is not a {} written out", obj.chars().take(80).collect::<String>(), fact.typ));
+                judge.gate.screen(&obj)?;
+                if !st.objs.contains_key(&format!("O:{}", sha(&[&fact.typ, &obj]))) {     // (a value read before was looked at then)
+                    judge.typed(&fact.typ, &obj)?;
                 }
                 Ok(obj)
             });
@@ -404,6 +564,7 @@ pub fn recheck_fact(st: &mut State, fact: &Fact, cwd: &Path) -> R<Value> {
                     if !list.contains(&(at.clone(), m.clone())) {
                         list.push((at.clone(), m.clone()));
                     }
+                    reread = reread || (!seen.is_empty() && have.last() != Some(&m));
                     have = vec![m];
                 }
                 Err(e) => {
@@ -431,13 +592,14 @@ pub fn recheck_fact(st: &mut State, fact: &Fact, cwd: &Path) -> R<Value> {
     entry.insert("h".into(), json!(h));
     entry.insert("fact".into(), json!(fact.name));
     entry.insert("text".into(), json!(fact.text));
+    entry.insert("places".into(), Value::Null);       // (filled in below; the keys come in the order the Python check gives them)
 
     // what people have laid down, and which of it can be used
     let mut said = fact.instructions.clone();
     for a in 0..said.len() {
         for b in a + 1..said.len() {
             let (x, y) = (s(&Value::Object(said[a].clone()), "is").to_string(), s(&Value::Object(said[b].clone()), "is").to_string());
-            if x != y && agreement(&fact.typ, &[&x, &y])? != "holds" {
+            if x != y && agreement(st, judge, h, &fact.typ, &[], &[&x, &y]).0 != Some("holds") {
                 for (i, other) in [(a, b), (b, a)] {
                     let by = said[other]["by"].clone();
                     said[i].entry("set aside").or_insert_with(|| json!([])).as_array_mut().unwrap().push(by);
@@ -446,66 +608,110 @@ pub fn recheck_fact(st: &mut State, fact: &Fact, cwd: &Path) -> R<Value> {
         }
     }
     let usable: Vec<&Map<String, Value>> = said.iter().filter(|i| !i.contains_key("set aside")).collect();
-    let target = usable.first().map(|i| i["is"].as_str().unwrap_or("").to_string());
-    if fact.defined.is_some() {
-        return Err(format!("{} is defined from other facts: what the definition gives has to be worked out by Lean, which this build does not ask yet (python -m pw.check does)", fact.name));
+    if !said.is_empty() {
+        entry.insert("instructions".into(), json!(said));
+    }
+    let mut target = usable.first().map(|i| i["is"].as_str().unwrap_or("").to_string());
+    let mut waits: Vec<String> = vec![];
+    if let Some(how) = &fact.defined {
+        // A definition says nothing new: its value is what its function gives for the facts it is
+        // defined from. While one of those is not settled, there is nothing to hold the places against.
+        entry.insert("defined".into(), how.clone());
+        let given = given.unwrap_or(&[]);
+        waits = given.iter().filter_map(|(name, _, v)| v.as_ref().err().map(|why| format!("{} {}", name, why))).collect();
+        if given.is_empty() {
+            waits.push("the facts it is defined from".into());
+        }
+        if waits.is_empty() {
+            let args: Vec<String> = given.iter().map(|(_, typ, v)| format!("(({}) : {})", v.as_ref().unwrap(), typ)).collect();
+            target = Some(format!("(({}) {})", s(how, "as"), args.join(" ")));
+        }
     }
     let reads = |p: &Map<String, Value>| p["reads as"].as_str().unwrap_or("").to_string();
     let is_some = |p: &Map<String, Value>| p.contains_key("some");
     let whole: Vec<usize> = (0..places.len()).filter(|i| !is_some(&places[*i])).collect();
-    let state_of = |verdict: Option<&str>| match verdict { Some("holds") => "current", Some("not") => "violated", _ => "uncovered" };
+    let m_of = |p: &Map<String, Value>| p["m"].as_str().unwrap_or("").to_string();
+    let state_of = |verdict: Said, new: bool| match verdict {
+        Some("holds") => if new && reread { "re-established" } else { "current" },
+        Some("not") => "violated",
+        Some("contested") => "contested",
+        _ => "uncovered",
+    };
     let mut state: String;
     if let Some(t) = &target {
-        entry.insert("value".into(), json!(t));
+        entry.insert("value".into(), json!(t));     // what this fact is settled as, for a definition that builds on it
     }
     if !unread.is_empty() {
         state = if unread.iter().any(|u| s(u, "why").contains("disagree")) { "disputed" } else { "stale" }.into();
+        entry.insert("state".into(), json!(state));
+        entry.insert("unread".into(), json!(unread));
+    } else if !waits.is_empty() {
+        state = "waits".into();
+        entry.insert("state".into(), json!(state));
+        entry.insert("waits for".into(), json!(waits));
     } else if let Some(target) = &target {
+        // Someone has laid down what the value is, or a definition gives it. Each place is held
+        // against that by itself, so that the places that differ can be named.
         let mut who: Vec<String> = usable.iter().map(|i| i["by"].as_str().unwrap_or("").to_string()).collect();
         who.sort();
         who.dedup();
-        let mut verdicts = vec![];
+        let (mut verdicts, mut new) = (vec![], false);
         for p in places.iter_mut() {
-            let v = if is_some(p) {
-                let v = contained(&fact.typ, &reads(p), target)?;
-                p.insert("contained".into(), json!(v == "holds"));
-                if v == "not" {
+            let guards = [m_of(p)];
+            let (v, fresh) = if is_some(p) {
+                let (v, fresh) = contained(st, judge, h, &fact.typ, &guards, &reads(p), target);
+                p.insert("contained".into(), json!(v == Some("holds")));
+                if v == Some("not") {
                     p.insert("not in the whole".into(), json!(outside(&reads(p), target)));
                 }
-                v
+                (v, fresh)
             } else {
-                agreement(&fact.typ, &[&reads(p), target])?
+                agreement(st, judge, h, &fact.typ, &guards, &[&reads(p), target])
             };
-            if v == "not" {
+            if v == Some("not") && !usable.is_empty() {
                 p.insert("against".into(), json!(who));
+            } else if v == Some("not") {
+                p.insert("differs from the definition".into(), json!(true));
             }
             verdicts.push(v);
+            new |= fresh;
         }
-        state = state_of(if verdicts.contains(&"not") { Some("not") } else if verdicts.iter().all(|v| *v == "holds") { Some("holds") } else { None }).into();
+        let verdict = if verdicts.contains(&Some("contested")) { Some("contested") } else if verdicts.contains(&Some("not")) { Some("not") }
+                      else if verdicts.iter().all(|v| *v == Some("holds")) { Some("holds") } else { None };
+        state = state_of(verdict, new).into();
+        entry.insert("state".into(), json!(state));
+        if fact.defined.is_some() && verdict != Some("holds") {
+            entry.insert("gives".into(), json!(judge.gate.evaluate(&fact.typ, target)));     // (to show; that a place differs was settled by a proof)
+        }
     } else {
+        // the places that state the whole of it have to read the same; a place that states some
+        // entries has to list nothing the whole does not have
         let terms: Vec<String> = whole.iter().map(|i| reads(&places[*i])).collect();
-        let mut verdict = agreement(&fact.typ, &terms.iter().map(String::as_str).collect::<Vec<_>>())?;
-        if verdict != "holds" {
+        let guards: Vec<String> = whole.iter().map(|i| m_of(&places[*i])).collect();
+        let (mut verdict, mut new) = agreement(st, judge, h, &fact.typ, &guards, &terms.iter().map(String::as_str).collect::<Vec<_>>());
+        if verdict != Some("holds") {
             for p in places.iter_mut().filter(|p| is_some(p)) {
-                p.insert("whole undecided".into(), json!(true));
+                p.insert("whole undecided".into(), json!(true));     // nothing to hold a partial listing against yet
             }
         } else {
             for p in places.iter_mut().filter(|p| is_some(p)) {
-                let inside = contained(&fact.typ, &reads(p), &terms[0])?;
-                p.insert("contained".into(), json!(inside == "holds"));
-                if inside == "not" {
-                    verdict = "not";
+                let (inside, fresh) = contained(st, judge, h, &fact.typ, &[m_of(p), guards[0].clone()], &reads(p), &terms[0]);
+                p.insert("contained".into(), json!(inside == Some("holds")));
+                new |= fresh;
+                if inside != Some("holds") {
+                    verdict = if inside == Some("contested") || verdict == Some("contested") { Some("contested") }
+                              else if inside == Some("not") || verdict == Some("not") { Some("not") } else { None };
+                }
+                if inside == Some("not") {
                     p.insert("not in the whole".into(), json!(outside(&reads(p), &terms[0])));
                 }
             }
         }
-        state = state_of(Some(verdict)).into();
-        if verdict == "holds" {
+        state = state_of(verdict, new).into();
+        entry.insert("state".into(), json!(state));
+        if verdict == Some("holds") {
             entry.insert("value".into(), json!(terms[0]));
         }
-    }
-    if !said.is_empty() {
-        entry.insert("instructions".into(), json!(said));
     }
     if usable.len() < said.len() && unread.is_empty() {
         entry.insert("without the instructions set aside".into(), json!(state));
@@ -583,22 +789,47 @@ pub fn recheck_fact(st: &mut State, fact: &Fact, cwd: &Path) -> R<Value> {
 }
 
 /// Hold every declared fact against the files in `cwd`: in the order the record first heard
-/// of them, then the ones new to it.
-pub fn recheck(st: &mut State, facts: &[Fact], cwd: &Path) -> R<Value> {
+/// of them, then the ones new to it. A definition is held after the facts it is defined from,
+/// with what they are settled as.
+pub fn recheck(st: &mut State, judge: &Judge, facts: &[Fact], cwd: &Path) -> R<Value> {
     let mut order: Vec<&Fact> = st.order.clone().iter().filter_map(|h| facts.iter().find(|f| f.h == *h)).collect();
     for f in facts {
         if !order.iter().any(|x| x.h == f.h) {
             order.push(f);
         }
     }
+    fn entry(st: &mut State, judge: &Judge, facts: &[Fact], cwd: &Path, f: &Fact, above: &[String], done: &mut HashMap<String, Value>) -> R<Value> {
+        if let Some(d) = done.get(&f.h) {
+            return Ok(d.clone());
+        }
+        let mut given: Option<Vec<Given>> = None;
+        if let Some(how) = &f.defined {
+            let mut g = vec![];
+            for name in how["from"].as_array().unwrap().iter().filter_map(Value::as_str) {
+                match facts.iter().find(|x| x.name == name) {
+                    None => g.push((name.to_string(), String::new(), Err("is not declared".to_string()))),
+                    Some(src) if src.h == f.h || above.contains(&src.h) => g.push((name.to_string(), String::new(), Err("is defined in a circle".to_string()))),
+                    Some(src) => {
+                        let mut up = above.to_vec();
+                        up.push(f.h.clone());
+                        let e = entry(st, judge, facts, cwd, src, &up, done)?;
+                        g.push((name.to_string(), src.typ.clone(), match e.get("value").and_then(Value::as_str) {
+                            Some(v) => Ok(v.to_string()),
+                            None => Err(format!("is {}", s(&e, "state"))),
+                        }));
+                    }
+                }
+            }
+            given = Some(g);
+        }
+        let d = recheck_fact(st, judge, f, cwd, given.as_deref())?;
+        done.insert(f.h.clone(), d.clone());
+        Ok(d)
+    }
+    let mut done = HashMap::new();
     let mut decisions = vec![];
     for f in order {
-        match recheck_fact(st, f, cwd) {
-            Ok(d) => decisions.push(d),
-            // what this build cannot judge is said for that fact, and the others are still judged
-            Err(e) if e.contains("this build does not ask yet") => decisions.push(json!({ "h": f.h, "fact": f.name, "text": f.text, "state": "needs Lean", "places": [], "why": e })),
-            Err(e) => return Err(e),
-        }
+        decisions.push(entry(st, judge, facts, cwd, f, &[], &mut done)?);
     }
     Ok(json!({ "decisions": decisions }))
 }
