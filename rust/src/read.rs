@@ -5,13 +5,13 @@ use rustpython_parser::ast::{self, Constant, Expr, Ranged, Stmt};
 use serde_json::{json, Map, Value};
 use std::path::Path;
 
-fn rx(pattern: &str) -> R<regex::Regex> {
+pub fn rx(pattern: &str) -> R<regex::Regex> {
     RegexBuilder::new(pattern).multi_line(true).build().map_err(|e| format!("a pattern is not a regular expression: {}", e))
 }
 
 // ---- places ---------------------------------------------------------------------------------
 
-fn md_section(text: &str, title: &str) -> Option<String> {
+pub fn md_section(text: &str, title: &str) -> Option<String> {
     let heading = regex::Regex::new(r"^(#+)\s+(.*?)\s*#*\s*$").unwrap();
     let lines: Vec<&str> = text.split_inclusive('\n').collect();
     let (mut fenced, mut start, mut level) = (false, None, 0);
@@ -33,7 +33,7 @@ fn md_section(text: &str, title: &str) -> Option<String> {
     start.map(|s| lines[s..].concat())
 }
 
-fn json_part(text: &str, keys: &str) -> Option<String> {
+pub fn json_part(text: &str, keys: &str) -> Option<String> {
     let mut part: Value = serde_json::from_str(text).ok()?;
     for key in keys.split('.') {
         part = match part {
@@ -45,7 +45,7 @@ fn json_part(text: &str, keys: &str) -> Option<String> {
     Some(pyjson(&part, true))
 }
 
-fn parse_python(text: &str) -> Option<Vec<Stmt>> {
+pub fn parse_python(text: &str) -> Option<Vec<Stmt>> {
     match rustpython_parser::parse(text, rustpython_parser::Mode::Module, "<place>").ok()? {
         ast::Mod::Module(m) => Some(m.body),
         _ => None,
@@ -71,7 +71,7 @@ fn stmt_body(s: &Stmt) -> &[Stmt] {
 }
 
 /// The source of a definition or assignment, by dotted name (Class.method).
-fn py_part(text: &str, name: &str) -> Option<String> {
+pub fn py_part(text: &str, name: &str) -> Option<String> {
     let module = parse_python(text)?;
     let mut body: &[Stmt] = &module;
     let mut node: Option<&Stmt> = None;
@@ -155,7 +155,9 @@ pub fn reader(read: &Value, at: &str) -> R<Value> {
     let r = read.as_object().ok_or_else(|| format!("{}: \"read\" is an object", at))?;
     let kind = r.get("as").and_then(Value::as_str).unwrap_or("string");
     if !KINDS.contains(&kind) {
-        return Err(format!("a value is one of {:?}, not {:?}", KINDS, kind));
+        let mut kinds = KINDS.to_vec();
+        kinds.sort();
+        return Err(format!("a value is one of {}, not {}", pylist(&kinds), pyrepr(kind)));
     }
     let known = |allowed: &[&str]| -> R<()> {
         let mut extra: Vec<&String> = r.keys().filter(|k| !allowed.contains(&k.as_str())).collect();
@@ -178,7 +180,7 @@ pub fn reader(read: &Value, at: &str) -> R<Value> {
             }
             let take = take.as_str().unwrap_or("");
             if !["value", "strings", "keys", "names", "keyword"].contains(&take) {
-                return Err(format!("\"python\" is one of value, strings, keys, names, keyword; not {:?}", take));
+                return Err(format!("\"python\" is one of value, strings, keys, names, keyword; not {}", pyrepr(take)));
             }
             out.insert("language".into(), json!("python"));
             out.insert("take".into(), json!(take));
@@ -216,7 +218,7 @@ pub fn reader(read: &Value, at: &str) -> R<Value> {
             let path = r["data"].as_str().unwrap_or("");
             let step = regex::Regex::new(r"^(\*|[^.\[\]=*]+(\[[^.\[\]=*]+=[^.\[\]]*\])?)$").unwrap();
             if path.is_empty() || !path.split('.').all(|s| step.is_match(s)) {
-                return Err(format!("\"data\" is a dotted path such as package.version, tasks.*, package[name=x].version; not {:?}", path));
+                return Err(format!("\"data\" is a dotted path such as package.version, tasks.*, package[name=x].version; not {}", pyrepr(path)));
             }
             out.insert("language".into(), json!("data"));
             out.insert("format".into(), json!(fmt));
@@ -280,7 +282,7 @@ pub fn reader(read: &Value, at: &str) -> R<Value> {
     Ok(Value::Object(out))
 }
 
-fn read_pattern(rd: &Value, text: &str) -> R<String> {
+pub fn read_pattern(rd: &Value, text: &str) -> R<String> {
     let mut text = text.replace("\r\n", "\n");
     let groups = |pattern: &str, text: &str| -> R<Vec<String>> {
         Ok(rx(pattern)?.captures_iter(text).map(|c| c.get(1).map_or("", |m| m.as_str()).to_string()).collect())
@@ -300,7 +302,7 @@ fn read_pattern(rd: &Value, text: &str) -> R<String> {
         let whole = RegexBuilder::new(&format!("^(?:{})$", rw[0].as_str().unwrap_or(""))).build().map_err(|e| e.to_string())?;
         let to = rw[1].as_str().unwrap_or("");
         for piece in found.iter_mut() {
-            let m = whole.captures(piece).ok_or_else(|| format!("`rewrite` does not match {:?} as a whole", piece))?;
+            let m = whole.captures(piece).ok_or_else(|| format!("`rewrite` does not match {} as a whole", pyrepr(piece)))?;
             let mut out = String::new();
             let mut chars = to.chars();
             while let Some(c) = chars.next() {
@@ -403,7 +405,7 @@ fn lit_term(rd: &Value, lit: Lit) -> R<String> {
     }
 }
 
-fn dedent(text: &str) -> String {
+pub fn dedent(text: &str) -> String {
     let lead = |l: &str| l.chars().take_while(|c| *c == ' ' || *c == '\t').collect::<String>();
     let mut common: Option<String> = None;
     for l in text.lines().filter(|l| !l.trim().is_empty()) {
@@ -550,7 +552,7 @@ fn pystr_of(v: &Value) -> String {
     }
 }
 
-fn read_data(rd: &Value, text: &str) -> R<String> {
+pub fn read_data(rd: &Value, text: &str) -> R<String> {
     let fmt = rd["format"].as_str().unwrap_or("");
     let root: Value = if fmt == "toml" {
         toml_value(text.parse::<toml::Table>().map(toml::Value::Table).map_err(|e| format!("the file does not parse as toml: {}", e.message()))?)
@@ -620,6 +622,6 @@ pub fn compute(rd: &Value, text: &str) -> R<String> {
         Some("pattern") => read_pattern(rd, text),
         Some("python") => read_python(rd, text),
         Some("data") => read_data(rd, text),
-        other => Err(format!("no way to read a place by {:?}; the record may come from another version", other)),
+        other => Err(format!("no way to read a place by {}; the record may come from another version", other.map(pyrepr).unwrap_or_else(|| "None".into()))),
     }
 }

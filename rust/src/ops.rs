@@ -55,6 +55,9 @@ fn request() -> R<Value> {
 
 pub fn kernel() -> i32 {
     let req = match request() { Ok(r) => r, Err(e) => return reply(Err(("ValueError".into(), e))) };
+    if let Some(out) = crate::text::op(&req) {          // text, files and measurements: no record involved
+        return reply(out.map_err(told));
+    }
     if s(&req, "op") == "read_text" {
         // how a declared way of reading reads a place: no record involved
         let cwd = PathBuf::from(opt(&req, "cwd").unwrap_or("."));

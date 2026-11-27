@@ -19,7 +19,7 @@ v0.4 までにあった主張・接続・確率の区間・並列ワーカーの
 |----------|------|
 | `rust/` | カーネル：記録（追記式）、事実・読み・一致の判定、規則の適用、Lean による判定（`rust/src/lean.rs`）。`pw check`・`pw confirm`・`pw mcp`、Python から使う `pw kernel`・`pw lean` |
 | `pw/core.py` | Python からカーネルを使う入口（`Kernel`、`LeanGate`）。Rust 版を呼ぶだけで、判定も記録への書き込みもしない |
-| `pw/kernel.py` | 箇所の読み方（節・キー・名前の切り出し、パターン、構文での読み、書き戻し、読み手に見せる抜粋）。探索役と書き戻しが記録の前に文面で試すためのもので、Rust 版と同じに読むことをテストで確かめている |
+| `pw/kernel.py` | 箇所の読み方・書き戻し・読み手に見せる抜粋・測定の集計を Python から呼ぶための名前。中身は Rust 版（`rust/src/read.rs`、`rust/src/text.rs`） |
 | `pw/check.py` | `python -m pw.check`：Rust 版の `pw check` を呼ぶ。エージェントなし。記録は読むだけ |
 | `pw/maintain.py` | 変わった箇所・未読の箇所を、目隠しの読み手に読ませる |
 | `rust/src/mcp.rs`（`pw mcp`） | 読み手が答えるための道具（MCP）。`pw.maintain`・`pw.calibrate`・`pw.discover`・`pw.propagate` の読み手は、これで答える |
@@ -310,7 +310,7 @@ CI が取ってくるものは、付け替えられる名前ではなく中身�
 |----------------|------------|
 | GitHub のアクション（checkout、setup-python） | コミットのハッシュ。どちらも Node.js 24 で動く版 |
 | Rust のクレート（`check` をビルドする） | `rust/Cargo.lock` に版とチェックサム。`cargo build --locked`。コンパイラはランナーのもの |
-| Python のパッケージ | `requirements-ci.txt`（動かすのに要るもの）と `requirements-test.txt`（このリポジトリのテスト用）に版とハッシュ。`pip install --require-hashes` |
+| Python のパッケージ（このリポジトリのテストだけ） | `requirements-test.txt` に版とハッシュ。`pip install --require-hashes`。仕組みを動かすのに Python のパッケージは要らない |
 | Lean（宣言に定義があるときだけ取ってくる） | 版は `lean/lean-toolchain`、アーカイブの SHA-256 は `ci/lean.sh` |
 
 固定した版は、どれも公開から 2 週間以上たっているものを選んだ。ジョブの権限はリポジトリの読み取りだけで、チェックアウト後に認証情報を残さない。キャッシュのアクションは使っていない。

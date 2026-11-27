@@ -898,12 +898,22 @@ pub fn premises(facts: &[Fact], judge: &Judge, file: &str) -> R<()> {
 
 // ---- who may be believed ----------------------------------------------------------------------
 
+/// The p-quantile of Beta(a, b), to machine precision: bisection on the regularized incomplete
+/// beta function. (statrs' own inverse stops at about 1e-5, which can move a bound across a bar.)
 fn beta_ppf(p: f64, a: f64, b: f64) -> f64 {
-    use statrs::distribution::{Beta, ContinuousCDF};
-    Beta::new(a, b).map(|d| d.inverse_cdf(p)).unwrap_or(f64::NAN)
+    use statrs::function::beta::beta_reg;
+    let (mut lo, mut hi) = (0.0f64, 1.0f64);
+    for _ in 0..200 {
+        let mid = (lo + hi) / 2.0;
+        if mid <= lo || mid >= hi {
+            break;
+        }
+        if beta_reg(a, b, mid) < p { lo = mid } else { hi = mid }
+    }
+    (lo + hi) / 2.0
 }
 
-fn interval(k: f64, n: f64) -> (f64, f64) {
+pub fn interval(k: f64, n: f64) -> (f64, f64) {
     (if k == 0.0 { 0.0 } else { beta_ppf(0.025, k, n - k + 1.0) }, if k == n { 1.0 } else { beta_ppf(0.975, k + 1.0, n - k) })
 }
 
@@ -914,7 +924,10 @@ fn rules(cwd: &Path) -> R<Value> {
     for rule in rules["a reading stands if any of"].as_array().ok_or("pw-rules.json: \"a reading stands if any of\" is a list of rules")? {
         let conds: Vec<&str> = rule.as_array().map(|a| a.iter().filter_map(Value::as_str).collect()).unwrap_or_default();
         if conds.is_empty() || conds.iter().any(|c| !CONDITIONS.contains(c)) {
-            return Err(format!("a rule may ask for {:?}; not {:?}", CONDITIONS, conds));
+            let mut all = CONDITIONS.to_vec();
+            all.sort();
+            let unknown: Vec<&str> = conds.iter().filter(|c| !CONDITIONS.contains(c)).cloned().collect();
+            return Err(format!("a rule may ask for {}; not {}", pylist(&all), pylist(&unknown)));
         }
     }
     Ok(rules)
@@ -928,7 +941,7 @@ fn measured(cwd: &Path, rules: &Value) -> R<HashSet<(String, Option<String>)>> {
         ("takes another thing for it at most", "accepted", 1, -1.0), ("picks one of two values at most", "picked", 1, -1.0),
     ];
     if let Some(unknown) = bar.keys().find(|k| !limits.iter().any(|l| l.0 == k.as_str())) {
-        return Err(format!("a reader can be asked for {:?}; not {:?}", limits.iter().map(|l| l.0).collect::<Vec<_>>(), unknown));
+        return Err(format!("a reader can be asked for {}; not {}", pylist(&limits.iter().map(|l| l.0).collect::<Vec<_>>()), pyrepr(unknown)));
     }
     let Ok(text) = std::fs::read_to_string(cwd.join("pw-calibration.json")) else { return Ok(HashSet::new()) };
     let runs: Value = serde_json::from_str(&text).map_err(|e| format!("pw-calibration.json is not JSON: {}", e))?;

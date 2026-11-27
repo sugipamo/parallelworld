@@ -1,4 +1,4 @@
-# What this repository's own tests need on top of requirements-ci.txt, pinned the same way
+# What this repository's own tests need (nothing else in Python is needed to run them), pinned by version and hash
 # (Python 3.13, Linux x86_64; each version published at least two weeks before 2026-11-23).
 # To update: pip download --only-binary=:all: -d wheels pytest==Z, check the publication
 # dates, then write each file's sha256 here.

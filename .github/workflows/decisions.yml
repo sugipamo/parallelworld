@@ -6,7 +6,7 @@ name: decisions
 # for the exact content they were made for.
 #
 # Everything this job fetches is pinned to content, not to a name that can be moved:
-# the actions by commit, the Python packages by hash (requirements-ci.txt, requirements-test.txt),
+# the actions by commit, the Python packages by hash (requirements-test.txt),
 # Lean by checksum (ci/lean.sh), the Rust crates by checksum (rust/Cargo.lock). The Rust compiler
 # is the runner's own.
 # The job can read the repository and nothing else.
@@ -35,11 +35,7 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0    # v7.1.0
         if: always()
         with:
-          python-version: "3.13"     # requirements-ci.txt pins wheels for this version
-
-      - name: Python packages, by hash
-        if: always()
-        run: pip install --require-hashes -r requirements-ci.txt
+          python-version: "3.13"     # requirements-test.txt pins wheels for this version
 
       # python -m pw.confirm and the tests run the Rust build from where a checkout has it.
       - name: The Rust build, where Python looks for it

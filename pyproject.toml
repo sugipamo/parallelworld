@@ -9,11 +9,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "parallelworld"
-version = "0.13.0"
+version = "0.14.0"
 description = "Declare what a project states in several places, and keep the places saying the same thing"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["scipy"]
+dependencies = []      # the kernel is the Rust build (rust/): nothing in Python computes
 
 [project.optional-dependencies]
 agents = ["mcp"]        # pw.maintain, pw.calibrate, pw.discover, pw.propagate --agent (they also need the claude CLI)

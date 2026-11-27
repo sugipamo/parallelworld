@@ -18,6 +18,7 @@ import json
 import os
 import shutil
 import subprocess
+from subprocess import run as _call      # (bound here: a test standing in for an agent session replaces subprocess.run)
 
 from .kernel import KernelError
 
@@ -51,7 +52,7 @@ def _on_path():
     if not found:
         return None
     try:                              # (another program may be called pw)
-        said = subprocess.run([found, "version"], capture_output=True, text=True, timeout=10).stdout
+        said = _call([found, "version"], capture_output=True, text=True, timeout=10).stdout
     except (OSError, subprocess.SubprocessError):
         return None
     return found if said.startswith("parallelworld ") else None
@@ -75,7 +76,7 @@ def fact_id(name, typ):
 def _ask(command, request, stdin_ok=(0,)):
     """One request to the Rust build; its answer, or the error it names."""
     try:
-        r = subprocess.run([pw_binary(), command], input=json.dumps(request, ensure_ascii=False), capture_output=True, text=True)
+        r = _call([pw_binary(), command], input=json.dumps(request, ensure_ascii=False), capture_output=True, text=True)
     except FileNotFoundError:
         raise KernelError(missing())
     if r.returncode != 0 or not r.stdout.strip():
@@ -169,7 +170,7 @@ class Kernel:
     def _run(self, *args, ok=(0,)):
         lean = ("--lean-dir", self.lean_dir) if self.lean_dir else ()
         try:
-            r = subprocess.run([pw_binary(), *args, *lean], capture_output=True, text=True)
+            r = _call([pw_binary(), *args, *lean], capture_output=True, text=True)
         except FileNotFoundError:
             raise KernelError(missing())
         if r.returncode not in ok:

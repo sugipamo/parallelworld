@@ -1,9 +1,7 @@
 """The Rust build (rust/) is the kernel: it judges, it keeps the record, it runs Lean. These tests
-are about what only it shows from outside (the readers' tools over MCP, a person's confirmation,
-what it says when a check cannot be made), and about the one thing still done twice: reading a
-place. pw.discover and pw.propagate try out ways of reading on text in Python (pw/kernel.py)
-before anything is recorded, so the Python helpers have to read every place as the Rust build
-does. Skipped when the build is not there and cargo is not there to make it."""
+are about what it shows from outside: the check, the readers' tools over MCP, a person's
+confirmation, what it does with a place's text, what it says when a check cannot be made.
+Skipped when the build is not there and cargo is not there to make it."""
 import json
 import os
 import shutil
@@ -46,41 +44,49 @@ FILES = {"k.py": "LIMIT = 14\nMODES = {'fast': 1,\n         \"safe\": 2}\n", "do
          "cfg.toml": '[[mode]]\nname = "fast"\n\n[[mode]]\nname = "safe"\n'}
 
 
-# ---- reading a place: the Python helpers and the Rust build ---------------------------------------
+# ---- reading a place, and what is done with its text ----------------------------------------------
 
-def read_both(pw, cwd, at, read):
-    """How the Python helpers and the Rust build read one place: (reader, value or error, subject) each."""
-    from pw.kernel import KernelError, compute, locate, reader, subject_id
-    try:
-        how = reader(read, at)
-        content = locate(at, cwd)
-        py = (how, compute(how, content.decode("utf-8", "replace")) if content is not None else None, subject_id(at, cwd))
-    except KernelError:
-        py = "refused"
-    r = json.loads(subprocess.run([pw, "kernel"], input=json.dumps({"op": "read_text", "at": at, "read": read, "cwd": cwd}),
-                                  capture_output=True, text=True).stdout)
-    rs = (r["ok"]["reader"], r["ok"]["value"], r["ok"]["subject"]) if "ok" in r else "refused"
-    return py, rs
-
-
-@pytest.mark.parametrize("change", [{}, {"k.py": "LIMIT = 15\nMODES = {'fast': 1, 'safe': 2}\n"}, {"k.py": "LIMIT = N\n"},
-                                    {"doc.md": "## Limits\n\nAt most 14.\n\n## Modes\n\n`fast`, `bogus`\n"}, {"doc.md": "## Limit\n\nAt most 14.\n"}])
-def test_places_are_read_alike(pw, tmp_path, change):
-    repo = declare(tmp_path, [LIMIT, MODES], **{**FILES, **change})
-    for fact in (LIMIT, MODES):
-        for p in fact["places"]:
-            py, rs = read_both(pw, repo, p["at"], p["read"])
-            assert py == rs, (p, py, rs)
-
-
-def test_this_repositorys_places_are_read_alike(pw):
+def test_this_repositorys_places_are_read(pw):
+    from pw.kernel import compute, locate, reader
     with open(os.path.join(ROOT, "pw-facts.json"), encoding="utf-8") as fh:
         facts = json.load(fh)
     places = [p for f in facts for p in f["places"] if isinstance(p, dict) and "read" in p]
     assert len(places) >= 10
     for p in places:
-        py, rs = read_both(pw, ROOT, p["at"], p["read"])
-        assert py == rs and py != "refused", (p, py, rs)
+        assert compute(reader(p["read"], p["at"]), locate(p["at"], ROOT).decode())
+
+
+def test_a_value_is_written_back_only_where_it_reads_back(pw):
+    from pw.kernel import KernelError, pattern, write_pattern
+    rd = pattern(find=r"LIMIT = (\d+)", kind="nat")
+    assert write_pattern(rd, "LIMIT = 14\nOTHER = 14\n", "15") == "LIMIT = 15\nOTHER = 14\n"
+    assert write_pattern(pattern(find=r"ratio: ([0-9.]+)", kind="permille"), "ratio: 0.85\n", "900") == "ratio: 0.9\n"
+    for text, term in (("LIMIT = 14\nLIMIT = 3\n", "15"), ("LIMIT = 14\n", '"x"')):
+        with pytest.raises(KernelError):
+            write_pattern(rd, text, term)
+    with pytest.raises(KernelError, match="only a single value"):
+        write_pattern(pattern(find_all=r"(\d+)"), "1 2", "[3]")
+
+
+def test_what_a_reader_is_shown(pw, tmp_path):
+    """A long place: the lines its way of reading looks at. A small one: what surrounds it, in
+    characters, whatever the script (Python's version cut after it by bytes)."""
+    from pw.kernel import context, excerpt, pattern
+    text = "x\n" * 2000 + "MODES = [\"a\", \"b\"]\n" + "y\n" * 2000
+    rd = pattern(find_all=r'"(\w+)"', within=r"MODES = \[([^\]]*)\]")
+    assert excerpt(rd, text) == 'MODES = ["a", "b"]\n' and excerpt(rd, "short") is None
+    (tmp_path / "doc.md").write_text("# 設定\n\n## 上限 🚀\n\n最大 14。\n\n## 次\n\n説明。\n")
+    around = context("doc.md::上限 🚀", str(tmp_path))
+    assert around == "# 設定\n\n## 上限 🚀\n\n最大 14。\n\n## 次\n\n説明。\n", around
+
+
+def test_measured_bounds_are_exact():
+    """The bounds a reader's measurement allows decide whether its readings count: to machine precision."""
+    from pw.kernel import interval
+    lo, hi = interval(27, 27)
+    assert abs(lo - 0.025 ** (1 / 27)) < 1e-12 and hi == 1.0                # Beta(27, 1): the bound has a closed form
+    lo, hi = interval(0, 40)
+    assert lo == 0.0 and abs(hi - (1 - 0.025 ** (1 / 40))) < 1e-12
 
 
 # ---- the check -------------------------------------------------------------------------------------

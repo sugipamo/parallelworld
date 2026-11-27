@@ -1,6 +1,6 @@
-# What the tools that use an agent need on top of requirements-ci.txt (pw.maintain, pw.calibrate,
-# pw.discover, pw.propagate --agent): the `mcp` package, over which a reader is given the tools it
-# answers with, and what that depends on. Pinned by version and by hash (Python 3.13, Linux
+# What pw.discover and pw.propagate --agent need: the `mcp` package, over which the agent is given
+# the tools it proposes with, and what that depends on. (The readers' tools are served by the Rust
+# build: pw.maintain and pw.calibrate need no Python package.) Pinned by version and by hash (Python 3.13, Linux
 # x86_64). They also need the `claude` command, which is not a Python package.
 # Each version had been published for at least two weeks when it was pinned (2026-11-26).
 # To update: pip download --only-binary=:all: -d wheels mcp==X (with a constraints file for

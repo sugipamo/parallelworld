@@ -12,7 +12,7 @@
 
 - `rust/` — カーネル。記録、事実・読み・一致の判定、規則の適用、Lean による判定（`pw check`、`pw confirm`、`pw mcp` など。下の「Rust 版」）
 - `pw/core.py` — Python からカーネルを使う入口。`Kernel` と `LeanGate` は Rust 版の実行ファイルを呼ぶだけで、Python では判定も記録への書き込みもしない
-- `pw/kernel.py` — 箇所の読み方の道具（節・キー・名前の切り出し、パターン、構文での読み、書き戻し、読み手に見せる抜粋）。探索役と書き戻しが、記録する前に文面で試すのに使う
+- `pw/kernel.py` — 箇所の読み方・書き戻し・読み手に見せる抜粋・測定の集計を、Python から呼ぶための名前（中身は Rust 版）と、プロジェクトの定数
 - `pw/check.py` — `python -m pw.check`。Rust 版の `pw check` を呼ぶ（言語モデルなし。記録は読むだけで、書き足さない）
 - `pw/maintain.py` — 変わった箇所・未読の箇所を、目隠しの読み手に読ませる
 - `pw mcp`（`rust/src/mcp.rs`）— 読み手が答えるための道具（MCP）。`pw.maintain` が Rust 版の実行ファイルから起動する
@@ -32,7 +32,8 @@
 ## 動かす
 
 ```
-pip install -e '.[agents,test]'             # scipy と、エージェントを使うものに要る mcp、テスト用の pytest。CI は requirements-ci.txt（動かすのに要るもの）と requirements-test.txt（テスト用）の版とハッシュで固定している
+cargo build --release --manifest-path rust/Cargo.toml   # カーネル（Rust 版）。Python からはこれを呼ぶ
+pip install -e '.[agents,test]'             # 探索役と書き戻しに要る mcp、テスト用の pytest。CI は requirements-test.txt の版とハッシュで固定している
 python -m pytest tests
 python -m pw.check --repo .                        # 事実をいまのファイルで確かめ直す。通らないものがあれば終了コード 1。記録（pw-log.jsonl）には書かない
 python -m pw.check --repo . --verify               # 加えて、記録にある証明を Lean に通し直す（CI はこれを回す：.github/workflows/decisions.yml）
@@ -68,7 +69,7 @@ rust/target/release/pw confirm --repo .          # 人の確認（--who NAME M:.
 - 実行ファイル 1 つで動く。Lean は、定義のある事実か `--lean always` のときだけ要る。
 - このリポジトリの確認は 0.5 秒、`--verify` つきで 1.3 秒（以前の Python 版は 1.8 秒と 2.6 秒）。
 - 以前は同じカーネルが Python にもあった。2 つのリポジトリの全履歴（判定 3,670 件）で両方の判定が 1 件も違わないこと、記録に書く行が 1 行ずつ同じことを確かめてから、Python 版を消した（`experiments/history/RESULTS.md`）。Python 版を直接使う古い実験は、それがあった最後のコミット `5130a42` で動く（`experiments/README.md`）。
-- 残っている二重化は、箇所の読み方だけ。探索役と書き戻しは、記録する前に文面で読み方を試すので、`pw/kernel.py` にも読み方がある。どの箇所も同じに読むことを、CI で確かめている（`tests/test_rust.py`）。
+- 箇所の読み方も Rust 版だけにある。探索役と書き戻しが記録の前に文面で試す読み方、書き戻し、読み手に見せる抜粋、読み手の測定の集計も、`pw/kernel.py` の名前のまま Rust 版を呼ぶ。同じことを 2 か所で実装しているところは、もうない。
 
 ## 他のリポジトリから使う
 
@@ -84,7 +85,7 @@ python -m pw.check --repo . --verify
 ```
 
 - `--lean-dir` は付けなくてよい（この仕組みに付いている Lean のプロジェクトを使う）。
-- エージェントを使うもの（`pw.maintain`、`pw.calibrate`、`pw.discover`、`pw.propagate --agent`）には、加えて `mcp` パッケージと `claude` の CLI が要る（`pip install '/path/to/parallelworld[agents]'`。版とハッシュで固定するなら `pip install --require-hashes -r requirements-ci.txt -r requirements-agent.txt`）。どちらかが無ければ、読み手を呼ぶ前に止まり、課金は起きない。
+- エージェントを使うもの（`pw.maintain`、`pw.calibrate`、`pw.discover`、`pw.propagate --agent`）には、`claude` の CLI が要る。`pw.discover` と `pw.propagate --agent` には、加えて `mcp` パッケージが要る（`pip install '/path/to/parallelworld[agents]'`。版とハッシュで固定するなら `pip install --require-hashes -r requirements-agent.txt`）。足りなければ、読み手を呼ぶ前に止まり、課金は起きない。
 - `pw.maintain` は作業ツリーの内容をそのまま読む。文面の変更と、増えた `pw-log.jsonl` を、同じコミットに入れてよい。
 - `pw.check` は何もファイルを書き換えない。対象のリポジトリの記録が増えるのは、`pw.maintain`・`pw.confirm`・`pw.discover --apply`・`pw.propagate --apply` と、`pw.check --record` を回したとき。増えた行はコミットに含める。
 - 読み方（パターンなど）を替えたら、`pw.maintain` か `pw.check --record` を回して、増えた行をコミットする。読み手は呼ばれない。替えたまま記録に残さないと、その箇所を次に編集したときに読み直しになる（`pw.check` が note として挙げる）。

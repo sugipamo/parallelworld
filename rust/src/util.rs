@@ -25,6 +25,12 @@ pub fn pystr(s: &str) -> String {
     serde_json::to_string(s).unwrap()
 }
 
+/// Python's repr of a string, `'a'`: how the Python kernel quoted text in its messages.
+pub fn pyrepr(x: &str) -> String {
+    let l = pylist(&[x]);
+    l[1..l.len() - 1].to_string()
+}
+
 /// Python's repr of a list of strings, `['a', 'b']`: how the Python check names keys in its messages.
 pub fn pylist<S: AsRef<str>>(items: &[S]) -> String {
     let one = |x: &str| {
@@ -99,7 +105,7 @@ impl PartialOrd for Key {
 
 pub fn term(kind: &str, text: &str) -> R<(Key, String)> {
     let digits = |s: &str| !s.is_empty() && s.chars().all(|c| c.is_ascii_digit());
-    let bad = || format!("{:?} is not a {}", text, kind);
+    let bad = || format!("{} is not a {}", pyrepr(text), kind);
     match kind {
         "string" => Ok((Key::S(text.to_string()), pystr(text))),
         "nat" if digits(text) => {
