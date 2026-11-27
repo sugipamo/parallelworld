@@ -168,7 +168,7 @@ ok   current    fact: limit
 
   | このリポジトリの規則 | 意味 |
   |------|------|
-  | `computed` ＋ `read the same blind` | 宣言された読み方で計算した読みで、その箇所だけを見た目隠しの読み手も同じ値を読み取った |
+  | `computed` ＋ `read the same blind` | 宣言された読み方で計算した読みで、その箇所だけを見た目隠しの読み手も同じ値を読み取った。確かめられたのは読み方なので、読み方が同じあいだは、箇所の中身が変わっても成り立つ（そのときは表示と `--json` の `read the same blind on` が「an earlier text」と言う） |
   | `confirmed by a person` | 人が文面と見比べた |
   | `blind` ＋ `words occur in the place` ＋ `agrees with a computed place` | 目隠しの読み手が読み、値が文面にそのままあり、計算した箇所と同じ値 |
   | `blind` ＋ `words occur in the place` ＋ `contained in a computed place` | 一部を挙げる箇所について：目隠しの読み手が読み、値が文面にそのままあり、挙げたものがすべて計算した箇所の一覧に入っている |
@@ -185,7 +185,7 @@ ok   current    fact: limit
   | `agrees with a computed place` | 同じ事実の、計算した箇所が同じ値 |
   | `agrees with another place read blind` | 同じ事実の別の箇所を、別のセッションの目隠しの読み手が同じ値に読んだ |
   | `read the same by a second model` | 測定済みの、モデルの違う 2 つの読み手が、どちらも目隠しで同じ値に読んだ |
-  | `read the same blind` | 計算する箇所について：測定済みの読み手が、その箇所の本文だけを渡されて、読み方が計算するのと同じ値を読み取った |
+  | `read the same blind` | 計算する箇所について：測定済みの読み手が、その箇所の本文だけを渡されて、読み方が計算するのと同じ値を読み取った。そのときの本文でよく、いまの本文でなくてよい（読み方が同じあいだ有効） |
   | `contained in a computed place` | 一部を挙げる箇所について：挙げたものがすべて、同じ事実の計算した箇所（全体を述べるもの）の一覧に入っている |
 
   目隠しの読み手には、その箇所の本文だけを渡し、ファイルを読む手段を与えない。ほかの箇所が見えていた読み手の「一致」は、写しただけかもしれないので数えない。1 回のセッションで読ませるのは、事実ごとに 1 箇所まで。

@@ -127,7 +127,11 @@ fn show(report: &Value, warn: bool) -> bool {
                     continue;
                 }
                 let stands = p["stands"].as_bool().unwrap_or(false);
-                println!("       {} {}{}   ({})", s(p, "at"), part, cut(s(p, "reads as"), 100), if stands { s(p, "why") } else { "does not stand" });
+                let earlier = stands && s(p, "why").contains("read the same blind") && s(p, "read the same blind on") == "an earlier text";
+                let why = if !stands { "does not stand".to_string() } else if earlier {
+                    format!("{}: on an earlier text of the place; the way of reading was confirmed, not this value", s(p, "why"))
+                } else { s(p, "why").to_string() };
+                println!("       {} {}{}   ({})", s(p, "at"), part, cut(s(p, "reads as"), 100), why);
                 if let Some(a) = p.get("against").and_then(Value::as_array) {
                     println!("          against the instruction of {}", a.iter().map(show_str).collect::<Vec<_>>().join(", "));
                 }
@@ -497,8 +501,66 @@ fn init(args: &[String]) -> R<i32> {
     Ok(0)
 }
 
+const USAGE: &str = "pw: keep what a repository states in several places saying the same thing (parallelworld)
+
+  pw check   [--repo DIR]                     hold the declared facts (pw-facts.json) against the files
+  pw confirm [--repo DIR] [--who NAME [--reject] M:...]
+                                              the readings nobody has confirmed; confirm or reject them
+  pw init    [--repo DIR] [--pin COMMIT]      a first step for a repository that does not use this yet
+  pw version
+  pw help [check | confirm | init]
+
+The agents' side (reading places blind, measuring readers, looking for places) is Python:
+python -m pw.maintain, pw.calibrate, pw.discover, pw.propagate. They use these, which are not
+for typing by hand: mcp, kernel, lean, state, sync, adopt.
+";
+
+const CHECK_USAGE: &str = "pw check: hold the declared facts against the files as they are now
+
+  --repo DIR             the repository (default: .); its pw-facts.json and pw-log.jsonl
+  --facts PATH           another declaration;  --db PATH  another record
+  --verify               run the record's proofs through Lean again instead of believing them
+  --unconfirmed warn     a fact whose places agree but rest on a reading no rule lets stand: a warning
+  --lean always          put every comparison to Lean (by default only what has to be worked out)
+  --json                 what was found, as JSON
+  --needs-lean           only say yes or no: does anything declared need Lean?
+  --record [--actor NAME]  append what was computed to the record (a check only reads it otherwise)
+  --lean-dir DIR         the Lean project (default: the one next to this tool, or PW_LEAN_DIR)
+
+Exit status: 0 every fact holds; 1 something needs attention; 2 the check could not be made.
+";
+
+const CONFIRM_USAGE: &str = "pw confirm: let a person confirm what an agent said a place says
+
+  pw confirm [--repo DIR]                         the readings nobody has confirmed, each beside its passage
+  pw confirm [--repo DIR] --who NAME M:... M:...  confirm these readings (they hold for the text as it is)
+  pw confirm [--repo DIR] --who NAME --reject M:...
+";
+
+const INIT_USAGE: &str = "pw init: a first step for a repository
+
+  pw init [--repo DIR] [--pin COMMIT] [--action OWNER/REPO]
+
+Writes what is missing of: an empty pw-facts.json, the .gitattributes line that keeps both sides
+of the record when branches merge, and .github/workflows/facts.yml, a CI job that runs this tool
+as an action pinned to a commit (by default the commit of this tool's checkout). Changes nothing
+that is there.
+";
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    let help = |a: &[String]| a.iter().any(|x| x == "--help" || x == "-h");
+    let usage = |which: Option<&str>| {
+        print!("{}", match which { Some("check") => CHECK_USAGE, Some("confirm") => CONFIRM_USAGE, Some("init") => INIT_USAGE, _ => USAGE });
+        std::process::exit(0)
+    };
+    match args.first().map(String::as_str) {
+        None => usage(None),
+        Some("help" | "--help" | "-h") => usage(args.get(1).map(String::as_str)),
+        Some(c @ ("check" | "confirm" | "init")) if help(&args[1..]) => usage(Some(c)),
+        Some(x) if x.starts_with("--") && help(&args) => usage(Some("check")),
+        _ => {}
+    }
     let result = match args.first().map(String::as_str) {
         Some("confirm") => confirm(&args[1..]),
         Some("mcp") => Ok(mcp::serve()),

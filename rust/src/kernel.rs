@@ -1295,6 +1295,8 @@ pub fn recheck_fact(st: &mut State, judge: &Judge, fact: &Fact, cwd: &Path, give
         let mine: Vec<(&Model, &Who)> = readings.iter().filter(|(a, _)| *a == at).filter_map(|(_, x)| view(st, x, asked)).collect();
         let stated: Vec<&(&Model, &Who)> = mine.iter().filter(|(x, w)| x.binding.is_none() && !counted(w, &measured).is_empty()).collect();
         let same_blind = info.binding.is_some() && stated.iter().any(|(sm, _)| mine.iter().any(|(c, _)| c.binding == info.binding && sm.subject == c.subject && value(&st.objs[&sm.obj]) == value(&st.objs[&c.obj])));
+        // what was read blind is the way of reading; whether it was this very text is said apart (#15)
+        let blind_now = same_blind && stated.iter().any(|(sm, _)| sm.subject == info.subject && value(&st.objs[&sm.obj]) == value(&st.objs[&info.obj]));
         let has = |c: &str| -> bool {
             match c {
                 "computed" => info.binding.is_some(),
@@ -1329,6 +1331,9 @@ pub fn recheck_fact(st: &mut State, judge: &Judge, fact: &Fact, cwd: &Path, give
             extra.insert("unmeasured readers".into(), json!(un));
         } else {
             extra.insert("has".into(), json!({ "read the same blind": same_blind }));
+            if same_blind {
+                extra.insert("read the same blind on".into(), json!(if blind_now { "this text" } else { "an earlier text" }));
+            }
             let un: BTreeSet<String> = mine.iter().filter(|(x, _)| x.binding.is_none()).flat_map(|(_, w)| w.models.difference(&counted(w, &measured)).cloned().collect::<Vec<_>>()).collect();
             extra.insert("unmeasured readers".into(), json!(un));
             let other: BTreeSet<String> = stated.iter().filter(|(x, _)| x.subject == now).map(|(x, _)| st.objs[&x.obj].clone()).filter(|t| *t != reads(&places[i])).collect();

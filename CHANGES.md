@@ -2,6 +2,12 @@
 
 使う側（このリポジトリを固定して使っているリポジトリ）で何かが要る変更、判定が変わる変更だけを書く。`pyproject.toml` の版は、読み手の指示文（`pw/reader.txt`）が変わるか、同じ宣言と記録に対する判定が変わるときに、0.x の x を上げる。
 
+## 0.15.2
+
+- `pw`、`pw --help`、`pw help check` などで使い方を出す（終了コード 0）。使う側が打つコマンド（`check`、`confirm`、`init`、`version`）と、Python の道具が使う内部用のものを分けて並べる。引数なしの `pw` は、以前は `pw check --repo .` として動いていたが、いまは使い方を出す（#16）。
+- Rust 版の実行ファイルが無いとき、`python -m pw.check` と `pw.confirm` は終了コード 2 で終わる（以前は 1 で、食い違いと区別がつかなかった）（#14）。
+- 計算する箇所が `read the same blind` で成り立つとき、目隠しで読んだのが以前の本文なら、そう表示する（`on an earlier text of the place; the way of reading was confirmed, not this value`。`--json` では `"read the same blind on": "an earlier text"`）。確かめられているのは読み方で、いまの値ではない。判定は変わらない（#15）。
+
 ## 0.15.1
 
 - `pw init`：使い始めるリポジトリに、空の宣言（`pw-facts.json`）、記録をマージで両方残す `.gitattributes` の 1 行、このアクションを使う CI のジョブを置く。アクションは、この仕組みのクローンのいまのコミットに固定する（`--pin COMMIT` で別のコミット。ブランチやタグの名前は受け取らない）。すでにあるファイルは書き換えない。判定は何も変わらない。

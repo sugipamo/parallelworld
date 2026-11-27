@@ -290,3 +290,39 @@ def test_a_first_step_writes_what_is_missing_and_keeps_the_rest(pw, tmp_path):
     assert init("--pin", "main").returncode == 2                  # a name can be moved: a commit id only
     (tmp_path / "fresh").mkdir()
     assert init("--pin", pin).returncode == 0 and check(pw, declare(tmp_path / "fresh", [])).returncode == 0     # an empty declaration passes
+
+
+def test_what_was_read_blind_is_the_way_of_reading(pw, tmp_path):
+    """A computed place stands by a blind reading of an earlier text: said as such, not as a reading of this value (#15)."""
+    from pw.core import Kernel
+    from pw.kernel import INSTRUCTIONS, pattern
+    (tmp_path / "k.py").write_text("LIMIT = 14\n")
+    (tmp_path / "pw-calibration.json").write_text(json.dumps([{"model": "opus", "instructions": INSTRUCTIONS, "planted": {"n": 27, "read": 27, "stuck": 0},
+                                                                "decoys": {"n": 27, "accepted": 0}}]))
+    k = Kernel(str(tmp_path / "pw-log.jsonl"), actor="reader")
+    h = k.claim_fact("limit", "Nat", [{"at": "k.py", "reader": pattern(find=r"LIMIT = (\d+)", kind="nat")}], gloss="the limit")["h"]
+    k.read_place(h, "k.py", cwd=str(tmp_path))
+    k.read_place(h, "k.py", "14", cwd=str(tmp_path), quote="LIMIT = 14", blind=True, model="opus")
+    place = lambda: k.recheck(str(tmp_path))["decisions"][0]["places"][0]
+    assert place()["stands"] and place()["read the same blind on"] == "this text"
+    (tmp_path / "k.py").write_text("LIMIT = 15\n")
+    p = place()
+    assert p["stands"] and p["has"] == {"read the same blind": True} and p["read the same blind on"] == "an earlier text"
+
+
+def test_help_is_asked_for_not_an_error(pw):
+    """pw, pw --help, pw help check: the usage, exit 0, every command a user types named (#16)."""
+    for args in ([], ["--help"], ["-h"], ["help"]):
+        r = subprocess.run([pw, *args], capture_output=True, text=True)
+        assert r.returncode == 0 and all(f"pw {c}" in r.stdout for c in ("check", "confirm", "init", "version")), args
+    for c in ("check", "confirm", "init"):
+        assert subprocess.run([pw, c, "--help"], capture_output=True, text=True).stdout.startswith(f"pw {c}:")
+        assert subprocess.run([pw, "help", c], capture_output=True, text=True).stdout.startswith(f"pw {c}:")
+
+
+def test_without_the_build_the_check_could_not_be_made(tmp_path):
+    """python -m pw.check without the Rust build: exit 2, as for any check that cannot be made (#14)."""
+    env = {**os.environ, "PW_BIN": str(tmp_path / "no-pw"), "PYTHONPATH": ROOT}
+    for mod in ("pw.check", "pw.confirm"):
+        r = subprocess.run([sys.executable, "-m", mod, "--repo", str(tmp_path)], capture_output=True, text=True, env=env)
+        assert r.returncode == 2 and r.stderr.startswith("pw: the Rust build of this tool is not there"), (mod, r)

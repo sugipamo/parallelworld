@@ -18,7 +18,8 @@ def main():
     try:
         os.execv(pw_binary(), [pw_binary(), "confirm", *sys.argv[1:]])
     except FileNotFoundError:
-        sys.exit(f"pw: {missing()}")
+        print(f"pw: {missing()}", file=sys.stderr)
+        sys.exit(0 if {"--help", "-h"} & set(sys.argv[1:]) else 2)        # (could not check: 2, as for any check that cannot be made)
 
 
 if __name__ == "__main__":
