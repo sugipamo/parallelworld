@@ -80,6 +80,20 @@ pub fn excerpt(rd: &Value, text: &str, least: usize) -> Option<String> {
             }
         }
     }
+    if s(rd, "language") == "rust" {
+        if let Some(shown) = crate::structured::rust_lines(rd, text) {
+            if small(&shown) {
+                return Some(shown);
+            }
+        }
+    }
+    if s(rd, "language") == "table" {
+        if let Some(shown) = crate::structured::table_lines(rd, text) {
+            if small(&shown) {
+                return Some(shown);
+            }
+        }
+    }
     if s(rd, "language") == "data" && s(rd, "format") == "toml" {
         let lines = lines_keep(text);
         let mut starts = vec![0];

@@ -1,6 +1,6 @@
 [package]
 name = "pw"
-version = "0.14.0"
+version = "0.15.0"
 edition = "2021"
 description = "Declare what a project states in several places, and keep the places saying the same thing"
 license = "MIT"
@@ -16,6 +16,10 @@ toml = { version = "0.8", features = ["preserve_order"] }
 regex = "1"
 sha2 = "0.10"
 statrs = "0.17"
+syn = { version = "2", default-features = false, features = ["full", "parsing", "printing"] }
+proc-macro2 = { version = "1", default-features = false, features = ["span-locations"] }
+quote = { version = "1", default-features = false }
+yaml-rust2 = { version = "0.13", default-features = false }
 rustpython-parser = "0.4"
 rustpython-ast = { version = "0.4", features = ["visitor"] }
 

@@ -8,8 +8,8 @@
    {
     "at": "rust/src/lean.rs",
     "read": {
-     "within": "pub const ALLOWED_AXIOMS: \\[&str; \\d+\\] = \\[([^\\]]*)\\]",
-     "find_all": "\"([\\w.]+)\"",
+     "rust": "value",
+     "item": "ALLOWED_AXIOMS",
      "sort": true
     }
    }
@@ -60,8 +60,8 @@
    {
     "at": "rust/src/kernel.rs",
     "read": {
-     "within": "const CONDITIONS: \\[&str; \\d+\\] = \\[([^\\]]*)\\];",
-     "find_all": "\"([^\"]+)\"",
+     "rust": "value",
+     "item": "CONDITIONS",
      "sort": true
     }
    },

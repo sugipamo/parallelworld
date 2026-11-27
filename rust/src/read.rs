@@ -165,6 +165,37 @@ pub fn reader(read: &Value, at: &str) -> R<Value> {
         if extra.is_empty() { Ok(()) } else { Err(format!("{}: unknown keys in \"read\": {}", at, pylist(&extra))) }
     };
     let ext = Path::new(at.split("::").next().unwrap()).extension().and_then(|e| e.to_str()).unwrap_or("");
+    if r.contains_key("table") {
+        // a column of a Markdown table (every cell), or one cell of it: the row whose first cell is `row`
+        known(&["table", "row", "as", "sort", "unique"])?;
+        if !["md", "markdown"].contains(&ext) {
+            return Err(format!("{}: \"table\" reads a Markdown file", at));
+        }
+        let column = r["table"].as_str().filter(|c| !c.trim().is_empty()).ok_or("\"table\" is the heading of a column")?;
+        let mut out = Map::new();
+        out.insert("language".into(), json!("table"));
+        out.insert("column".into(), json!(column.trim()));
+        if let Some(row) = r.get("row") {
+            out.insert("row".into(), json!(row.as_str().ok_or("\"row\" is the first cell of a row")?.trim()));
+        } else {
+            out.insert("sort".into(), json!(flag(r, "sort")));
+            out.insert("unique".into(), json!(flag(r, "unique")));
+        }
+        out.insert("as".into(), json!(kind));
+        return Ok(Value::Object(out));
+    }
+    if r.contains_key("rust") {
+        known(&["rust", "item", "as", "sort", "unique"])?;
+        if ext != "rs" || at.contains("::") {
+            return Err(format!("{}: \"rust\" reads a whole .rs file; name the item with \"item\"", at));
+        }
+        let take = r["rust"].as_str().unwrap_or("");
+        if !["value", "strings", "names"].contains(&take) {
+            return Err(format!("\"rust\" is one of value, strings, names; not {}", pyrepr(take)));
+        }
+        let item = r.get("item").and_then(Value::as_str).filter(|i| !i.is_empty()).ok_or("\"rust\" needs \"item\": the name of a const, static, fn, enum, struct, impl or mod (a::b inside mods)")?;
+        return Ok(json!({ "language": "rust", "take": take, "item": item, "as": kind, "sort": flag(r, "sort"), "unique": flag(r, "unique") }));
+    }
     if r.contains_key("python") || r.contains_key("data") {
         known(&["python", "data", "as", "sort", "unique", "keys", "public", "decorator", "call", "with", "keyword"])?;
         if r.contains_key("python") == r.contains_key("data") {
@@ -213,7 +244,8 @@ pub fn reader(read: &Value, at: &str) -> R<Value> {
             let fmt = match ext {
                 "toml" | "lock" => "toml",
                 "json" => "json",
-                _ => return Err("\"data\" reads a .toml or .json file (or a .lock file written as TOML)".into()),
+                "yml" | "yaml" => "yaml",
+                _ => return Err("\"data\" reads a .toml, .json or .yaml file (or a .lock file written as TOML)".into()),
             };
             let path = r["data"].as_str().unwrap_or("");
             let step = regex::Regex::new(r"^(\*|[^.\[\]=*]+(\[[^.\[\]=*]+=[^.\[\]]*\])?)$").unwrap();
@@ -334,7 +366,7 @@ pub fn read_pattern(rd: &Value, text: &str) -> R<String> {
 }
 
 /// A literal, as Python's ast.literal_eval reads it: a value or a list of values.
-enum Lit {
+pub enum Lit {
     One(Value),
     Many(Vec<Value>),
 }
@@ -393,7 +425,7 @@ fn value_term(rd: &Value, v: &Value) -> R<(Key, String)> {
     }
 }
 
-fn lit_term(rd: &Value, lit: Lit) -> R<String> {
+pub fn lit_term(rd: &Value, lit: Lit) -> R<String> {
     match lit {
         Lit::One(v) => Ok(value_term(rd, &v)?.1),
         Lit::Many(vs) => {
@@ -554,7 +586,9 @@ fn pystr_of(v: &Value) -> String {
 
 pub fn read_data(rd: &Value, text: &str) -> R<String> {
     let fmt = rd["format"].as_str().unwrap_or("");
-    let root: Value = if fmt == "toml" {
+    let root: Value = if fmt == "yaml" {
+        crate::structured::yaml_value(text)?
+    } else if fmt == "toml" {
         toml_value(text.parse::<toml::Table>().map(toml::Value::Table).map_err(|e| format!("the file does not parse as toml: {}", e.message()))?)
     } else {
         serde_json::from_str(text).map_err(|e| format!("the file does not parse as json: {}", e))?
@@ -622,6 +656,8 @@ pub fn compute(rd: &Value, text: &str) -> R<String> {
         Some("pattern") => read_pattern(rd, text),
         Some("python") => read_python(rd, text),
         Some("data") => read_data(rd, text),
+        Some("table") => crate::structured::read_table(rd, text).and_then(|l| lit_term(rd, l)),
+        Some("rust") => crate::structured::read_rust(rd, text).and_then(|l| lit_term(rd, l)),
         other => Err(format!("no way to read a place by {}; the record may come from another version", other.map(pyrepr).unwrap_or_else(|| "None".into()))),
     }
 }

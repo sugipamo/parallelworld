@@ -222,3 +222,53 @@ def test_what_a_reader_says(pw, tmp_path):
     mcp_session(pw, {"PW_DB": str(tmp_path / "pw-log.jsonl"), "PW_AGENT": "reader-2", "PW_WORKDIR": repo, "PW_BLIND": "1",
                      "PW_MODEL": "claude-opus-5-5"}, calls[:1])
     assert json.loads((tmp_path / "pw-log.jsonl").read_text().splitlines()[-1])["instructions"] == INSTRUCTIONS
+
+
+# ---- ways of reading by structure: Markdown tables, YAML, Rust ------------------------------------
+
+def test_a_markdown_table_is_read_by_its_columns(pw, tmp_path):
+    from pw.kernel import KernelError, compute, reader
+    text = ("## Modes\n\nSome prose with `fast` in it.\n\n| Mode | Limit | Notes |\n|:-----|------:|-------|\n"
+            "| `fast` | 14 | the default \\| quick |\n|  safe  |  3 |  |\n\n```\n| Mode |\n|---|\n| fake |\n```\n")
+    read = lambda r, **kw: compute(reader({"table": r, **kw}, "doc.md::Modes"), text)
+    assert read("Mode") == '["fast", "safe"]' and read("Mode", sort=True) == '["fast", "safe"]'
+    assert read("Limit", row="safe", **{"as": "nat"}) == "3" and read("Notes", row="fast") == '"the default | quick"'
+    realigned = text.replace("| `fast` | 14 |", "|`fast`|14|").replace("|:-----|------:|", "|---|---|")
+    assert compute(reader({"table": "Mode"}, "doc.md"), realigned) == '["fast", "safe"]'   # spacing and alignment do not matter
+    for bad in ({"table": "Nothing"}, {"table": "Limit", "row": "turbo"}):
+        with pytest.raises(KernelError):
+            compute(reader(bad, "doc.md"), text)
+    with pytest.raises(KernelError, match="Markdown"):
+        reader({"table": "Mode"}, "doc.txt")
+
+
+def test_a_yaml_file_is_read_by_a_path(pw):
+    from pw.kernel import compute, reader
+    text = "jobs:\n  test:\n    strategy:\n      matrix:\n        python: ['3.12', \"3.13\"]\n    runs-on: ubuntu-24.04\nlimit: 14\n"
+    at = ".github/workflows/ci.yml"
+    assert compute(reader({"data": "jobs.test.strategy.matrix.python"}, at), text) == '["3.12", "3.13"]'
+    assert compute(reader({"data": "jobs.*.runs-on"}, at), text) == '["ubuntu-24.04"]'
+    assert compute(reader({"data": "limit", "as": "nat"}, at), text) == "14"
+    assert compute(reader({"data": "jobs", "keys": True}, at), text) == '["test"]'
+
+
+def test_a_rust_file_is_read_by_its_items(pw):
+    from pw.kernel import KernelError, compute, reader
+    text = ('pub const LIMIT: u32 = 14;\nconst NAMES: [&str; 2] = ["b", "a"];\nstatic NEG: i64 = -3;\n'
+            'pub enum Mode { Fast, Safe }\nstruct Config { limit: u32, mode: Mode }\n'
+            'mod tools { pub fn read() {} pub fn not_stated() {} pub const X: u8 = 1; }\n'
+            'impl Config { fn new() -> Self { todo!() } fn check(&self) {} }\n'
+            'fn names() -> Vec<String> { vec!["x".into(), format!("{}", "y")] }\n')
+    read = lambda **r: compute(reader({"as": "string", **r}, "src/lib.rs"), text)
+    assert read(rust="value", item="LIMIT", **{"as": "nat"}) == "14" and read(rust="value", item="NEG", **{"as": "int"}) == "(-3)"
+    assert read(rust="value", item="NAMES", sort=True) == '["a", "b"]'
+    assert read(rust="names", item="Mode") == '["Fast", "Safe"]' and read(rust="names", item="Config") == '["limit", "mode", "new", "check"]'
+    assert read(rust="names", item="tools") == '["read", "not_stated", "X"]' and read(rust="value", item="tools::X", **{"as": "nat"}) == "1"
+    assert read(rust="strings", item="names") == '["x", "{}", "y"]'
+    reformatted = text.replace("pub const LIMIT: u32 = 14;", "pub const LIMIT: u32 =\n    14; // the most")
+    assert compute(reader({"rust": "value", "item": "LIMIT", "as": "nat"}, "src/lib.rs"), reformatted) == "14"
+    for bad in ({"rust": "value", "item": "Mode"}, {"rust": "value", "item": "nothing"}, {"rust": "value", "item": "names"}):
+        with pytest.raises(KernelError):
+            compute(reader(bad, "src/lib.rs"), text)
+    with pytest.raises(KernelError, match="item"):
+        reader({"rust": "value"}, "src/lib.rs")

@@ -103,7 +103,7 @@ What to report for a place
               place writes the value another way than the other places (["py(\\d)(\\d+)", "\\1.\\2"]
               turns py310 into 3.10).
   No look-around, back-references or named groups. Leave the pattern out for prose.
-  For a Python file, and for a TOML or JSON file, prefer `structure` to a pattern: it reads the
+  For a Python or Rust file, a TOML, JSON or YAML file, and a Markdown table, prefer `structure` to a pattern: it reads the
   place by what it is, so quotes, spacing and line breaks do not matter and an entry added in
   another style is still seen. Give it instead of find/find_all, as an object:
     {"python": "value"}     the literal a name is assigned (name the assignment: path::NAME)
@@ -114,8 +114,14 @@ What to report for a place
                             only those carrying that decorator
     {"python": "keyword", "call": "add_argument", "with": "--mode", "keyword": "default"}
                             the literal passed as that keyword to the one such call
-    {"data": "package.version"}   a dotted path into a .toml or .json file, named whole; a step may
-                            be * (every entry) or name[key=value]; add "keys": true for the keys
+    {"data": "package.version"}   a dotted path into a .toml, .json or .yaml file, named whole; a step
+                            may be * (every entry) or name[key=value]; add "keys": true for the keys
+    {"rust": "value", "item": "LIMIT"}   the literal of a const or static in a .rs file, named whole
+                            (inside a mod: "tools::LIMIT"); "strings" for every string literal in an
+                            item (macros included); "names" for an enum's variants, a struct's fields,
+                            the fns of an impl or trait, the items of a mod
+    {"table": "Mode"}       every cell of that column of the one table in a Markdown place that has
+                            it; with "row": "safe", the one cell of the row whose first cell is safe
   with "as" (string, nat, int, permille), and "sort": true for a list, as needed.
   Read the place that really determines the thing, even if it writes the value differently:
   do not settle for another line that merely happens to spell it the same way.

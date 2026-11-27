@@ -389,7 +389,7 @@ def test_a_place_can_be_read_by_its_structure():
     for read, text in [({"data": "package.license"}, toml), ({"data": "tasks.name"}, toml), ({"data": "package", "keys": True}, "x = ["), ({"data": "package.version", "as": "nat"}, toml)]:
         with pytest.raises(KernelError):
             data(read, text)
-    for read, at in [({"data": "a.b"}, "f.yaml"), ({"python": "value"}, "f.toml"), ({"data": "a"}, "f.json::a"), ({"python": "nope"}, "f.py"),
+    for read, at in [({"data": "a.b"}, "f.ini"), ({"python": "value"}, "f.toml"), ({"data": "a"}, "f.json::a"), ({"python": "nope"}, "f.py"),
                      ({"python": "value", "find": "x"}, "f.py"), ({"data": "a..b"}, "f.toml"), ({"python": "value", "public": True}, "f.py")]:
         with pytest.raises(KernelError):
             reader(read, at)

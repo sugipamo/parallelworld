@@ -3,6 +3,7 @@ mod kernel;
 mod lean;
 mod mcp;
 mod ops;
+mod structured;
 mod text;
 mod read;
 mod util;
