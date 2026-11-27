@@ -517,3 +517,24 @@ def test_a_place_read_blind_already_is_not_paid_for_again(tmp_path):
     (tmp_path / "k.py").write_text("LIMIT = 14\n")                            # same content, another question: read it again
     m = k.read_place(h, "k.py", cwd=str(tmp_path))["m"]
     assert not read_blind_already(k.state(), h, "k.py", m, "opus")
+
+
+def test_the_rust_build_is_found_however_this_was_installed(tmp_path, monkeypatch):
+    """Installed outside a checkout (pip install, not editable): a `pw` on PATH is used if it says it
+    is this tool; if there is none, what to do is said for that way of installing."""
+    from pw import core
+    monkeypatch.delenv("PW_BIN", raising=False)
+    monkeypatch.setattr(core, "ROOT", str(tmp_path / "site-packages"))
+    (tmp_path / "bin").mkdir()
+    monkeypatch.setenv("PATH", str(tmp_path / "bin"))
+    core._on_path.cache_clear()
+    assert core.pw_binary().startswith(str(tmp_path / "site-packages")) and "PW_BIN" in core.missing() and "cargo install" in core.missing()
+    other = tmp_path / "bin" / "pw"
+    other.write_text("#!/bin/sh\necho something else\n")
+    other.chmod(0o755)
+    core._on_path.cache_clear()
+    assert core.pw_binary().startswith(str(tmp_path / "site-packages"))              # another program called pw is not taken
+    other.write_text("#!/bin/sh\necho parallelworld 0.0.0\n")
+    core._on_path.cache_clear()
+    assert core.pw_binary() == str(other)
+    core._on_path.cache_clear()

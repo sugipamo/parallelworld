@@ -405,6 +405,7 @@ fn main() {
     let result = match args.first().map(String::as_str) {
         Some("confirm") => confirm(&args[1..]),
         Some("mcp") => Ok(mcp::serve()),
+        Some("version") => { println!("parallelworld {}", env!("CARGO_PKG_VERSION")); Ok(0) }
         Some("kernel") => Ok(ops::kernel()),
         Some("lean") => Ok(ops::lean()),
         Some(x @ ("state" | "sync" | "adopt")) => record_tool(x, &args[1..]),

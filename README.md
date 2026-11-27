@@ -112,6 +112,8 @@ jobs:
 - 入力は 2 つ。`repo`（確かめるディレクトリ。既定は `.`）と `args`（`pw check` に渡す引数。既定は `--verify`。規則を満たさない読みを警告にとどめるなら `--verify --unconfirmed warn`）。Python 版にしかない `--record` と `--db` は渡せない。
 - CI は記録を読むだけなので、手元で確かめたときと記録の中身がずれない。
 
+エージェント側のツール（`pw.maintain` など）を pip で入れて使うときは、Rust 版の実行ファイルも要る。クローンで `cargo install --path rust` を回して `PATH` に `pw` を置くか、`PW_BIN` でビルドしたものを指す（クローンの中で使うなら、`cargo build --release --manifest-path rust/Cargo.toml` だけでよい）。
+
 ### 参照先を上げるとき
 
 1. 固定しているコミットを上げ、`python -m pw.check --repo . --verify` を回す。使う側で何かが要る変更は [CHANGES.md](CHANGES.md) に書いてある。

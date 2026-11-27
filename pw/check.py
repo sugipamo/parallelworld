@@ -15,7 +15,7 @@ import os
 import subprocess
 import sys
 
-from .core import FACTS, LEAN_DIR, pw_binary  # noqa: F401  (FACTS: the name of a project's declaration)
+from .core import FACTS, LEAN_DIR, missing, pw_binary  # noqa: F401  (FACTS: the name of a project's declaration)
 from .kernel import KernelError
 
 
@@ -34,7 +34,7 @@ def main():
     try:
         os.execv(pw_binary(), [pw_binary(), "check", *sys.argv[1:]])
     except FileNotFoundError:
-        sys.exit(f"pw: the Rust build of this tool is not there ({pw_binary()}): cargo build --release --manifest-path rust/Cargo.toml")
+        sys.exit(f"pw: {missing()}")
 
 
 if __name__ == "__main__":

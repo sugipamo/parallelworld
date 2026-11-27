@@ -33,6 +33,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 from .check import FACTS
+from . import core
 from .core import Kernel, LeanGate, pw_binary
 from .kernel import INSTRUCTIONS, LOG, READER, _sha, context, excerpt, locate, question
 from .core import LEAN_DIR
@@ -46,8 +47,7 @@ def ready(own_tools=False):
     import shutil
     missing = []
     if not os.access(pw_binary(), os.X_OK):
-        missing.append(f"the Rust build of this tool is not there ({pw_binary()}): it serves the readers' tools. "
-                       "Build it: cargo build --release --manifest-path rust/Cargo.toml (or point PW_BIN at it)")
+        missing.append(core.missing() + ". It serves the readers' tools")
     if own_tools and importlib.util.find_spec("mcp") is None:
         missing.append("the Python package `mcp` is not installed (pip install mcp): without it the agent has no tool to answer with")
     if shutil.which("claude") is None:

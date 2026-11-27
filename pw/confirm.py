@@ -11,14 +11,14 @@ changes, the new reading has to be confirmed again.
 import os
 import sys
 
-from .core import pw_binary
+from .core import missing, pw_binary
 
 
 def main():
     try:
         os.execv(pw_binary(), [pw_binary(), "confirm", *sys.argv[1:]])
     except FileNotFoundError:
-        sys.exit(f"pw: the Rust build of this tool is not there ({pw_binary()}): cargo build --release --manifest-path rust/Cargo.toml")
+        sys.exit(f"pw: {missing()}")
 
 
 if __name__ == "__main__":

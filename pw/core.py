@@ -12,9 +12,11 @@ from the Rust build; this module only asks it and reads its answers:
 `Kernel` and `LeanGate` keep the methods the Python implementation had, so that the agent tools
 and the tests read as before.
 """
+import functools
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 
 from .kernel import KernelError
@@ -33,8 +35,36 @@ class GateError(Exception):
 
 
 def pw_binary():
-    """The Rust build of this tool: PW_BIN, else rust/target/release/pw in this checkout."""
-    return os.environ.get("PW_BIN") or os.path.join(ROOT, "rust", "target", "release", "pw")
+    """The Rust build of this tool: PW_BIN; else the build in this checkout (rust/target/release/pw);
+    else a `pw` on PATH that says it is this tool (`cargo install --path rust` puts one there)."""
+    if os.environ.get("PW_BIN"):
+        return os.environ["PW_BIN"]
+    built = os.path.join(ROOT, "rust", "target", "release", "pw")
+    if os.access(built, os.X_OK):
+        return built
+    return _on_path() or built
+
+
+@functools.lru_cache(maxsize=None)
+def _on_path():
+    found = shutil.which("pw")
+    if not found:
+        return None
+    try:                              # (another program may be called pw)
+        said = subprocess.run([found, "version"], capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return found if said.startswith("parallelworld ") else None
+
+
+def missing():
+    """What to do when the Rust build is not there: said for how this package was installed."""
+    if os.path.exists(os.path.join(ROOT, "rust", "Cargo.toml")):
+        return (f"the Rust build of this tool is not there ({pw_binary()}): "
+                "cargo build --release --manifest-path rust/Cargo.toml (or point PW_BIN at it)")
+    return ("the Rust build of this tool is not there: this Python package is installed outside a checkout of it, "
+            "so build the Rust part in a checkout, then put it on PATH (cargo install --path rust) or point PW_BIN at "
+            "rust/target/release/pw there")
 
 
 def fact_id(name, typ):
@@ -47,8 +77,7 @@ def _ask(command, request, stdin_ok=(0,)):
     try:
         r = subprocess.run([pw_binary(), command], input=json.dumps(request, ensure_ascii=False), capture_output=True, text=True)
     except FileNotFoundError:
-        raise KernelError(f"the Rust build of this tool is not there ({pw_binary()}): "
-                          "cargo build --release --manifest-path rust/Cargo.toml (or point PW_BIN at it)")
+        raise KernelError(missing())
     if r.returncode != 0 or not r.stdout.strip():
         raise KernelError(r.stderr.strip().removeprefix("pw: ") or f"pw {command} failed ({r.returncode})")
     out = json.loads(r.stdout)
@@ -142,8 +171,7 @@ class Kernel:
         try:
             r = subprocess.run([pw_binary(), *args, *lean], capture_output=True, text=True)
         except FileNotFoundError:
-            raise KernelError(f"the Rust build of this tool is not there ({pw_binary()}): "
-                              "cargo build --release --manifest-path rust/Cargo.toml (or point PW_BIN at it)")
+            raise KernelError(missing())
         if r.returncode not in ok:
             raise KernelError(r.stderr.strip().removeprefix("pw: ") or f"pw {args[0]} failed ({r.returncode})")
         return r
