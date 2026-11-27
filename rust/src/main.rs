@@ -402,11 +402,107 @@ fn record_tool(name: &str, args: &[String]) -> R<i32> {
     Ok(0)
 }
 
+const WORKFLOW: &str = "name: facts
+
+# Hold the facts declared in pw-facts.json against the files, at every push and pull request.
+# The checker is {action}, used as an action at a fixed commit: that one commit fixes the
+# checker, its crates and Lean. No agent is used; the job only reads the repository.
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  facts:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1        # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: {action}@{pin}
+";
+
+/// A first step for a repository that does not use this yet: an empty declaration, the line that
+/// keeps both sides of the record when branches merge, and a CI job that runs the check. Nothing
+/// that is there already is changed.
+fn init(args: &[String]) -> R<i32> {
+    let (mut repo, mut pin, mut action) = (".".to_string(), None, "sugipamo/parallelworld".to_string());
+    let mut i = 0;
+    while i < args.len() {
+        let flag = args[i].clone();
+        let mut value = |what: &str| { i += 1; args.get(i).cloned().ok_or(format!("{} needs {}", flag, what)) };
+        match flag.as_str() {
+            "--repo" => repo = value("a directory")?,
+            "--pin" => pin = Some(value("a commit")?),
+            "--action" => action = value("OWNER/REPO")?,
+            other => return Err(format!("unknown argument {}; pw init [--repo DIR] [--pin COMMIT] [--action OWNER/REPO]", other)),
+        }
+        i += 1;
+    }
+    let cwd = Path::new(&repo);
+    if !cwd.is_dir() {
+        return Err(format!("{} is not a directory", repo));
+    }
+    // the commit to pin the action at: given, or the one this tool's own checkout is at
+    let pin = match pin {
+        Some(p) => p,
+        None => {
+            let here = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+            let head = std::process::Command::new("git").arg("-C").arg(&here).args(["rev-parse", "HEAD"]).output().ok()
+                .filter(|o| o.status.success()).map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string());
+            head.ok_or("say which commit of this tool the CI job is to use: --pin COMMIT (this build is not in a checkout to take it from)")?
+        }
+    };
+    if !regex::Regex::new(r"^[0-9a-f]{40}$").unwrap().is_match(&pin) {
+        return Err(format!("--pin is a whole commit id (40 hex digits), not {}: a name such as a branch or tag can be moved", pin));
+    }
+    let mut said = vec![];
+    let mut put = |path: &str, text: &str| -> R<()> {
+        let full = cwd.join(path);
+        if full.exists() {
+            said.push(format!("kept     {} (it is there already)", path));
+            return Ok(());
+        }
+        if let Some(dir) = full.parent() {
+            std::fs::create_dir_all(dir).map_err(|e| format!("{}: {}", dir.display(), e))?;
+        }
+        std::fs::write(&full, text).map_err(|e| format!("{}: {}", full.display(), e))?;
+        said.push(format!("wrote    {}", path));
+        Ok(())
+    };
+    put("pw-facts.json", "[]\n")?;
+    put(".github/workflows/facts.yml", &WORKFLOW.replace("{action}", &action).replace("{pin}", &pin))?;
+    // both branches' readings are kept when they merge: the record is appended to, never rewritten
+    let attrs = cwd.join(".gitattributes");
+    let now = std::fs::read_to_string(&attrs).unwrap_or_default();
+    if now.lines().any(|l| l.split_whitespace().collect::<Vec<_>>() == ["pw-log.jsonl", "merge=union"]) {
+        said.push("kept     .gitattributes (pw-log.jsonl merge=union is there already)".into());
+    } else {
+        let sep = if now.is_empty() || now.ends_with('\n') { "" } else { "\n" };
+        std::fs::write(&attrs, format!("{}{}pw-log.jsonl merge=union\n", now, sep)).map_err(|e| format!("{}: {}", attrs.display(), e))?;
+        said.push(format!("{} .gitattributes (pw-log.jsonl merge=union)", if now.is_empty() { "wrote   " } else { "added to" }));
+    }
+    for line in &said {
+        println!("{}", line);
+    }
+    println!("\nThe CI job uses {}@{}.", action, &pin[..12]);
+    println!("Next:");
+    println!("  1. declare what this repository states in more than one place, in pw-facts.json (docs/spec.md, section 2),");
+    println!("     or have an agent propose facts: python -m pw.discover --repo {} --new --apply", repo);
+    println!("  2. have the places read: python -m pw.maintain --repo {}   (a blind reader reads what no pattern can)", repo);
+    println!("  3. commit pw-facts.json, pw-log.jsonl, .gitattributes and .github/workflows/facts.yml");
+    Ok(0)
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let result = match args.first().map(String::as_str) {
         Some("confirm") => confirm(&args[1..]),
         Some("mcp") => Ok(mcp::serve()),
+        Some("init") => init(&args[1..]),
         Some("version") => { println!("parallelworld {}", env!("CARGO_PKG_VERSION")); Ok(0) }
         Some("kernel") => Ok(ops::kernel()),
         Some("lean") => Ok(ops::lean()),

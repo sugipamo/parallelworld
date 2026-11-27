@@ -272,3 +272,21 @@ def test_a_rust_file_is_read_by_its_items(pw):
             compute(reader(bad, "src/lib.rs"), text)
     with pytest.raises(KernelError, match="item"):
         reader({"rust": "value"}, "src/lib.rs")
+
+
+def test_a_first_step_writes_what_is_missing_and_keeps_the_rest(pw, tmp_path):
+    pin = "0123456789abcdef0123456789abcdef01234567"
+    (tmp_path / ".gitattributes").write_text("*.png binary")
+    init = lambda *a: subprocess.run([pw, "init", "--repo", str(tmp_path), *a], capture_output=True, text=True)
+    r = init("--pin", pin)
+    assert r.returncode == 0 and "wrote    pw-facts.json" in r.stdout
+    assert (tmp_path / "pw-facts.json").read_text() == "[]\n"
+    assert (tmp_path / ".gitattributes").read_text() == "*.png binary\npw-log.jsonl merge=union\n"
+    flow = (tmp_path / ".github" / "workflows" / "facts.yml").read_text()
+    assert f"uses: sugipamo/parallelworld@{pin}" in flow and "permissions:\n  contents: read" in flow
+    (tmp_path / "pw-facts.json").write_text(json.dumps([LIMIT]))
+    r = init("--pin", pin)                                        # again: nothing is changed
+    assert r.stdout.count("kept") == 3 and json.loads((tmp_path / "pw-facts.json").read_text()) == [LIMIT]
+    assert init("--pin", "main").returncode == 2                  # a name can be moved: a commit id only
+    (tmp_path / "fresh").mkdir()
+    assert init("--pin", pin).returncode == 0 and check(pw, declare(tmp_path / "fresh", [])).returncode == 0     # an empty declaration passes

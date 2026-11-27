@@ -75,6 +75,8 @@ rust/target/release/pw confirm --repo .          # 人の確認（--who NAME M:.
 
 対象のリポジトリに置くのは、宣言（`pw-facts.json`）と、読み手が書く記録（`pw-log.jsonl`、`pw-calibration.json`）、変えたければ規則の表（`pw-rules.json`）。この仕組みのコードは写さない。記録をブランチどうしで両方残してマージするには、対象のリポジトリの `.gitattributes` に `pw-log.jsonl merge=union` と書く。
 
+最初の一歩は `pw init --repo 対象のリポジトリ`。空の宣言、`.gitattributes` のその 1 行、このアクションを使う CI のジョブ（`.github/workflows/facts.yml`。いま使っているこの仕組みのクローンのコミットに固定する。別のコミットにするなら `--pin`）を置く。すでにあるファイルは書き換えない。あとは事実を宣言するか、`python -m pw.discover --repo . --new --apply` でエージェントに提案させ、`python -m pw.maintain --repo .` で読ませてコミットする。
+
 ### 手元で
 
 ```
