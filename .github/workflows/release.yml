@@ -1,0 +1,56 @@
+name: release
+
+# Build the executable once, statically linked (it runs on any Linux x86_64), and publish it with
+# its SHA-256 as a release named after the version in rust/Cargo.toml. Started by hand. The
+# release says the digest of the source it was built from (ci/pw.sh source_digest); writing its
+# lines into rust/release.txt, in a commit of that same source, is what lets ci/pw.sh and the
+# action take it instead of building. A version that is published already is not published again.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write          # to create the release, and nothing else
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1        # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build, statically linked
+        run: |
+          rustup target add x86_64-unknown-linux-musl
+          cargo build --release --locked --target x86_64-unknown-linux-musl --manifest-path rust/Cargo.toml
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' rust/Cargo.toml | head -n 1)
+          mkdir out && cp rust/target/x86_64-unknown-linux-musl/release/pw "out/pw-$version-linux-x86_64"
+          out/pw-$version-linux-x86_64 version | grep -qx "parallelworld $version"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: What rust/release.txt is to say
+        run: |
+          digest=$(ci/pw.sh --source-digest)
+          sum=$(sha256sum "out/pw-$VERSION-linux-x86_64" | cut -c1-64)
+          {
+            echo "version=$VERSION"
+            echo "source=$digest"
+            echo "url=https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/pw-$VERSION-linux-x86_64"
+            echo "sha256=$sum"
+          } > out/release.txt
+          cat out/release.txt
+          { echo '```'; cat out/release.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "v$VERSION is published already: a version is published once"; exit 1
+          fi
+          gh release create "v$VERSION" "out/pw-$VERSION-linux-x86_64" out/release.txt --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --title "v$VERSION" \
+            --notes "The pw executable for Linux x86_64, statically linked, built from $GITHUB_SHA. release.txt is what rust/release.txt says for it."

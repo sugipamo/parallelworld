@@ -1,14 +1,15 @@
 name: parallelworld check
 description: >-
   Hold a repository's declared facts (pw-facts.json) against its files as they are checked out:
-  the check built from this repository's Rust source, and Lean if the declaration needs it.
+  the check (the executable published for this commit's source, or built from it), and Lean if
+  the declaration needs it.
   No agent is used.
 
 # For another repository's workflow. Pin this action by commit; that one commit then fixes
-# everything else: the checker's source, its crates (by checksum, rust/Cargo.lock) and Lean
-# (the version in lean/lean-toolchain, by checksum, ci/lean.sh). The Rust compiler is the
-# runner's own. Nothing built is cached from one job to the next: what runs is what the
-# commit's source builds.
+# everything else: the checker (rust/release.txt names the executable published for exactly this
+# source, by SHA-256; where it names none, or one of other source, it is built from source with
+# the crates pinned by rust/Cargo.lock: ci/pw.sh) and Lean (the version in lean/lean-toolchain,
+# by checksum, ci/lean.sh). Nothing is cached from one job to the next.
 #
 #     - uses: actions/checkout@<commit>
 #     - uses: sugipamo/parallelworld@<commit>
@@ -24,16 +25,24 @@ inputs:
       Further arguments to the check (pw check: --verify, --unconfirmed warn, --lean always, --json).
       The default runs the proofs in the record through Lean again instead of believing them.
     default: "--verify"
+  build:
+    description: >-
+      "auto": take the executable rust/release.txt names when it is of this source, else build.
+      "source": always build from source (a minute and a half on four cores).
+    default: "auto"
 
 runs:
   using: composite
   steps:
-    - name: The check, built from source
+    - name: The check, published for this source or built from it
       shell: bash
+      env:
+        PW_BUILD: ${{ inputs.build }}
       run: |
-        cargo build --release --locked --quiet --manifest-path "$GITHUB_ACTION_PATH/rust/Cargo.toml" --target-dir "$RUNNER_TEMP/parallelworld-target"
-        echo "PW_BIN=$RUNNER_TEMP/parallelworld-target/release/pw" >> "$GITHUB_ENV"
+        bin=$("$GITHUB_ACTION_PATH/ci/pw.sh" "$RUNNER_TEMP/parallelworld-bin")
+        echo "PW_BIN=$bin" >> "$GITHUB_ENV"
         echo "PW_LEAN_DIR=$GITHUB_ACTION_PATH/lean" >> "$GITHUB_ENV"
+        "$bin" version
 
     # Written-out values are compared as they stand. Lean is fetched only where something has
     # to be worked out: a fact defined from other facts, or every comparison if `args` asks for it.

@@ -459,10 +459,10 @@ def test_the_action_has_its_parts():
     with open(os.path.join(root, "action.yml"), encoding="utf-8") as fh:
         text = fh.read()
     assert re.findall(r"^([a-z]+):", text, re.M) == ["name", "description", "inputs", "runs"]
-    assert re.findall(r"^  ([a-z]+):", text.split("\ninputs:", 1)[1].split("\nruns:", 1)[0], re.M) == ["repo", "args"]
+    assert re.findall(r"^  ([a-z]+):", text.split("\ninputs:", 1)[1].split("\nruns:", 1)[0], re.M) == ["repo", "args", "build"]
     runs = text.split("\nruns:", 1)[1]
     assert "\n  using: composite\n  steps:\n" in runs and len(re.findall(r"^    - name: ", runs, re.M)) == 3
-    assert "cargo build --release --locked" in runs and '"$PW_BIN" check' in runs
+    assert "ci/pw.sh" in runs and '"$PW_BIN" check' in runs
 
 
 def test_a_declaration_that_cannot_be_used_is_said_in_a_line(tmp_path):
