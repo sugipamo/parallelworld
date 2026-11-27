@@ -437,6 +437,21 @@ def test_the_documents_are_there_and_point_at_things_that_exist():
                 assert os.path.exists(there) and (os.path.isdir(there) or os.path.getsize(there) > 0), f"{name} links to {target}, which is not there"
 
 
+def test_the_action_has_its_parts():
+    """action.yml is read by GitHub, not by anything here: a slip in it shows only in another
+    repository's CI. Its top level has to be these keys, and its steps the ones the README names."""
+    import os
+    import re
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with open(os.path.join(root, "action.yml"), encoding="utf-8") as fh:
+        text = fh.read()
+    assert re.findall(r"^([a-z]+):", text, re.M) == ["name", "description", "inputs", "runs"]
+    assert re.findall(r"^  ([a-z]+):", text.split("\ninputs:", 1)[1].split("\nruns:", 1)[0], re.M) == ["repo", "args"]
+    runs = text.split("\nruns:", 1)[1]
+    assert "\n  using: composite\n  steps:\n" in runs and len(re.findall(r"^    - name: ", runs, re.M)) == 3
+    assert "cargo build --release --locked" in runs and '"$PW_BIN" check' in runs
+
+
 def test_a_declaration_that_cannot_be_used_is_said_in_a_line(tmp_path):
     import json
     k = Kernel(str(tmp_path / "pw-log.jsonl"))

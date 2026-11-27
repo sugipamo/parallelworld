@@ -7,7 +7,25 @@ description: >-
 # For another repository's workflow. Pin this action by commit; that one commit then fixes
 # everything else: the checker's source, its crates (by checksum, rust/Cargo.lock) and Lean
 # (the version in lean/lean-toolchain, by checksum, ci/lean.sh). The Rust compiler is the
-# runner's own. Nothing built is cached between runs:
+# runner's own. Nothing built is cached from one job to the next: what runs is what the
+# commit's source builds.
+#
+#     - uses: actions/checkout@<commit>
+#     - uses: sugipamo/parallelworld@<commit>
+#
+# The job needs nothing beyond reading the repository (permissions: contents: read).
+
+inputs:
+  repo:
+    description: The directory whose pw-facts.json is checked, relative to the workspace.
+    default: "."
+  args:
+    description: >-
+      Further arguments to the check (pw check: --verify, --unconfirmed warn, --lean always, --json).
+      The default runs the proofs in the record through Lean again instead of believing them.
+    default: "--verify"
+
+runs:
   using: composite
   steps:
     - name: The check, built from source
