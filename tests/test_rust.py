@@ -263,3 +263,67 @@ print(k.read_place(h, "doc.md::Limits", "14", cwd={repo!r}, quote="At most 14.")
     assert a == b == [] and ac == bc == 2
     (a, ac, ao), (b, bc, bo) = appended(pw, repo, cmd="confirm")          # the list: nothing written
     assert a == b == [] and ac == bc == 0 and ao == bo and m in ao
+
+
+# ---- what a reader can say, through the MCP server -----------------------------------------------
+
+def mcp_session(pw, env, calls):
+    """Start `pw mcp`, initialize, make the calls; return what each said back."""
+    msgs = [{"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {"protocolVersion": "2025-06-18", "capabilities": {},
+                                                                            "clientInfo": {"name": "test", "version": "0"}}},
+            {"jsonrpc": "2.0", "method": "notifications/initialized"},
+            {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}]
+    msgs += [{"jsonrpc": "2.0", "id": n + 2, "method": "tools/call", "params": {"name": name, "arguments": a}} for n, (name, a) in enumerate(calls)]
+    r = subprocess.run([pw, "mcp"], input="".join(json.dumps(m) + "\n" for m in msgs), capture_output=True, text=True, env={**os.environ, **env}, timeout=60)
+    replies = {m["id"]: m for m in map(json.loads, r.stdout.splitlines())}
+    assert replies[0]["result"]["serverInfo"]["name"] == "pw"
+    assert [t["name"] for t in replies[1]["result"]["tools"]] == ["read_place", "not_stated"]
+    return [replies[n + 2]["result"]["structuredContent"] for n in range(len(calls))]
+
+
+def test_what_a_reader_says(pw, tmp_path):
+    """read_place and not_stated: the same answers and the same lines as the Python kernel's, refusals included."""
+    from pw.kernel import Kernel, KernelError
+    from pw.lean_gate import GateError, LeanGate
+    facts = [{"name": "limit", "type": "Nat", "places": ["doc.md::Limits", LIMIT["places"][0]]},
+             {"name": "modes", "type": "List String", "places": ["doc.md::Modes", {"at": "notes.md", "some": True}]}]
+    repo = declare(tmp_path, facts, **FILES, **{"notes.md": "Try `fast`.\n"})
+    Kernel(str(tmp_path / "pw-log.jsonl")).sync_facts(str(tmp_path / "pw-facts.json"))
+    hs = {f["name"]: h for h, f in Kernel(str(tmp_path / "pw-log.jsonl")).state().facts.items()}
+    L, M = hs["limit"], hs["modes"]
+    calls = [("read_place", {"h": L, "place": "doc.md::Limits", "object": "14", "quote": "At most 14."}),
+             ("read_place", {"h": L, "place": "doc.md::Limits", "object": "14", "quote": "At most 14."}),          # the same again: nothing new
+             ("read_place", {"h": L, "place": "doc.md::Limits", "object": "15", "quote": "At most 15."}),          # not in the place
+             ("read_place", {"h": L, "place": "doc.md::Limits", "object": "7 + 7", "quote": "At most 14."}),       # not written out
+             ("read_place", {"h": L, "place": "doc.md::Limits", "object": "14 #", "quote": "At most 14."}),        # not Lean we take
+             ("read_place", {"h": L, "place": "doc.md::Nothing", "object": "14", "quote": "x"}),                   # not a place of the fact
+             ("read_place", {"h": "H:nothing", "place": "doc.md::Limits", "object": "14", "quote": "x"}),
+             ("read_place", {"h": M, "place": "doc.md::Modes", "object": '["fast"]', "quote": "`fast`"}),
+             ("read_place", {"h": M, "place": "notes.md", "object": '["fast"]', "quote": "Try `fast`."}),
+             ("not_stated", {"h": L, "place": "k.py::LIMIT", "why": "  it is   the code  "}),
+             ("not_stated", {"h": L, "place": "k.py::LIMIT", "why": " "})]
+    for blind, model in (("1", "claude-opus-5-5"), ("1", ""), ("0", "claude-opus-5-5")):
+        env = {"PW_AGENT": "reader", "PW_WORKDIR": repo, "PW_BLIND": blind, "PW_MODEL": model}
+        lines, said = [], []
+        for impl in ("python", "rust"):
+            db = str(tmp_path / f"log-{impl}-{blind}{model}.jsonl")
+            shutil.copy(tmp_path / "pw-log.jsonl", db)
+            if impl == "python":
+                k = Kernel(db, gate=LeanGate(), actor="reader")
+                who = {"blind": blind == "1", "model": model or None}
+                out = []
+                for name, a in calls:
+                    try:
+                        out.append(k.read_place(a["h"], a["place"], a["object"], cwd=repo, quote=a["quote"], **who) if name == "read_place"
+                                   else k.decline(a["h"], a["place"], a["why"], repo, **who))
+                    except (KernelError, GateError) as e:
+                        out.append({"error": f"{type(e).__name__}: {e}"})
+            else:
+                out = mcp_session(pw, {**env, "PW_DB": db, "PW_MODEL": model}, calls) if model else \
+                      mcp_session(pw, {k: v for k, v in {**env, "PW_DB": db}.items() if k != "PW_MODEL"}, calls)
+            said.append(out)
+            with open(db, encoding="utf-8") as fh:
+                lines.append([{k: v for k, v in json.loads(x).items() if k != "ts"} for x in fh.read().splitlines()])
+        assert said[0] == said[1], (blind, model, said)
+        assert lines[0] == lines[1], (blind, model)
+    assert [o.get("error", "")[:11] for o in said[1]][2:7] == ["KernelError", "KernelError", "GateError: ", "KernelError", "KernelError"]

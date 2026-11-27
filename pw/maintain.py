@@ -39,15 +39,23 @@ from .lean_gate import LEAN_DIR, LeanGate
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def ready():
+def pw_binary():
+    """The Rust build of this tool (rust/): it serves the readers' tools (pw mcp)."""
+    return os.environ.get("PW_BIN") or os.path.join(ROOT, "rust", "target", "release", "pw")
+
+
+def ready(own_tools=False):
     """Stop before any session is paid for, if a reader could not answer: the readers' tools are
-    served over MCP by this package, and the sessions are run by the claude command."""
+    served over MCP by the Rust build of this tool, and the sessions are run by the claude command.
+    `own_tools`: the caller also serves tools of its own from this package (pw.discover, pw.propagate)."""
     import importlib.util
     import shutil
     missing = []
-    if importlib.util.find_spec("mcp") is None:
-        missing.append("the Python package `mcp` is not installed (pip install mcp): without it a reader has no tool to answer with, "
-                       "and every place comes back unanswered")
+    if not os.access(pw_binary(), os.X_OK):
+        missing.append(f"the Rust build of this tool is not there ({pw_binary()}): it serves the readers' tools. "
+                       "Build it: cargo build --release --manifest-path rust/Cargo.toml (or point PW_BIN at it)")
+    if own_tools and importlib.util.find_spec("mcp") is None:
+        missing.append("the Python package `mcp` is not installed (pip install mcp): without it the agent has no tool to answer with")
     if shutil.which("claude") is None:
         missing.append("the `claude` command is not on PATH: it runs the readers' sessions")
     if missing:
@@ -64,9 +72,9 @@ def blind_read(repo, lean_dir, model, actor, items, budget, db=None):
     work = tempfile.mkdtemp(prefix="pw-blind-")
     cfg = os.path.join(work, "mcp.json")
     with open(cfg, "w") as fh:
-        json.dump({"mcpServers": {"pw": {"command": sys.executable, "args": ["-m", "pw.mcp_server"], "env": {
+        json.dump({"mcpServers": {"pw": {"command": pw_binary(), "args": ["mcp"], "env": {
             "PW_DB": db or os.path.join(repo, LOG), "PW_AGENT": actor, "PW_WORKDIR": repo, "PW_LEAN_DIR": lean_dir,
-            "PW_BLIND": "1", "PW_MODEL": model, "PYTHONPATH": ROOT}}}}, fh)
+            "PW_BLIND": "1", "PW_MODEL": model}}}}, fh)
     prompt = READER
     for h, place, typ, what, around, *shown in items:
         text = shown[0] if shown and shown[0] else locate(place, repo).decode("utf-8", "replace")
@@ -188,7 +196,7 @@ def main():
         print(f"\n{len(failed)} reader session(s) failed or left a place unanswered (see above). That is not a finding: run this again.")
         if all(r.get("turns") in (None, 1) for r in silent):
             print("Every session ended after one turn without answering. The readers' tools may not have started: "
-                  "try `python -m pw.mcp_server` by hand; it should start and wait, not fail.")
+                  f"try `{pw_binary()} mcp` by hand; it should start and wait, not fail.")
     sys.exit(1 if bad or failed else 0)
 
 

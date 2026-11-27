@@ -22,7 +22,7 @@ v0.4 までにあった主張・接続・確率の区間・並列ワーカーの
 | `pw/check.py` | 宣言された事実を、いまのファイルに当て直す。エージェントなし。記録は読むだけ |
 | `rust/` | 同じ `check` の Rust での実装。アクションはこちらを使う。判定が同じであることを履歴と CI で突き合わせている |
 | `pw/maintain.py` | 変わった箇所・未読の箇所を、目隠しの読み手に読ませる |
-| `pw/mcp_server.py` | 読み手が答えるための道具（MCP） |
+| `rust/src/mcp.rs`（`pw mcp`） | 読み手が答えるための道具（MCP）。`pw.maintain`・`pw.calibrate`・`pw.discover`・`pw.propagate` の読み手は、これで答える |
 | `pw/reader.txt` | 読み手に渡す指示文 |
 | `pw/calibrate.py` | 読み手を測る（わざと書き換えた本文、おとり） |
 | `pw/discover.py` | 宣言に漏れている箇所と、未宣言の事実をエージェントに探させる |

@@ -895,14 +895,18 @@ def test_a_decoy_is_a_place_that_states_none_of_it(tmp_path):
     assert ("methods.md::Methods", "functions") in got and ("functions.md::Functions", "methods") in got
 
 
-def test_agents_are_not_started_without_what_they_answer_with(monkeypatch, capsys):
+def test_agents_are_not_started_without_what_they_answer_with(monkeypatch, capsys, tmp_path):
     import importlib.util
     from pw import maintain
-    real = importlib.util.find_spec
-    monkeypatch.setattr(importlib.util, "find_spec", lambda name, *a: None if name == "mcp" else real(name, *a))
+    monkeypatch.setenv("PW_BIN", str(tmp_path / "no-pw"))           # the readers' tools are served by the Rust build
     with pytest.raises(SystemExit) as e:
         maintain.ready()
-    assert "mcp" in str(e.value) and "Nothing was read" in str(e.value)
+    assert "cargo build" in str(e.value) and "Nothing was read" in str(e.value)
+    real = importlib.util.find_spec                                  # an agent with tools of its own serves them from Python
+    monkeypatch.setattr(importlib.util, "find_spec", lambda name, *a: None if name == "mcp" else real(name, *a))
+    with pytest.raises(SystemExit) as e:
+        maintain.ready(own_tools=True)
+    assert "mcp" in str(e.value)
 
 
 def test_a_way_of_reading_new_to_the_record_is_pointed_out(tmp_path, capsys):

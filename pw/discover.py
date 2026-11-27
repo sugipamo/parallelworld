@@ -686,7 +686,7 @@ def main():
     if args.serve:
         return serve()
     from .maintain import ready
-    ready()
+    ready(own_tools=True)
     from .lean_gate import LEAN_DIR
     lean_dir = args.lean_dir or LEAN_DIR
     repo = os.path.abspath(args.repo)

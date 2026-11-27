@@ -21,10 +21,10 @@
   "places": [
    "docs/spec.md::4. 読み手の道具（MCP）",
    {
-    "at": "pw/mcp_server.py",
+    "at": "rust/src/mcp.rs",
     "read": {
-     "python": "names",
-     "decorator": "mcp.tool",
+     "within": "fn tools\\(\\) -> Value \\{([\\s\\S]*?)\\n\\}",
+     "find_all": "\"name\": \"(\\w+)\"",
      "sort": true
     }
    }

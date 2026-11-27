@@ -89,6 +89,117 @@ impl State {
     }
 }
 
+/// The id of the instructions a blind reader is given (pw/reader.txt): a reading counts per model and instructions.
+pub fn instructions_id() -> String {
+    sha(&[include_str!("../../pw/reader.txt")])
+}
+
+/// Python's str() of a value read off a place, to look for it in the place's words.
+fn pyshown(v: &Value) -> String {
+    fn repr(v: &Value) -> String {
+        match v {
+            Value::String(x) => if x.contains('\'') && !x.contains('"') { format!("\"{}\"", x) } else { format!("'{}'", x.replace('\\', "\\\\").replace('\'', "\\'")) },
+            Value::Array(a) => format!("[{}]", a.iter().map(repr).collect::<Vec<_>>().join(", ")),
+            Value::Object(o) => format!("{{{}}}", o.iter().map(|(k, x)| format!("{}: {}", repr(&json!(k)), repr(x))).collect::<Vec<_>>().join(", ")),
+            other => pystr_of(other),
+        }
+    }
+    match v {
+        Value::String(x) => x.clone(),
+        Value::Array(_) | Value::Object(_) => repr(v),
+        other => pystr_of(other),
+    }
+}
+
+/// An error a reader is told about, named as the Python kernel names it.
+pub type Told = (&'static str, String);
+
+fn kernel_err(e: String) -> Told {
+    ("KernelError", e)
+}
+
+/// What a reader says one place of a fact states, with the sentence that says it
+/// (pw/kernel.py read_place, for a reading stated by an agent).
+pub fn read_place(st: &mut State, judge: &Judge, h: &str, place: &str, obj: &str, cwd: &Path, quote: Option<&str>, blind: bool, model: Option<&str>) -> Result<Value, Told> {
+    let fact = st.facts.get(h).cloned().ok_or_else(|| kernel_err(format!("{} is not a fact", h)))?;
+    let places: Vec<Value> = fact["places"].as_array().cloned().unwrap_or_default();
+    let decl = places.iter().find(|p| s(p, "at") == place).ok_or_else(|| {
+        let ats: Vec<&str> = places.iter().map(|p| s(p, "at")).collect();
+        kernel_err(format!("{} is not a place of this fact; its places are {}", place, pylist(&ats)))
+    })?;
+    let content = locate(place, cwd).ok_or_else(|| kernel_err(format!("{} is not there", place)))?;
+    if let Some(q) = quote {
+        if !anchored(q, place, cwd) {
+            return Err(kernel_err("the quote is not in the place word for word".into()));
+        }
+    }
+    let obj = norm(obj);
+    judge.gate.screen(&obj).map_err(|e| ("GateError", e))?;
+    let typ = s(&fact, "type").to_string();
+    if json_like(&typ) && written(&typ, &obj).is_none() {
+        // what a reader says a place states is a value, not a computation
+        let example = match typ.chars().next() { Some('S') => "\"fast\"", Some('N') => "14", Some('I') => "-3", _ => "[\"a\", \"b\"] or [1, 2]" };
+        return Err(kernel_err(format!("state the value itself, written out: a {} such as {}", typ, example)));
+    }
+    let o = format!("O:{}", sha(&[&typ, &obj]));
+    if !st.objs.contains_key(&o) {
+        judge.typed(&typ, &obj).map_err(kernel_err)?;
+    }
+    let version = subject_id(place, cwd);
+    let m = format!("M:{}", sha(&[h, &version, &o, ""]));
+    let literal = match serde_json::from_str::<Value>(&obj) {
+        Ok(said) => {
+            let whole = String::from_utf8_lossy(&content).into_owned();
+            let list = said.as_array().is_some();
+            let place_words = if quote.is_some() && !list { quote.unwrap().to_string() } else { whole };
+            let each = if let Value::Array(a) = &said { a.clone() } else { vec![said.clone()] };
+            each.iter().all(|x| place_words.contains(&pyshown(x)))
+        }
+        Err(_) => false,
+    };
+    let a = &st.asked[h];
+    let asked = if decl.get("some").and_then(Value::as_bool).unwrap_or(false) { sha(&[a, "some"]) } else { a.clone() };
+    let under = instructions_id();
+    let named = model.filter(|x| !x.is_empty());
+    let known = st.models.get(&m).and_then(|x| x.asked.get(&asked)).cloned().unwrap_or_default();
+    let read = st.readings.get(h).map_or(false, |l| l.contains(&(place.to_string(), m.clone())));
+    let actor = st.actor.clone();
+    if !read || !known.by.contains(&actor) || (blind && !known.blind.contains(&actor))
+        || (blind && named.map_or(false, |x| !known.under.get(x).map_or(false, |u| u.contains(&Some(under.clone()))))) {
+        let mut payload = vec![
+            ("h", json!(h)), ("place", json!(place)), ("subject", json!(version)), ("m", json!(m)),
+            ("obj", json!({ "id": o, "type": typ, "text": obj })), ("binding", Value::Null), ("quote", json!(quote)),
+            ("asked", json!(asked)), ("blind", json!(blind)), ("model", if blind { json!(model) } else { Value::Null }),
+        ];
+        if blind && named.is_some() {
+            payload.push(("instructions", json!(under)));
+        }
+        payload.push(("literal", json!(literal)));
+        payload.push(("anchor", json!(quote.is_some() && !typ.contains("List"))));
+        st.emit("reading", payload);
+    }
+    Ok(json!({ "m": m, "o": o, "read as": obj }))
+}
+
+/// A reader shown a place found that it does not state the fact (pw/kernel.py decline).
+pub fn decline(st: &mut State, h: &str, place: &str, why: &str, cwd: &Path, blind: bool, model: Option<&str>) -> Result<Value, Told> {
+    let fact = st.facts.get(h).cloned().ok_or_else(|| kernel_err(format!("{} is not a fact", h)))?;
+    let decl = fact["places"].as_array().into_iter().flatten().find(|p| s(p, "at") == place).cloned()
+        .ok_or_else(|| kernel_err(format!("{} is not a place of this fact", place)))?;
+    if locate(place, cwd).is_none() {
+        return Err(kernel_err(format!("{} is not there", place)));
+    }
+    if norm(why).is_empty() {
+        return Err(kernel_err("say what the place is about instead".into()));
+    }
+    let a = &st.asked[h];
+    let asked = if decl.get("some").and_then(Value::as_bool).unwrap_or(false) { sha(&[a, "some"]) } else { a.clone() };
+    st.emit("decline", vec![("h", json!(h)), ("place", json!(place)), ("subject", json!(subject_id(place, cwd))),
+                            ("why", json!(norm(why).chars().take(400).collect::<String>())), ("asked", json!(asked)),
+                            ("blind", json!(blind)), ("model", if blind { json!(model) } else { Value::Null })]);
+    Ok(json!({ "declined": place }))
+}
+
 /// A person has compared a reading with the place itself, and confirms or rejects it
 /// (pw/kernel.py sign_off). True if it was recorded already.
 pub fn sign_off(st: &mut State, m: &str, who: &str, confirmed: bool) -> R<bool> {

@@ -1,6 +1,7 @@
 //! pw check: hold every declared fact against the files as they are now.
 mod kernel;
 mod lean;
+mod mcp;
 mod read;
 mod util;
 
@@ -355,6 +356,7 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let result = match args.first().map(String::as_str) {
         Some("confirm") => confirm(&args[1..]),
+        Some("mcp") => Ok(mcp::serve()),
         Some("check") => run(&args[1..]),
         _ => run(&args[..]),
     };

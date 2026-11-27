@@ -2,6 +2,12 @@
 
 使う側（このリポジトリを固定して使っているリポジトリ）で何かが要る変更、判定が変わる変更だけを書く。`pyproject.toml` の版は、読み手の指示文（`pw/reader.txt`）が変わるか、同じ宣言と記録に対する判定が変わるときに、0.x の x を上げる。
 
+## 0.12.0
+
+- **読み手の道具（MCP）は Rust 版が出す。** `pw.maintain`・`pw.calibrate`・`pw.discover`・`pw.propagate` が読み手を呼ぶとき、道具は `rust/target/release/pw mcp` から出る（`PW_BIN` で場所を変えられる）。手元でこれらを回すなら、先に `cargo build --release --manifest-path rust/Cargo.toml` が要る。無ければ、読み手を呼ぶ前に止まって、そう言う。`pw/mcp_server.py` はなくなった。記録に書く行は前と 1 行ずつ同じ（`tests/test_rust.py`）。
+- Rust 版に `pw check --record`（`--db` も）と `pw confirm` がある。記録に足す行は Python 版と同じ。
+- `python -m pw.confirm` は、一覧を出すだけで記録に計算した読みを書き足していた。いまは写しの上で、宣言どおりの事実について一覧を出し、記録には書かない。同じ回に計算した読みで落ちることもなくなった。
+
 ## 0.11.0
 
 - **アクションは Rust 版の `check` を使う。** ソースからビルドし（クレートは `rust/Cargo.lock` のチェックサムで固定、4 コアで 1 分半ほど）、Python は入れない。判定と表示は Python 版と同じ（2 つのリポジトリの全履歴と CI のテストで突き合わせてある）。使う側で変えることは、ふつうは何もない。次のときだけ要る：
