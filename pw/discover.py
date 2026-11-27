@@ -52,7 +52,8 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 
 from .check import FACTS
-from .kernel import CALIBRATION, LOG, Kernel, KernelError, _anchored, _json_part, _md_section, _py_part, _read_pattern, compute, locate, pattern, reader
+from .core import Kernel
+from .kernel import CALIBRATION, LOG, KernelError, _anchored, _json_part, _md_section, _py_part, _read_pattern, compute, locate, pattern, reader
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TYPES = {"String": str, "Nat": int, "Int": int, "List String": str, "List Nat": int}
@@ -563,14 +564,13 @@ def confirm(repo, lean_dir, facts, proposals, model, budget, record):
     neither read nor decline, which says nothing about the place.
     """
     from .maintain import read_blind                      # (maintain imports nothing from here)
-    from .lean_gate import LeanGate
     merged, added = merge(facts, proposals)
     if not added:
         return facts, [], []
     work = tempfile.mkdtemp(prefix="pw-confirm-")
     with open(os.path.join(work, FACTS), "w", encoding="utf-8") as fh:
         json.dump(merged, fh, ensure_ascii=False)
-    kernel = Kernel(record, gate=LeanGate(lean_dir), actor="discover")
+    kernel = Kernel(record, lean_dir=lean_dir, actor="discover")
     kernel.sync_facts(os.path.join(work, FACTS))
     decisions = {d["fact"]: d for d in kernel.recheck(repo)["decisions"]}
     args = argparse.Namespace(lean_dir=lean_dir, budget=budget)
@@ -654,14 +654,13 @@ def merge(facts, proposals):
 def broken_places(repo, lean_dir, facts):
     """The declared places that can no longer be read as declared: [(fact name, place, why)].
     Found by holding the facts against the files, on a copy of the record."""
-    from .lean_gate import LeanGate
     work = tempfile.mkdtemp(prefix="pw-discover-")
     record = os.path.join(work, LOG)
     if os.path.exists(os.path.join(repo, LOG)):
         shutil.copy(os.path.join(repo, LOG), record)
     with open(os.path.join(work, FACTS), "w", encoding="utf-8") as fh:
         json.dump(facts, fh, ensure_ascii=False)
-    kernel = Kernel(record, gate=LeanGate(lean_dir), actor="discover")
+    kernel = Kernel(record, lean_dir=lean_dir, actor="discover")
     kernel.sync_facts(os.path.join(work, FACTS))
     return [(d["fact"], u["at"], u["why"]) for d in kernel.recheck(repo)["decisions"] for u in d.get("unread", []) if u.get("broken")]
 
@@ -771,8 +770,7 @@ def main():
             with open(path, "w", encoding="utf-8") as fh:
                 json.dump(final, fh, ensure_ascii=False, indent=1)
                 fh.write("\n")
-            from .lean_gate import LeanGate
-            Kernel(record, gate=LeanGate(lean_dir), actor="discover").sync_facts(path)
+            Kernel(record, lean_dir=lean_dir, actor="discover").sync_facts(path)
             print(f"written to {FACTS}; their blind readings are in the record. Then: python -m pw.maintain")
         elif not args.apply:
             print(f"nothing was written (--apply writes the kept places to {FACTS})")

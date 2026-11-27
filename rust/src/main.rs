@@ -189,8 +189,8 @@ fn run(args: &[String]) -> R<i32> {
     let mut repo = ".".to_string();
     let (mut verify, mut warn, mut as_json, mut needs, mut always, mut keep) = (false, false, false, false, false, false);
     let mut lean_dir = lean::lean_dir();
-    let mut db: Option<String> = None;
-    let usage = "pw check [--repo DIR] [--db PATH] [--lean-dir DIR] [--verify] [--unconfirmed fail|warn] [--lean needed|always] [--json] [--needs-lean] [--record]";
+    let (mut db, mut facts_at, mut actor): (Option<String>, Option<String>, String) = (None, None, "check".into());
+    let usage = "pw check [--repo DIR] [--facts PATH] [--db PATH] [--lean-dir DIR] [--verify] [--unconfirmed fail|warn] [--lean needed|always] [--json] [--needs-lean] [--record [--actor NAME]]";
     let mut i = 0;
     while i < args.len() {
         let flag = args[i].clone();
@@ -201,6 +201,8 @@ fn run(args: &[String]) -> R<i32> {
             "--verify" => verify = true,
             "--record" => keep = true,
             "--db" => db = Some(value("a path")?),
+            "--facts" => facts_at = Some(value("a path")?),
+            "--actor" => actor = value("a name")?,
             "--json" => as_json = true,
             "--needs-lean" => needs = true,
             "--unconfirmed" => warn = match value("fail or warn")?.as_str() { "warn" => true, "fail" => false, x => return Err(format!("--unconfirmed is fail or warn, not {}", x)) },
@@ -210,7 +212,9 @@ fn run(args: &[String]) -> R<i32> {
         i += 1;
     }
     let cwd = Path::new(&repo);
-    let facts = kernel::declared(&cwd.join("pw-facts.json"))?;
+    let facts_path = facts_at.map(PathBuf::from).unwrap_or_else(|| cwd.join("pw-facts.json"));
+    let file = facts_path.file_name().and_then(|n| n.to_str()).unwrap_or("pw-facts.json").to_string();
+    let facts = kernel::declared(&facts_path)?;
     if needs {
         println!("{}", if kernel::needs_lean(&facts, always) { "yes" } else { "no" });
         return Ok(0);
@@ -223,8 +227,8 @@ fn run(args: &[String]) -> R<i32> {
     let work = |st: &mut kernel::State| -> R<(Value, Vec<Value>, std::collections::HashSet<(String, String, String)>, std::collections::HashMap<String, String>)> {
         let recorded = st.proofs.clone();       // what the project's record claims Lean proved, before this check adds anything
         let ways = st.ways.clone();
-        kernel::premises(&facts, &judge, "pw-facts.json")?;
-        kernel::sync(st, &facts, "pw-facts.json");
+        kernel::premises(&facts, &judge, &file)?;
+        kernel::sync(st, &facts, &file);
         if with_lean {
             judge.gate.usable()?;
         }
@@ -232,7 +236,7 @@ fn run(args: &[String]) -> R<i32> {
         Ok((report, recorded, ways, st.props()))
     };
     let (report, recorded, ways, props) = if keep {
-        kernel::with_record(&record, "check", work)?
+        kernel::with_record(&record, &actor, work)?
     } else {
         let mut st = kernel::replay(&record)?;
         st.actor = "check".into();
@@ -352,11 +356,55 @@ fn confirm(args: &[String]) -> R<i32> {
     Ok(0)
 }
 
+/// The commands the agent tools use to act on the record without judging anything themselves:
+/// `pw state --db PATH` prints the record as replayed; `pw sync --facts PATH --db PATH` claims
+/// and withdraws as declared; `pw adopt --db PATH` takes over readings given as JSON lines on stdin.
+fn record_tool(name: &str, args: &[String]) -> R<i32> {
+    let (mut db, mut facts_at, mut actor, mut lean_dir) = (None, None, "anon".to_string(), lean::lean_dir());
+    let mut i = 0;
+    while i < args.len() {
+        let flag = args[i].clone();
+        let mut value = |what: &str| { i += 1; args.get(i).cloned().ok_or(format!("{} needs {}", flag, what)) };
+        match flag.as_str() {
+            "--db" => db = Some(PathBuf::from(value("a path")?)),
+            "--facts" => facts_at = Some(PathBuf::from(value("a path")?)),
+            "--actor" => actor = value("a name")?,
+            "--lean-dir" => lean_dir = value("a directory")?.into(),
+            other => return Err(format!("unknown argument {}; pw {} --db PATH [--facts PATH] [--actor NAME]", other, name)),
+        }
+        i += 1;
+    }
+    let db = db.ok_or(format!("pw {} needs --db PATH", name))?;
+    match name {
+        "state" => {
+            let st = kernel::replay(&db)?;
+            println!("{}", serde_json::to_string(&st.dump()).unwrap());
+        }
+        "sync" => {
+            let path = facts_at.ok_or("pw sync needs --facts PATH")?;
+            let file = path.file_name().and_then(|n| n.to_str()).unwrap_or("pw-facts.json").to_string();
+            let facts = kernel::declared(&path)?;
+            let judge = kernel::Judge { always: false, gate: lean::Gate::new(lean_dir) };
+            kernel::premises(&facts, &judge, &file)?;
+            kernel::with_record(&db, &actor, |st| { kernel::sync(st, &facts, &file); Ok(()) })?;
+            println!("{}", serde_json::to_string(&facts.iter().map(|f| f.h.clone()).collect::<Vec<_>>()).unwrap());
+        }
+        _ => {
+            let mut text = String::new();
+            std::io::Read::read_to_string(&mut std::io::stdin(), &mut text).map_err(|e| e.to_string())?;
+            let events: Vec<Value> = text.lines().filter(|l| !l.trim().is_empty()).map(serde_json::from_str).collect::<Result<_, _>>().map_err(|e| e.to_string())?;
+            kernel::with_record(&db, &actor, |st| st.adopt(&events))?;
+        }
+    }
+    Ok(0)
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let result = match args.first().map(String::as_str) {
         Some("confirm") => confirm(&args[1..]),
         Some("mcp") => Ok(mcp::serve()),
+        Some(x @ ("state" | "sync" | "adopt")) => record_tool(x, &args[1..]),
         Some("check") => run(&args[1..]),
         _ => run(&args[..]),
     };

@@ -66,7 +66,8 @@ pub struct State {
     pub ways: HashSet<(String, String, String)>,
     asked: HashMap<String, String>,           // H -> the question its places are asked, as recorded
     facts: HashMap<String, Value>,            // H -> the fact as last claimed (with "asked")
-    withdrawn: HashSet<String>,
+    withdrawn: HashMap<String, String>,       // H -> why it is no longer declared
+    types: HashMap<String, String>,           // O -> its Lean type
     /// who the events this run appends are by, and the events themselves, in order
     pub actor: String,
     pub pending: Vec<Value>,
@@ -200,6 +201,66 @@ pub fn decline(st: &mut State, h: &str, place: &str, why: &str, cwd: &Path, blin
     Ok(json!({ "declined": place }))
 }
 
+impl State {
+    /// The record as replayed, in the shape pw/kernel.py's State has (sets as sorted lists),
+    /// for the tools that act on what the record says without judging it.
+    pub fn dump(&self) -> Value {
+        fn who(w: &Who) -> Value {
+            let under: Map<String, Value> = w.under.iter().map(|(m, u)| {
+                let mut u: Vec<Value> = u.iter().map(|x| json!(x)).collect();
+                u.sort_by_key(|x| x.to_string());
+                (m.clone(), json!(u))
+            }).collect();
+            json!({ "by": w.by, "blind": w.blind, "models": w.models, "under": under })
+        }
+        let mut facts = Map::new();
+        for h in &self.order {
+            let Some(f) = self.facts.get(h) else { continue };
+            let mut f = f.clone();
+            let o = f.as_object_mut().unwrap();
+            o.insert("readings".into(), json!(self.readings.get(h).cloned().unwrap_or_default()));
+            o.insert("declined".into(), json!(self.declined.get(h).cloned().unwrap_or_default()));
+            o.insert("agreed".into(), json!(self.agreed.get(h).cloned().unwrap_or_default()));
+            facts.insert(h.clone(), f);
+        }
+        let models: Map<String, Value> = self.models.iter().map(|(m, x)| {
+            let mut v = who(&x.who);
+            let o = v.as_object_mut().unwrap();
+            for (k, val) in [("subject", json!(x.subject)), ("obj", json!(x.obj)), ("binding", json!(x.binding)), ("quote", json!(x.quote)),
+                             ("anchor", json!(x.anchor)), ("literal", json!(x.literal))] {
+                o.insert(k.into(), val);
+            }
+            o.insert("asked".into(), Value::Object(x.asked.iter().map(|(a, w)| (a.clone(), who(w))).collect()));
+            (m.clone(), v)
+        }).collect();
+        let objs: Map<String, Value> = self.objs.iter().map(|(o, t)| (o.clone(), json!({ "type": self.types.get(o), "text": t }))).collect();
+        let verdict: Map<String, Value> = self.verdict.iter().map(|(f, r)| (f.clone(), json!(r))).collect();
+        json!({
+            "facts": facts, "models": models, "objs": objs, "props": self.props, "verdict": verdict, "proofs": self.proofs,
+            "confirmations": Value::Object(self.confirmations.iter().map(|(e, v)| (e.clone(), v.clone())).collect()),
+            "withdrawn": self.withdrawn,
+        })
+    }
+
+    /// Take over readings made against a copy of this record, of text since written into the
+    /// files (pw/kernel.py adopt): each holds here exactly if the file now has that content.
+    pub fn adopt(&mut self, events: &[Value]) -> R<()> {
+        for e in events {
+            let ok = s(e, "type") == "reading" && self.facts.get(s(e, "h")).map_or(false, |f| {
+                f["places"].as_array().into_iter().flatten().any(|p| s(p, "at") == s(e, "place"))
+            });
+            if !ok {
+                return Err("only readings of declared places can be taken over".into());
+            }
+            let mut e = e.clone();
+            e.as_object_mut().unwrap().shift_remove("id");
+            apply(self, &e)?;
+            self.pending.push(e);
+        }
+        Ok(())
+    }
+}
+
 /// A person has compared a reading with the place itself, and confirms or rejects it
 /// (pw/kernel.py sign_off). True if it was recorded already.
 pub fn sign_off(st: &mut State, m: &str, who: &str, confirmed: bool) -> R<bool> {
@@ -282,6 +343,7 @@ fn apply(st: &mut State, p: &Value) -> Result<(), String> {
         "reading" => {
             let obj = &p["obj"];
             st.objs.entry(s(obj, "id").to_string()).or_insert_with(|| s(obj, "text").to_string());
+            st.types.entry(s(obj, "id").to_string()).or_insert_with(|| s(obj, "type").to_string());
             let m = s(p, "m").to_string();
             let binding = p.get("binding").filter(|b| !b.is_null()).cloned();
             if let Some(b) = &binding {
@@ -354,7 +416,7 @@ fn apply(st: &mut State, p: &Value) -> Result<(), String> {
             st.agreed.entry(h).or_default().push((guards, f));
         }
         "withdraw" => {
-            st.withdrawn.insert(h);
+            st.withdrawn.insert(h, s(p, "justification").to_string());
         }
         other => return Err(format!("an event of type {}", other)),
     }
@@ -587,12 +649,12 @@ pub fn sync(st: &mut State, facts: &[Fact], file: &str) {
             x.as_object_mut().map(|o| o.shift_remove("text"));
             x
         });
-        if was.as_ref() != Some(&fact) || st.withdrawn.contains(&f.h) {
+        if was.as_ref() != Some(&fact) || st.withdrawn.contains_key(&f.h) {
             st.emit("claim", vec![("h", json!(f.h)), ("text", json!(f.text)), ("fact", fact)]);
         }
     }
     for h in st.order.clone() {
-        if !facts.iter().any(|f| f.h == h) && !st.withdrawn.contains(&h) {
+        if !facts.iter().any(|f| f.h == h) && !st.withdrawn.contains_key(&h) {
             st.emit("withdraw", vec![("h", json!(h)), ("justification", json!(format!("no longer declared in {}", file)))]);
         }
     }

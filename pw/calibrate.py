@@ -54,8 +54,9 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 
 from .check import FACTS
-from .kernel import INSTRUCTIONS, LOG, Kernel, context, interval, locate, reader_measurements
-from .lean_gate import LEAN_DIR, LeanGate
+from .core import Kernel
+from .kernel import INSTRUCTIONS, LOG, context, interval, locate, reader_measurements
+from .lean_gate import LEAN_DIR
 from .maintain import blind_read, ready
 
 RESULTS = "pw-calibration.json"
@@ -243,7 +244,7 @@ def trials(kernel, repo, per_place, rng, n_decoys=0, twice=0):
 def run_session(args, number, batch):
     """One blind reader, one scratch project holding one changed text per fact."""
     work = tempfile.mkdtemp(prefix="pw-calibrate-")
-    kernel = Kernel(os.path.join(work, LOG), gate=LeanGate(args.lean_dir), actor="calibrate")
+    kernel = Kernel(os.path.join(work, LOG), actor="calibrate", lean_dir=args.lean_dir)
     items = []
     for i, t in enumerate(batch):
         name = f"passage{i}" + (os.path.splitext(t["place"].split("::")[0])[1] or ".txt")
@@ -291,10 +292,8 @@ def main():
     scratch = os.path.join(tempfile.mkdtemp(prefix="pw-calibrate-"), LOG)       # the project's record is only read
     if os.path.exists(os.path.join(repo, LOG)):
         shutil.copy(os.path.join(repo, LOG), scratch)
-    kernel = Kernel(scratch, gate=LeanGate(args.lean_dir), actor="calibrate")
+    kernel = Kernel(scratch, actor="calibrate", lean_dir=args.lean_dir)
     kernel.sync_facts(os.path.join(repo, FACTS))
-    if kernel.needs_lean():
-        kernel.gate.usable()
     todo = trials(kernel, repo, args.per_place, random.Random(args.seed), args.decoys, args.twice)
     if not todo:
         sys.exit("no place read by an agent whose value occurs literally in it: nothing to plant")

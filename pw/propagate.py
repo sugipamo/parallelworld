@@ -40,8 +40,9 @@ import tempfile
 import time
 
 from .check import FACTS
-from .kernel import LOG, Kernel, KernelError, _json_part, _md_section, _py_part, _sha, compute, context, question, write_pattern
-from .lean_gate import LEAN_DIR, LeanGate
+from .core import Kernel
+from .kernel import LOG, KernelError, _json_part, _md_section, _py_part, _sha, compute, context, question, write_pattern
+from .lean_gate import LEAN_DIR
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SUPPOSED = "(supposed)"
@@ -206,7 +207,7 @@ def plan(repo, lean_dir, facts, suppose=None, editor=None, reader=None):
         shutil.copy(os.path.join(repo, LOG), record)
     with open(os.path.join(work, FACTS), "w", encoding="utf-8") as fh:
         json.dump(tried, fh, ensure_ascii=False)
-    kernel = Kernel(record, gate=LeanGate(lean_dir), actor="propagate")
+    kernel = Kernel(record, lean_dir=lean_dir, actor="propagate")
     kernel.sync_facts(os.path.join(work, FACTS))
     st = kernel.state()
     out = {"files": {}, "written": [], "by hand": [], "refused": [], "unread": [], "readings": [], "cost_usd": 0}
@@ -440,7 +441,7 @@ def main():
                 with open(os.path.join(repo, path), "w", encoding="utf-8") as fh:
                     fh.write(new)
             if got["readings"]:                         # what the blind reader read of the new text holds for the files as written
-                Kernel(os.path.join(repo, LOG), gate=LeanGate(args.lean_dir), actor="propagate").adopt(got["readings"])
+                Kernel(os.path.join(repo, LOG), lean_dir=args.lean_dir, actor="propagate").adopt(got["readings"])
             print(f"\n{len(got['files'])} file(s) written. Then: python -m pw.check" + (" (and pw.maintain for what an agent changed)" if args.agent else ""))
         else:
             print("\nnothing was written (--apply writes these changes)")

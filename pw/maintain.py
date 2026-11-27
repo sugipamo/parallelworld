@@ -32,16 +32,10 @@ import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from .check import FACTS, show
-from .kernel import LOG, READER, Kernel, _sha, context, excerpt, locate, question
-from .lean_gate import LEAN_DIR, LeanGate
-
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-def pw_binary():
-    """The Rust build of this tool (rust/): it serves the readers' tools (pw mcp)."""
-    return os.environ.get("PW_BIN") or os.path.join(ROOT, "rust", "target", "release", "pw")
+from .check import FACTS
+from .core import Kernel, pw_binary
+from .kernel import LOG, READER, _sha, context, excerpt, locate, question
+from .lean_gate import LEAN_DIR
 
 
 def ready(own_tools=False):
@@ -144,11 +138,9 @@ def main():
     ap.add_argument("--budget", type=float, default=3.0)
     args = ap.parse_args()
     repo = os.path.abspath(args.repo)
-    kernel = Kernel(os.path.join(repo, LOG), gate=LeanGate(args.lean_dir), actor="maintain")
+    kernel = Kernel(os.path.join(repo, LOG), actor="maintain", lean_dir=args.lean_dir)
     kernel.sync_facts(os.path.join(repo, FACTS))
-    if kernel.needs_lean():
-        kernel.gate.usable()
-    report = kernel.recheck(repo)
+    report = kernel.recheck(repo)            # (says so, and stops, if Lean is needed and not there)
 
     def needs_agent(d, u):
         # (a place that cannot be found as declared is not for a reader: the declaration has to be repaired)
@@ -190,7 +182,7 @@ def main():
         if alone:
             silent += read_blind(kernel, repo, args, alone, args.second_model, "second")
             report = kernel.recheck(repo)
-    bad = show(report)
+    bad = kernel.show(repo)
     failed = [r for r in silent if r.get("error") or r["no answer"]]
     if failed:
         print(f"\n{len(failed)} reader session(s) failed or left a place unanswered (see above). That is not a finding: run this again.")
