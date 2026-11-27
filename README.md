@@ -10,7 +10,8 @@
 
 設計は [docs/spec.md](docs/spec.md)。もとは、並列コーディングエージェントが共有する知識をベイズ推定と Lean の証明で扱うバックエンドの叩き台だった。その層は使われなかったので削除した（経緯は仕様書の §7、当時の仕様は [docs/archive/](docs/archive/)、知見は [docs/natural-language.md](docs/natural-language.md)）。
 
-- `pw/kernel.py` — 記録と、事実・読み・一致の判定・規則の適用
+- `pw/kernel.py` — 記録と、事実・読み・一致の判定・規則の適用（Python 版。判定と記録への書き込みは Rust 版に移った。`python -m pw.check`・`pw.confirm` とテストが使う）
+- `pw/core.py` — エージェント側のツールが使うカーネル。中身は Rust 版の実行ファイル（`pw state`・`pw sync`・`pw check --record --json`・`pw adopt`）で、Python では判定も書き込みもしない
 - `pw/lean_gate.py` — Lean による等式の判定
 - `pw/check.py` — 宣言された事実を、いまのファイルに当て直す（言語モデルなし。記録は読むだけで、書き足さない）
 - `rust/` — 同じ `check` を Rust で書いたもの（移行の途中。下の「Rust 版」）

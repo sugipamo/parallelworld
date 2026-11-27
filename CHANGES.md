@@ -6,6 +6,7 @@
 
 - **読み手の道具（MCP）は Rust 版が出す。** `pw.maintain`・`pw.calibrate`・`pw.discover`・`pw.propagate` が読み手を呼ぶとき、道具は `rust/target/release/pw mcp` から出る（`PW_BIN` で場所を変えられる）。手元でこれらを回すなら、先に `cargo build --release --manifest-path rust/Cargo.toml` が要る。無ければ、読み手を呼ぶ前に止まって、そう言う。`pw/mcp_server.py` はなくなった。記録に書く行は前と 1 行ずつ同じ（`tests/test_rust.py`）。
 - Rust 版に `pw check --record`（`--db` も）と `pw confirm` がある。記録に足す行は Python 版と同じ。
+- エージェント側のツール（`pw.maintain`・`pw.calibrate`・`pw.discover`・`pw.propagate`）は、判定も記録への書き込みも Rust 版に任せる（`pw/core.py`）。Rust 版には、そのための `pw state`・`pw sync`・`pw adopt` と、`pw check` の `--facts`・`--actor` を足した。
 - `python -m pw.confirm` は、一覧を出すだけで記録に計算した読みを書き足していた。いまは写しの上で、宣言どおりの事実について一覧を出し、記録には書かない。同じ回に計算した読みで落ちることもなくなった。
 
 ## 0.11.0
