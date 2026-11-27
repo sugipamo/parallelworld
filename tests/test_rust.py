@@ -187,3 +187,79 @@ def test_what_is_wrong_is_said_alike(pw, tmp_path):
     py, rs = both(pw, repo)
     cut = lambda e: e.split(" (")[0]                       # (what the JSON parser says is its own)
     assert py.returncode == rs.returncode == 2 and cut(py.stderr) == cut(rs.stderr) == f"pw: {tmp_path}/pw-log.jsonl, line 2: not a readable event"
+
+
+# ---- what each appends to the record -------------------------------------------------------------
+
+def appended(pw, repo, *args, cmd="check"):
+    """Run each implementation on its own copy of `repo`; return the lines each appended, without their times."""
+    out = []
+    for impl in ("python", "rust"):
+        copy = repo + "-" + impl
+        shutil.rmtree(copy, ignore_errors=True)
+        shutil.copytree(repo, copy, ignore=shutil.ignore_patterns(".git", "target", "__pycache__", ".pytest_cache"))
+        log = os.path.join(copy, "pw-log.jsonl")
+        before = open(log, encoding="utf-8").read() if os.path.exists(log) else ""
+        if impl == "python":
+            r = subprocess.run([sys.executable, "-m", f"pw.{cmd}", "--repo", copy, *args], capture_output=True, text=True, env={**os.environ, "PYTHONPATH": ROOT})
+        else:
+            r = subprocess.run([pw, cmd, "--repo", copy, *args], capture_output=True, text=True)
+        after = open(log, encoding="utf-8").read() if os.path.exists(log) else ""
+        assert after.startswith(before), impl
+        lines = [json.loads(x) for x in after[len(before):].splitlines()]
+        out.append(([{k: v for k, v in e.items() if k != "ts"} for e in lines], r.returncode, r.stdout))
+        assert all(after[len(before):].splitlines()[n] == json.dumps(e, ensure_ascii=False) for n, e in enumerate(lines))     # written as Python writes it
+    return out
+
+
+@pytest.mark.parametrize("args", [(), ("--lean", "always")])
+def test_what_check_records(pw, tmp_path, args):
+    """--record appends the same events: the facts claimed and withdrawn, what was computed, and (with Lean) what was agreed and proved."""
+    if args and not LAKE:
+        pytest.skip("Lean not installed")
+    (tmp_path / "a").mkdir()
+    repo = declare(tmp_path / "a", [LIMIT, MODES], **FILES)
+    (py, pc, po), (rs, rc, ro) = appended(pw, repo, "--record", "--unconfirmed", "warn", *args)
+    assert py == rs and pc == rc and po == ro and {e["type"] for e in py} >= {"claim", "reading"}, (py, rs)
+    # and again on top of that: a fact taken out, a description changed, a value changed
+    first = subprocess.run([pw, "check", "--repo", repo, "--record", *args], capture_output=True, text=True)
+    assert first.returncode in (0, 1)
+    with open(os.path.join(repo, "pw-facts.json"), "w") as fh:
+        json.dump([{**LIMIT, "gloss": "the most there may be"}], fh)
+    with open(os.path.join(repo, "k.py"), "w") as fh:
+        fh.write("LIMIT = 15\nMODES = {'fast': 1, 'safe': 2}\n")
+    (py, pc, po), (rs, rc, ro) = appended(pw, repo, "--record", *args)
+    assert py == rs and pc == rc and po == ro and [e["type"] for e in py][:2] == ["claim", "withdraw"], (py, rs)
+
+
+@lean
+def test_what_check_records_here(pw, tmp_path):
+    """This repository, with its definition: nothing new to record, or the same new lines."""
+    repo = str(tmp_path / "here")
+    shutil.copytree(ROOT, repo, ignore=shutil.ignore_patterns(".git", "target", "__pycache__", ".pytest_cache"))
+    (py, pc, po), (rs, rc, ro) = appended(pw, repo, "--record", "--verify")
+    assert py == rs and pc == rc == 0 and po == ro
+
+
+def test_confirming(pw, tmp_path):
+    """A person confirms and rejects readings: the same lines; the same refusal of saying both."""
+    repo = declare(tmp_path, [{**LIMIT, "places": [LIMIT["places"][0], "doc.md::Limits"]}], **FILES)
+    m = "M:" + "0" * 10
+    py = subprocess.run([sys.executable, "-c", f"""
+import sys; sys.path.insert(0, {ROOT!r})
+from pw.kernel import Kernel
+k = Kernel({repo!r} + "/pw-log.jsonl", actor="reader")
+k.sync_facts({repo!r} + "/pw-facts.json")
+h = next(iter(k.state().facts))
+print(k.read_place(h, "doc.md::Limits", "14", cwd={repo!r}, quote="At most 14.")["m"])
+"""], capture_output=True, text=True)
+    m = py.stdout.strip()
+    assert m.startswith("M:"), py.stderr
+    (a, ac, ao), (b, bc, bo) = appended(pw, repo, "--who", "ann", m, cmd="confirm")
+    assert a == b and ac == bc == 0 and ao == bo and a[0]["type"] == "observe" and a[0]["outcome"] == "confirmed"
+    (a, ac, _), (b, bc, _) = appended(pw, repo, "--who", "ann", "--reject", m, cmd="confirm")
+    assert a == b and ac == bc == 0
+    (a, ac, _), (b, bc, _) = appended(pw, repo, "--who", "ann", "M:nothing", cmd="confirm")
+    assert a == b == [] and ac == bc == 2
+    (a, ac, ao), (b, bc, bo) = appended(pw, repo, cmd="confirm")          # the list: nothing written
+    assert a == b == [] and ac == bc == 0 and ao == bo and m in ao

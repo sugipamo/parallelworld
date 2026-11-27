@@ -64,13 +64,61 @@ pub struct State {
     agreed: HashMap<String, Vec<(Vec<String>, String)>>,
     pub proofs: Vec<Value>,
     pub ways: HashSet<(String, String, String)>,
+    asked: HashMap<String, String>,           // H -> the question its places are asked, as recorded
+    facts: HashMap<String, Value>,            // H -> the fact as last claimed (with "asked")
+    withdrawn: HashSet<String>,
+    /// who the events this run appends are by, and the events themselves, in order
+    pub actor: String,
+    pub pending: Vec<Value>,
 }
 
 impl State {
-    /// The Lean proposition a recorded proof is about.
-    pub fn prop(&self, f: &str) -> Option<&String> {
-        self.props.get(f)
+    /// The Lean propositions recorded proofs are about.
+    pub fn props(&self) -> HashMap<String, String> {
+        self.props.clone()
     }
+
+    /// The readings a person has confirmed or rejected.
+    pub fn signed(&self) -> HashSet<String> {
+        self.confirmations.iter().map(|(_, e)| s(e, "target").to_string()).collect()
+    }
+
+    /// The sentence a reading quotes, and whether the kernel checked it is in the place.
+    pub fn quote(&self, m: &str) -> (Option<String>, bool) {
+        self.models.get(m).map_or((None, false), |x| (x.quote.clone(), x.anchor))
+    }
+}
+
+/// A person has compared a reading with the place itself, and confirms or rejects it
+/// (pw/kernel.py sign_off). True if it was recorded already.
+pub fn sign_off(st: &mut State, m: &str, who: &str, confirmed: bool) -> R<bool> {
+    let outcome = if confirmed { "confirmed" } else { "rejected" };
+    let mut asked = None;
+    'facts: for h in &st.order {
+        let Some(f) = st.facts.get(h) else { continue };
+        for (at, x) in st.readings.get(h).into_iter().flatten() {
+            if x != m {
+                continue;
+            }
+            if let Some(p) = f["places"].as_array().into_iter().flatten().find(|p| s(p, "at") == at) {
+                let a = &st.asked[h];
+                asked = Some(if p.get("some").and_then(Value::as_bool).unwrap_or(false) { sha(&[a, "some"]) } else { a.clone() });
+                break 'facts;
+            }
+        }
+    }
+    let asked = asked.ok_or_else(|| format!("{} is not a reading of a declared place", m))?;
+    let source = format!("person:{}/{}", who, asked);
+    let eid = format!("E:{}", sha(&[m, "sign_off", &source]));
+    if let Some((_, old)) = st.confirmations.iter().find(|(e, _)| *e == eid) {
+        if s(old, "outcome") != outcome {
+            return Err(format!("{} already recorded this reading as {}", who, s(old, "outcome")));
+        }
+        return Ok(true);
+    }
+    st.emit("observe", vec![("eid", json!(eid)), ("target", json!(m)), ("kind", json!("sign_off")), ("outcome", json!(outcome)),
+                            ("source", json!(source)), ("asked", json!(asked))]);
+    Ok(false)
 }
 
 fn s<'a>(v: &'a Value, key: &str) -> &'a str {
@@ -79,105 +127,164 @@ fn s<'a>(v: &'a Value, key: &str) -> &'a str {
 
 /// Replay the record: one JSON object per line.
 pub fn replay(path: &Path) -> R<State> {
+    replay_text(&std::fs::read_to_string(path).unwrap_or_default(), path)
+}
+
+pub fn replay_text(text: &str, path: &Path) -> R<State> {
     let mut st = State::default();
-    let mut asked: HashMap<String, String> = HashMap::new();
-    let Ok(text) = std::fs::read_to_string(path) else { return Ok(st) };
     for (n, line) in text.lines().enumerate().filter(|(_, l)| !l.trim().is_empty()) {
         let bad = |e: String| format!("{}, line {}: not a readable event ({})", path.display(), n + 1, e);
         let p: Value = serde_json::from_str(line).map_err(|e| bad(e.to_string()))?;
-        let h = s(&p, "h").to_string();
-        match s(&p, "type") {
-            "claim" => {
-                let fact = p.get("fact").ok_or_else(|| bad("a claim that is not a fact".into()))?;
-                let a = match fact.get("asked").and_then(Value::as_str) {
-                    Some(a) => a.to_string(),
-                    None => {
-                        let plain = format!("the same {} is stated in {} place(s)", s(fact, "name"), fact["places"].as_array().map_or(0, Vec::len));
-                        sha(&["asked", if s(&p, "text") != plain { s(&p, "text") } else { "" }])
-                    }
-                };
-                asked.insert(h.clone(), a);
-                if !st.order.contains(&h) {
-                    st.order.push(h);
-                }
-            }
-            "reading" => {
-                let obj = &p["obj"];
-                st.objs.entry(s(obj, "id").to_string()).or_insert_with(|| s(obj, "text").to_string());
-                let m = s(&p, "m").to_string();
-                let binding = p.get("binding").filter(|b| !b.is_null()).cloned();
-                if let Some(b) = &binding {
-                    st.ways.insert((h.clone(), s(&p, "place").to_string(), pyjson(b, true)));
-                }
-                let model = st.models.entry(m.clone()).or_insert_with(|| Model {
-                    subject: s(&p, "subject").to_string(),
-                    obj: s(obj, "id").to_string(),
-                    binding,
-                    quote: p.get("quote").and_then(Value::as_str).map(String::from),
-                    anchor: p.get("anchor").and_then(Value::as_bool).unwrap_or(false),
-                    literal: false,
-                    who: Who::default(),
-                    asked: HashMap::new(),
-                });
-                let q = p.get("asked").and_then(Value::as_str).map(String::from).or_else(|| asked.get(&h).cloned()).ok_or_else(|| bad("a reading of a fact that was not declared".into()))?;
-                let actor = p.get("actor").and_then(Value::as_str).unwrap_or("anon").to_string();
-                let blind = p.get("blind").and_then(Value::as_bool).unwrap_or(false);
-                let name = p.get("model").and_then(Value::as_str).filter(|x| !x.is_empty());
-                let under = p.get("instructions").and_then(Value::as_str).map(String::from);
-                model.literal |= p.get("literal").and_then(Value::as_bool).unwrap_or(false);
-                let note = |w: &mut Who| {
-                    w.by.insert(actor.clone());
-                    if blind {
-                        w.blind.insert(actor.clone());
-                        if let Some(x) = name {
-                            w.models.insert(x.to_string());
-                            w.under.entry(x.to_string()).or_default().insert(under.clone());
-                        }
-                    }
-                };
-                note(&mut model.who);
-                note(model.asked.entry(q).or_default());
-                let list = st.readings.entry(h).or_default();
-                let key = (s(&p, "place").to_string(), m);
-                if !list.contains(&key) {
-                    list.push(key);
-                }
-            }
-            "decline" => {
-                let mut d = p.clone();
-                if d.get("asked").and_then(Value::as_str).is_none() {
-                    d["asked"] = json!(asked.get(&h).cloned().unwrap_or_default());
-                }
-                st.declined.entry(h).or_default().push(d);
-            }
-            "observe" => {
-                if s(&p, "kind") != "sign_off" {
-                    return Err(bad(format!("evidence of kind {}", s(&p, "kind"))));
-                }
-                let eid = s(&p, "eid").to_string();
-                st.confirmations.retain(|(e, _)| *e != eid);
-                st.confirmations.push((eid, p));
-            }
-            "proof" => {
-                let relation = s(&p, "relation").to_string();
-                if relation != "holds" && relation != "not" {
-                    return Err(bad(format!("a proof of {}", relation)));
-                }
-                let f = p.get("args").and_then(|a| a.get(0)).and_then(Value::as_str).ok_or_else(|| bad("a proof of nothing".into()))?.to_string();
-                st.verdict.entry(f).or_default().insert(relation);
-                st.proofs.push(p);
-            }
-            "agree" => {
-                let f = s(&p, "f").to_string();
-                st.props.entry(f.clone()).or_insert_with(|| s(&p, "lean").to_string());
-                let guards: Vec<String> = p.get("guards").and_then(Value::as_array).map(|g| g.iter().filter_map(Value::as_str).map(String::from).collect()).unwrap_or_default();
-                st.agreed.entry(h).or_default().push((guards, f));
-            }
-            "withdraw" => {}
-            other => return Err(bad(format!("an event of type {}", other))),
-        }
+        apply(&mut st, &p).map_err(bad)?;
     }
     Ok(st)
+}
+
+/// What one event of the record changes (pw/kernel.py State.apply).
+fn apply(st: &mut State, p: &Value) -> Result<(), String> {
+    let h = s(p, "h").to_string();
+    match s(p, "type") {
+        "claim" => {
+            let mut fact = p.get("fact").cloned().ok_or("a claim that is not a fact")?;
+            if fact.get("value").map_or(false, |v| !v.is_null()) {
+                return Err("a fact with a fixed value; say whose instruction it is under \"instructions\"".into());
+            }
+            let a = match fact.get("asked").and_then(Value::as_str) {
+                Some(a) => a.to_string(),
+                None => {
+                    let plain = format!("the same {} is stated in {} place(s)", s(&fact, "name"), fact["places"].as_array().map_or(0, Vec::len));
+                    sha(&["asked", if s(p, "text") != plain { s(p, "text") } else { "" }])
+                }
+            };
+            if let Some(o) = fact.as_object_mut() {
+                o.shift_remove("value");
+                o.insert("asked".into(), json!(a));
+                o.insert("text".into(), json!(s(p, "text")));
+            }
+            st.asked.insert(h.clone(), a);
+            st.facts.insert(h.clone(), fact);
+            st.withdrawn.remove(&h);
+            if !st.order.contains(&h) {
+                st.order.push(h);
+            }
+        }
+        "reading" => {
+            let obj = &p["obj"];
+            st.objs.entry(s(obj, "id").to_string()).or_insert_with(|| s(obj, "text").to_string());
+            let m = s(p, "m").to_string();
+            let binding = p.get("binding").filter(|b| !b.is_null()).cloned();
+            if let Some(b) = &binding {
+                st.ways.insert((h.clone(), s(p, "place").to_string(), pyjson(b, true)));
+            }
+            let q = p.get("asked").and_then(Value::as_str).map(String::from).or_else(|| st.asked.get(&h).cloned()).ok_or("a reading of a fact that was not declared")?;
+            let model = st.models.entry(m.clone()).or_insert_with(|| Model {
+                subject: s(p, "subject").to_string(),
+                obj: s(obj, "id").to_string(),
+                binding,
+                quote: p.get("quote").and_then(Value::as_str).map(String::from),
+                anchor: p.get("anchor").and_then(Value::as_bool).unwrap_or(false),
+                literal: false,
+                who: Who::default(),
+                asked: HashMap::new(),
+            });
+            let actor = p.get("actor").and_then(Value::as_str).unwrap_or("anon").to_string();
+            let blind = p.get("blind").and_then(Value::as_bool).unwrap_or(false);
+            let name = p.get("model").and_then(Value::as_str).filter(|x| !x.is_empty());
+            let under = p.get("instructions").and_then(Value::as_str).map(String::from);
+            model.literal |= p.get("literal").and_then(Value::as_bool).unwrap_or(false);
+            let note = |w: &mut Who| {
+                w.by.insert(actor.clone());
+                if blind {
+                    w.blind.insert(actor.clone());
+                    if let Some(x) = name {
+                        w.models.insert(x.to_string());
+                        w.under.entry(x.to_string()).or_default().insert(under.clone());
+                    }
+                }
+            };
+            note(&mut model.who);
+            note(model.asked.entry(q).or_default());
+            let list = st.readings.entry(h).or_default();
+            let key = (s(p, "place").to_string(), m);
+            if !list.contains(&key) {
+                list.push(key);
+            }
+        }
+        "decline" => {
+            let mut d = p.clone();
+            if d.get("asked").and_then(Value::as_str).is_none() {
+                d["asked"] = json!(st.asked.get(&h).cloned().unwrap_or_default());
+            }
+            st.declined.entry(h).or_default().push(d);
+        }
+        "observe" => {
+            if s(p, "kind") != "sign_off" {
+                return Err(format!("evidence of kind {}", s(p, "kind")));
+            }
+            let eid = s(p, "eid").to_string();
+            match st.confirmations.iter_mut().find(|(e, _)| *e == eid) {
+                Some(e) => e.1 = p.clone(),
+                None => st.confirmations.push((eid, p.clone())),
+            }
+        }
+        "proof" => {
+            let relation = s(p, "relation").to_string();
+            if relation != "holds" && relation != "not" {
+                return Err(format!("a proof of {}", relation));
+            }
+            let f = p.get("args").and_then(|a| a.get(0)).and_then(Value::as_str).ok_or("a proof of nothing")?.to_string();
+            st.verdict.entry(f).or_default().insert(relation);
+            st.proofs.push(p.clone());
+        }
+        "agree" => {
+            let f = s(p, "f").to_string();
+            st.props.entry(f.clone()).or_insert_with(|| s(p, "lean").to_string());
+            let guards: Vec<String> = p.get("guards").and_then(Value::as_array).map(|g| g.iter().filter_map(Value::as_str).map(String::from).collect()).unwrap_or_default();
+            st.agreed.entry(h).or_default().push((guards, f));
+        }
+        "withdraw" => {
+            st.withdrawn.insert(h);
+        }
+        other => return Err(format!("an event of type {}", other)),
+    }
+    Ok(())
+}
+
+impl State {
+    /// Add an event, as the Python kernel writes it: ts, actor, type, then what it says.
+    fn emit(&mut self, typ: &str, payload: Vec<(&str, Value)>) {
+        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs_f64()).unwrap_or(0.0);
+        let mut e = Map::new();
+        e.insert("ts".into(), json!((now * 1000.0).round() / 1000.0));
+        e.insert("actor".into(), json!(self.actor));
+        e.insert("type".into(), json!(typ));
+        for (k, v) in payload {
+            e.insert(k.into(), v);
+        }
+        let e = Value::Object(e);
+        apply(self, &e).expect("an event this kernel made itself");
+        self.pending.push(e);
+    }
+}
+
+/// Run `f` on the record with nothing else writing to it, and append the events it adds: the
+/// record is locked, replayed, changed and written as one step (pw/kernel.py Kernel._tx).
+pub fn with_record<T>(path: &Path, actor: &str, f: impl FnOnce(&mut State) -> R<T>) -> R<T> {
+    use std::io::{Read, Seek, SeekFrom, Write};
+    let mut fh = std::fs::OpenOptions::new().read(true).append(true).create(true).open(path)
+        .map_err(|e| format!("{}: {}", path.display(), e))?;
+    fh.lock().map_err(|e| format!("{}: {}", path.display(), e))?;
+    let mut text = String::new();
+    fh.seek(SeekFrom::Start(0)).and_then(|_| fh.read_to_string(&mut text)).map_err(|e| format!("{}: {}", path.display(), e))?;
+    let mut st = replay_text(&text, path)?;
+    st.actor = actor.to_string();
+    let out = f(&mut st);
+    if out.is_ok() && !st.pending.is_empty() {
+        let lines: String = st.pending.iter().map(|e| pyjson(e, false) + "\n").collect();
+        fh.write_all(lines.as_bytes()).and_then(|_| fh.flush()).map_err(|e| format!("{}: {}", path.display(), e))?;
+    }
+    let _ = fh.unlock();
+    out
 }
 
 /// The facts declared in pw-facts.json.
@@ -235,15 +342,36 @@ pub fn declared(path: &Path) -> R<Vec<Fact>> {
         }
         let gloss = norm(d.get("gloss").and_then(Value::as_str).unwrap_or(""));
         let mut instructions = vec![];
-        for i in d.get("instructions").and_then(Value::as_array).cloned().unwrap_or_default() {
-            let mut o = i.as_object().cloned().ok_or_else(|| format!("{}: \"instructions\" is a list of {{\"is\": value, \"by\": who}}", fname))?;
-            let is = o.get("is").ok_or_else(|| format!("{}: an instruction is {{\"is\": value, \"by\": who}}, optionally with \"said\" and \"on\"", fname))?;
+        let listed = match d.get("instructions") {
+            None => vec![],
+            Some(Value::Array(a)) if a.iter().all(Value::is_object) => a.clone(),
+            Some(_) => return Err(format!("{}: \"instructions\" is a list of {{\"is\": value, \"by\": who}}", fname)),
+        };
+        for i in listed {
+            let o = i.as_object().unwrap();
+            let shape = format!("{}: an instruction is {{\"is\": value, \"by\": who}}, optionally with \"said\" and \"on\"", fname);
+            let by = o.get("by").map(pystr_of).unwrap_or_default();
+            if o.keys().any(|k| !["is", "by", "said", "on"].contains(&k.as_str())) || by.trim().is_empty() {
+                return Err(shape);
+            }
+            let is = o.get("is").ok_or(shape)?;
             let term = norm(&if json_like(&typ) { pyjson(is, false) } else { is.as_str().unwrap_or("").to_string() });
             if json_like(&typ) && written(&typ, &term).is_none() {
-                return Err(format!("{} is not a {} written out", term, typ));
+                return Err(format!("{} is not a {} written out", term.chars().take(80).collect::<String>(), typ));
             }
-            o.insert("is".into(), json!(term));
-            instructions.push(o);
+            // kept as the Python kernel keeps it: is, by, and said and on where they say something
+            let mut kept = Map::new();
+            kept.insert("is".into(), json!(term));
+            kept.insert("by".into(), json!(norm(&by)));
+            for k in ["said", "on"] {
+                if let Some(v) = o.get(k).filter(|v| truthy(v)) {
+                    kept.insert(k.into(), json!(norm(&pystr_of(v))));
+                }
+            }
+            if instructions.iter().any(|x: &Map<String, Value>| x["is"] == kept["is"] && x["by"] == kept["by"]) {
+                return Err(format!("{}: the same instruction by the same person is listed twice", fname));
+            }
+            instructions.push(kept);
         }
         out.push(Fact {
             h: format!("H:{}", sha(&["fact", fname, &typ])),
@@ -288,6 +416,75 @@ pub fn declared(path: &Path) -> R<Vec<Fact>> {
         out[i].defined = Some(json!({ "from": from, "as": norm(how["as"].as_str().unwrap()) }));
     }
     Ok(out)
+}
+
+/// Python's str() of a JSON value, as the Python kernel applies it to who gave an instruction.
+fn pystr_of(v: &Value) -> String {
+    match v {
+        Value::String(x) => x.clone(),
+        Value::Bool(b) => if *b { "True".into() } else { "False".into() },
+        Value::Null => "None".into(),
+        other => pyjson(other, false),
+    }
+}
+
+fn truthy(v: &Value) -> bool {
+    match v {
+        Value::Null => false,
+        Value::Bool(b) => *b,
+        Value::String(x) => !x.is_empty(),
+        Value::Number(n) => n.as_f64() != Some(0.0),
+        Value::Array(a) => !a.is_empty(),
+        Value::Object(o) => !o.is_empty(),
+    }
+}
+
+impl Fact {
+    /// The fact as the Python kernel records it in a claim.
+    fn recorded(&self) -> Value {
+        let places: Vec<Value> = self.places.iter().map(|p| {
+            let mut o = Map::new();
+            o.insert("at".into(), json!(p.at));
+            o.insert("reader".into(), p.reader.clone().unwrap_or(Value::Null));
+            if p.some {
+                o.insert("some".into(), json!(true));
+            }
+            Value::Object(o)
+        }).collect();
+        let mut f = Map::new();
+        f.insert("name".into(), json!(self.name));
+        f.insert("type".into(), json!(self.typ));
+        f.insert("places".into(), json!(places));
+        f.insert("asked".into(), json!(self.asked));
+        if !self.instructions.is_empty() {
+            f.insert("instructions".into(), json!(self.instructions));
+        }
+        if let Some(d) = &self.defined {
+            f.insert("defined".into(), d.clone());
+        }
+        Value::Object(f)
+    }
+}
+
+/// Make the standing facts the declared ones: claim what is new or changed, withdraw what is
+/// no longer declared (pw/kernel.py sync_facts).
+pub fn sync(st: &mut State, facts: &[Fact], file: &str) {
+    for f in facts {
+        let fact = f.recorded();
+        let was = st.facts.get(&f.h).map(|x| {
+            let mut x = x.clone();
+            x.as_object_mut().map(|o| o.shift_remove("text"));
+            x
+        });
+        if was.as_ref() != Some(&fact) || st.withdrawn.contains(&f.h) {
+            st.emit("claim", vec![("h", json!(f.h)), ("text", json!(f.text)), ("fact", fact)]);
+        }
+    }
+    for h in st.order.clone() {
+        if !facts.iter().any(|f| f.h == h) && !st.withdrawn.contains(&h) {
+            st.emit("withdraw", vec![("h", json!(h)), ("justification", json!(format!("no longer declared in {}", file)))]);
+        }
+    }
 }
 
 /// Does anything declared need Lean to be judged: a definition, or a type whose values are not
@@ -449,10 +646,9 @@ fn contained(st: &mut State, judge: &Judge, h: &str, typ: &str, guards: &[String
 fn settle(st: &mut State, judge: &Judge, h: &str, guards: &[String], lean: &str) -> (Said, bool) {
     let f = format!("F:{}", sha(&[lean]));
     let key = (guards.to_vec(), f.clone());
-    let agreed = st.agreed.entry(h.to_string()).or_default();
-    let new = !agreed.contains(&key);
+    let new = !st.agreed.get(h).map_or(false, |a| a.contains(&key));
     if new {
-        agreed.push(key);
+        st.emit("agree", vec![("h", json!(h)), ("f", json!(f)), ("lean", json!(lean)), ("guards", json!(guards))]);
     }
     let prop = st.props.entry(f.clone()).or_insert_with(|| lean.to_string()).clone();
     if !st.verdict.contains_key(&f) {
@@ -460,8 +656,8 @@ fn settle(st: &mut State, judge: &Judge, h: &str, guards: &[String], lean: &str)
         for (relation, tactic) in tries {
             let v = judge.gate.check(relation, &[("Prop", &prop)], tactic);
             if v.ok {
-                st.verdict.entry(f.clone()).or_default().insert(relation.to_string());
-                st.proofs.push(json!({ "type": "proof", "relation": relation, "args": [f], "proof": tactic, "axioms": v.axioms, "gamma": v.gamma }));
+                st.emit("proof", vec![("relation", json!(relation)), ("args", json!([f])), ("proof_sha", json!(sha(&[tactic]))), ("proof", json!(tactic)),
+                                      ("axioms", json!(v.axioms)), ("gamma", json!(v.gamma))]);
                 break;
             }
         }
@@ -556,13 +752,12 @@ pub fn recheck_fact(st: &mut State, judge: &Judge, fact: &Fact, cwd: &Path, give
                 Ok(obj) => {
                     let o = format!("O:{}", sha(&[&fact.typ, &obj]));
                     let m = format!("M:{}", sha(&[h, &now, &o, &pyjson(how, true)]));
-                    st.objs.entry(o.clone()).or_insert(obj);
-                    st.models.entry(m.clone()).or_insert_with(|| Model {
-                        subject: now.clone(), obj: o, binding: Some(how.clone()), quote: None, anchor: false, literal: false, who: Who::default(), asked: HashMap::new(),
-                    });
-                    let list = st.readings.entry(h.clone()).or_default();
-                    if !list.contains(&(at.clone(), m.clone())) {
-                        list.push((at.clone(), m.clone()));
+                    if !st.readings.get(h).map_or(false, |l| l.contains(&(at.clone(), m.clone()))) {
+                        st.emit("reading", vec![
+                            ("h", json!(h)), ("place", json!(at)), ("subject", json!(now)), ("m", json!(m)),
+                            ("obj", json!({ "id": o, "type": fact.typ, "text": obj })), ("binding", how.clone()), ("quote", Value::Null),
+                            ("asked", json!(asked)), ("blind", json!(false)), ("model", Value::Null), ("literal", json!(false)), ("anchor", json!(false)),
+                        ]);
                     }
                     reread = reread || (!seen.is_empty() && have.last() != Some(&m));
                     have = vec![m];

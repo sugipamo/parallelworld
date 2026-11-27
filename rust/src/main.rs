@@ -5,7 +5,7 @@ mod read;
 mod util;
 
 use serde_json::Value;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use util::R;
 
 fn cut(s: &str, n: usize) -> String {
@@ -186,9 +186,10 @@ fn show(report: &Value, warn: bool) -> bool {
 
 fn run(args: &[String]) -> R<i32> {
     let mut repo = ".".to_string();
-    let (mut verify, mut warn, mut as_json, mut needs, mut always) = (false, false, false, false, false);
+    let (mut verify, mut warn, mut as_json, mut needs, mut always, mut keep) = (false, false, false, false, false, false);
     let mut lean_dir = lean::lean_dir();
-    let usage = "pw check [--repo DIR] [--lean-dir DIR] [--verify] [--unconfirmed fail|warn] [--lean needed|always] [--json] [--needs-lean]";
+    let mut db: Option<String> = None;
+    let usage = "pw check [--repo DIR] [--db PATH] [--lean-dir DIR] [--verify] [--unconfirmed fail|warn] [--lean needed|always] [--json] [--needs-lean] [--record]";
     let mut i = 0;
     while i < args.len() {
         let flag = args[i].clone();
@@ -197,6 +198,8 @@ fn run(args: &[String]) -> R<i32> {
             "--repo" => repo = value("a directory")?,
             "--lean-dir" => lean_dir = value("a directory")?.into(),
             "--verify" => verify = true,
+            "--record" => keep = true,
+            "--db" => db = Some(value("a path")?),
             "--json" => as_json = true,
             "--needs-lean" => needs = true,
             "--unconfirmed" => warn = match value("fail or warn")?.as_str() { "warn" => true, "fail" => false, x => return Err(format!("--unconfirmed is fail or warn, not {}", x)) },
@@ -213,15 +216,27 @@ fn run(args: &[String]) -> R<i32> {
     }
     let judge = kernel::Judge { always, gate: lean::Gate::new(lean_dir) };
     // (named as the Python check names it: the directory made absolute)
-    let mut st = kernel::replay(&std::fs::canonicalize(cwd).unwrap_or_else(|_| cwd.to_path_buf()).join("pw-log.jsonl"))?;
-    let recorded = st.proofs.clone();       // what the project's record claims Lean proved, before this check adds anything
-    let ways = st.ways.clone();
-    kernel::premises(&facts, &judge, "pw-facts.json")?;
+    let record = db.map(PathBuf::from).unwrap_or_else(|| std::fs::canonicalize(cwd).unwrap_or_else(|_| cwd.to_path_buf()).join("pw-log.jsonl"));
     let with_lean = kernel::needs_lean(&facts, always);
-    if with_lean {
-        judge.gate.usable()?;
-    }
-    let report = kernel::recheck(&mut st, &judge, &facts, cwd)?;
+    // Checking only looks: what it works out is kept in memory, unless --record asks for it to be appended.
+    let work = |st: &mut kernel::State| -> R<(Value, Vec<Value>, std::collections::HashSet<(String, String, String)>, std::collections::HashMap<String, String>)> {
+        let recorded = st.proofs.clone();       // what the project's record claims Lean proved, before this check adds anything
+        let ways = st.ways.clone();
+        kernel::premises(&facts, &judge, "pw-facts.json")?;
+        kernel::sync(st, &facts, "pw-facts.json");
+        if with_lean {
+            judge.gate.usable()?;
+        }
+        let report = kernel::recheck(st, &judge, &facts, cwd)?;
+        Ok((report, recorded, ways, st.props()))
+    };
+    let (report, recorded, ways, props) = if keep {
+        kernel::with_record(&record, "check", work)?
+    } else {
+        let mut st = kernel::replay(&record)?;
+        st.actor = "check".into();
+        work(&mut st)?
+    };
     if as_json {
         let quiet = report["decisions"].as_array().unwrap().iter().any(|d| {
             let agree = ["current", "re-established"].contains(&s(d, "state"));
@@ -249,7 +264,7 @@ fn run(args: &[String]) -> R<i32> {
     }
     fresh.sort();
     fresh.dedup();
-    if !fresh.is_empty() {
+    if !fresh.is_empty() && !keep {
         println!("note: the way {} {} read is not in the record yet. It stands for the text as it is; to have it stand when the text changes, run `python -m pw.maintain` (or `python -m pw.check --record`) now and commit pw-log.jsonl. No reader is called for that.",
                  cut(&fresh.join(", "), 300), if fresh.len() == 1 { "is" } else { "are" });
     }
@@ -259,7 +274,7 @@ fn run(args: &[String]) -> R<i32> {
     } else if verify {
         let jobs: Vec<(String, Vec<(String, String)>, String)> = recorded.iter().map(|p| {
             let f = p["args"][0].as_str().unwrap_or("");
-            (s(p, "relation").to_string(), vec![("Prop".to_string(), st.prop(f).cloned().unwrap_or_default())], s(p, "proof").to_string())
+            (s(p, "relation").to_string(), vec![("Prop".to_string(), props.get(f).cloned().unwrap_or_default())], s(p, "proof").to_string())
         }).collect();
         let verdicts = judge.gate.check_many(&jobs, 50);
         let mut refused = 0;
@@ -275,10 +290,75 @@ fn run(args: &[String]) -> R<i32> {
     Ok(if bad { 1 } else { 0 })
 }
 
+/// Let a person confirm what an agent said a place says (pw/confirm.py).
+fn confirm(args: &[String]) -> R<i32> {
+    let (mut repo, mut who, mut reject, mut lean_dir, mut readings) = (".".to_string(), None, false, lean::lean_dir(), vec![]);
+    let mut i = 0;
+    while i < args.len() {
+        let flag = args[i].clone();
+        let mut value = |what: &str| { i += 1; args.get(i).cloned().ok_or(format!("{} needs {}", flag, what)) };
+        match flag.as_str() {
+            "--repo" => repo = value("a directory")?,
+            "--lean-dir" => lean_dir = value("a directory")?.into(),
+            "--who" => who = Some(value("a name")?),
+            "--reject" => reject = true,
+            x if x.starts_with("--") => return Err(format!("unknown argument {}; pw confirm [--repo DIR] [--who NAME [--reject] M:...]", x)),
+            m => readings.push(m.to_string()),
+        }
+        i += 1;
+    }
+    let cwd = Path::new(&repo);
+    let record = std::fs::canonicalize(cwd).unwrap_or_else(|_| cwd.to_path_buf()).join("pw-log.jsonl");
+    if !readings.is_empty() {
+        let who = who.ok_or("say who is confirming: --who NAME")?;
+        for m in &readings {
+            kernel::with_record(&record, &who, |st| kernel::sign_off(st, m, &who, !reject))?;
+            println!("{}{}", if reject { "rejected " } else { "confirmed " }, m);
+        }
+        return Ok(0);
+    }
+    // the readings stated by an agent that hold for the files as they are and that no person has confirmed or rejected
+    let facts = kernel::declared(&cwd.join("pw-facts.json"))?;
+    let judge = kernel::Judge { always: false, gate: lean::Gate::new(lean_dir) };
+    let mut st = kernel::replay(&record)?;
+    st.actor = "confirm".into();
+    kernel::premises(&facts, &judge, "pw-facts.json")?;
+    kernel::sync(&mut st, &facts, "pw-facts.json");
+    let report = kernel::recheck(&mut st, &judge, &facts, cwd)?;
+    let signed = st.signed();
+    let mut todo = vec![];
+    for d in list(&report, "decisions") {
+        for p in list(&d, "places") {
+            if s(&p, "by") == "stated" && !signed.contains(s(&p, "m")) {
+                todo.push(s(&p, "m").to_string());
+                let (quote, anchor) = st.quote(s(&p, "m"));
+                let at = s(&p, "at");
+                let shown = match quote {
+                    Some(q) if anchor => format!("because it says: {}", util::norm(&q)),
+                    Some(q) => format!("for example it says: {}\n   (a list is read off the whole place: compare it with {})", util::norm(&q), at),
+                    None => {
+                        let passage = String::from_utf8_lossy(&read::locate(at, cwd).unwrap_or_default()).trim().to_string();
+                        let more = if passage.chars().count() > 600 { "\n             …" } else { "" };
+                        format!("passage:  {}{}", cut(&passage, 600).replace('\n', "\n             "), more)
+                    }
+                };
+                println!("{}  {}\n   reads as: {}\n   {}\n", s(&p, "m"), at, s(&p, "reads as"), shown);
+            }
+        }
+    }
+    let how = if todo.is_empty() { String::new() } else { format!("; confirm with: python -m pw.confirm --who NAME {}", todo.join(" ")) };
+    println!("{} reading(s) nobody has confirmed{}", todo.len(), how);
+    Ok(0)
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let rest = if args.first().map(String::as_str) == Some("check") { &args[1..] } else { &args[..] };
-    match run(rest) {
+    let result = match args.first().map(String::as_str) {
+        Some("confirm") => confirm(&args[1..]),
+        Some("check") => run(&args[1..]),
+        _ => run(&args[..]),
+    };
+    match result {
         Ok(code) => std::process::exit(code),
         Err(e) => {
             eprintln!("pw: {}", e);
