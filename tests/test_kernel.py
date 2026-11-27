@@ -538,3 +538,19 @@ def test_the_rust_build_is_found_however_this_was_installed(tmp_path, monkeypatc
     core._on_path.cache_clear()
     assert core.pw_binary() == str(other)
     core._on_path.cache_clear()
+
+
+def test_the_published_executable_is_named_for_its_source():
+    """rust/release.txt names one executable by version, source digest, place and SHA-256; ci/pw.sh
+    computes the digest the same way the release did (it is the release's own definition)."""
+    import os
+    import re
+    import subprocess
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with open(os.path.join(root, "rust", "release.txt"), encoding="utf-8") as fh:
+        said = dict(line.split("=", 1) for line in fh.read().split("\n") if line)
+    assert set(said) == {"version", "source", "url", "sha256"}
+    assert re.fullmatch(r"[0-9a-f]{64}", said["source"]) and re.fullmatch(r"[0-9a-f]{64}", said["sha256"])
+    assert said["url"] == f"https://github.com/sugipamo/parallelworld/releases/download/v{said['version']}/pw-{said['version']}-linux-x86_64"
+    digest = subprocess.run([os.path.join(root, "ci", "pw.sh"), "--source-digest"], capture_output=True, text=True, check=True).stdout.strip()
+    assert re.fullmatch(r"[0-9a-f]{64}", digest)          # (equal to said["source"] only while the source is what was released)

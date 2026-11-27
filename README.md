@@ -108,12 +108,12 @@ jobs:
       - uses: sugipamo/parallelworld@<このリポジトリのコミット>
 ```
 
-- することは、Rust 版の `check` をソースからビルドすること（ランナーにある `cargo`。クレートは `rust/Cargo.lock` のチェックサムで固定。4 コアで 1 分半ほど）、宣言に定義があるときだけ Lean の取得（`lean/lean-toolchain` の版、`ci/lean.sh` のチェックサムで固定）、`pw check --repo . --verify`。Python は使わない。エージェントも使わない。ビルドしたものをキャッシュしないので、動くのはいつも、固定したコミットのソースからできたもの。
+- することは、Rust 版の `check` を用意すること（`ci/pw.sh`。`rust/release.txt` が、このコミットのソースからビルドして公開した実行ファイルを SHA-256 つきで名指ししていれば、それを取ってきてチェックサムを照らす。1 秒ほど。名指しがない、またはソースが違うときは、ランナーの `cargo` でソースからビルドする。クレートは `rust/Cargo.lock` のチェックサムで固定、4 コアで 1 分半ほど）、宣言に定義があるときだけ Lean の取得（`lean/lean-toolchain` の版、`ci/lean.sh` のチェックサムで固定）、`pw check --repo . --verify`。Python は使わない。エージェントも使わない。何もキャッシュしない。
 - **使う側が固定するのは、このリポジトリのコミット 1 つ。** Lean の版もチェックサムもクレートのチェックサムも、そのコミットの中で決まる。使う側に写す値はない。
 - 入力は 2 つ。`repo`（確かめるディレクトリ。既定は `.`）と `args`（`pw check` に渡す引数。既定は `--verify`。規則を満たさない読みを警告にとどめるなら `--verify --unconfirmed warn`）。Python 版にしかない `--record` と `--db` は渡せない。
 - CI は記録を読むだけなので、手元で確かめたときと記録の中身がずれない。
 
-エージェント側のツール（`pw.maintain` など）を pip で入れて使うときは、Rust 版の実行ファイルも要る。クローンで `cargo install --path rust` を回して `PATH` に `pw` を置くか、`PW_BIN` でビルドしたものを指す（クローンの中で使うなら、`cargo build --release --manifest-path rust/Cargo.toml` だけでよい）。
+エージェント側のツール（`pw.maintain` など）を pip で入れて使うときは、Rust 版の実行ファイルも要る。クローンで `export PW_BIN="$(ci/pw.sh)"` とする（公開済みのものを取ってくるか、ビルドする）か、`cargo install --path rust` で `PATH` に `pw` を置く（クローンの中で使うなら、`cargo build --release --manifest-path rust/Cargo.toml` だけでよい）。
 
 ### 参照先を上げるとき
 
