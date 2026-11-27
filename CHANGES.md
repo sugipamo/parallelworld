@@ -2,6 +2,16 @@
 
 使う側（このリポジトリを固定して使っているリポジトリ）で何かが要る変更、判定が変わる変更だけを書く。`pyproject.toml` の版は、読み手の指示文（`pw/reader.txt`）が変わるか、同じ宣言と記録に対する判定が変わるときに、0.x の x を上げる。
 
+## 0.13.0
+
+- **Python 版のカーネルを消した。** 判定・記録・Lean は Rust 版だけがする。`python -m pw.check` と `python -m pw.confirm` は、Rust 版の `pw check`・`pw confirm` を呼ぶ（先に `cargo build --release --manifest-path rust/Cargo.toml` が要る。アクションは自分でビルドするので何も変わらない）。判定と表示、記録に書く行は前と同じ。
+  - `pw/lean_gate.py` はなくなった。Python から使うなら `pw.core` の `Kernel` と `LeanGate`（同じメソッドで、中身は Rust 版の `pw kernel`・`pw lean`）。
+  - `pw/kernel.py` に残ったのは箇所の読み方の道具だけ。どの箇所も Rust 版と同じに読むことをテストで確かめている。
+  - Python 版を直接使う古い実験は、コミット `5130a42` で動く（`experiments/README.md`）。
+- 読み手に渡す指示文の識別子は、読み手を呼んだ側が渡す（`pw.maintain` が、読み手に見せた指示文から求める）。以前は道具を出す側が自分の持つ指示文から求めていたので、指示文を書き換えて Rust 版をビルドし直さないと、別の識別子で記録されえた。
+- `pw.maintain` は、パターンで読む箇所を、同じ中身・同じ問い・同じ指示文で目隠しの読み手がもう読んでいれば、読ませ直さない。測られていない読み手の読みは数えられないので、以前は回すたびに読ませ直して費用がかかっていた（数えられるようにするのは読み手の測定。チェックがそう表示する）。
+- 長いファイルをパターン（`within` つき）で読む箇所は、目隠しの読み手に `within` が当たる行だけを見せる（このリポジトリの `rust/src/kernel.rs` は 72,000 字が 280 字に）。
+
 ## 0.12.0
 
 - **読み手の道具（MCP）は Rust 版が出す。** `pw.maintain`・`pw.calibrate`・`pw.discover`・`pw.propagate` が読み手を呼ぶとき、道具は `rust/target/release/pw mcp` から出る（`PW_BIN` で場所を変えられる）。手元でこれらを回すなら、先に `cargo build --release --manifest-path rust/Cargo.toml` が要る。無ければ、読み手を呼ぶ前に止まって、そう言う。`pw/mcp_server.py` はなくなった。記録に書く行は前と 1 行ずつ同じ（`tests/test_rust.py`）。

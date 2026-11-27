@@ -4,7 +4,8 @@ import json
 import pytest
 
 from pw import check
-from pw.kernel import Kernel, KernelError, pattern
+from pw.core import Kernel
+from pw.kernel import KernelError, pattern
 
 
 def repo(tmp_path, code="LIMIT = 14\nMODES = ['fast', \"safe\"]\n", doc="## Limits\n\nAt most 14.\n\n## Modes\n\n`fast`, `safe`\n"):
@@ -73,18 +74,22 @@ def test_what_the_record_says_lean_proved_is_not_used(tmp_path, capsys):
     assert "FAIL violated" in capsys.readouterr().out
 
 
-def test_a_definition_needs_lean(tmp_path):
+def test_a_definition_needs_lean(tmp_path, monkeypatch):
+    monkeypatch.setenv("PW_LAKE", str(tmp_path / "no-lake"))            # (as where Lean is not installed)
     repo(tmp_path, doc="## Limits\n\nAt most 14.\n\n## Modes\n\n`fast`, `safe`: 2 modes\n")
     count = {"name": "number of modes", "type": "Nat", "defined": {"from": ["modes"], "as": "fun ms => ms.length"},
              "places": [{"at": "doc.md::Modes", "read": {"find": r"(\d+) modes", "as": "nat"}}]}
     (tmp_path / "pw-facts.json").write_text(json.dumps(FACTS + [count]))
     k = Kernel(str(tmp_path / "pw-log.jsonl"))
-    k.sync_facts(str(tmp_path / "pw-facts.json"))
+    with pytest.raises(KernelError, match="Lean"):                        # a definition is a Lean function: it is not taken unseen
+        k.sync_facts(str(tmp_path / "pw-facts.json"))
+    k.claim_fact("modes", "List String", ["doc.md::Modes"])
+    k.claim_fact("number of modes", "Nat", ["doc.md::Modes"], defined={"from": ["modes"], "as": "fun ms => ms.length"})
     assert k.needs_lean()
     with pytest.raises(KernelError, match="Lean"):                        # what the definition gives has to be worked out
         k.recheck(str(tmp_path))
     with pytest.raises(Exception, match="Lean"):                          # the command says so before anything else
-        check.run(str(tmp_path), str(tmp_path / "pw-log.jsonl"), lean_dir=str(tmp_path / "no-such-lean-project"))
+        check.run(str(tmp_path), str(tmp_path / "pw-log.jsonl"))
 
 
 def test_a_partial_place_with_an_entry_of_its_own_is_named(tmp_path, capsys):

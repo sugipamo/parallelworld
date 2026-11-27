@@ -6,9 +6,10 @@
   "places": [
    "docs/spec.md::3. Lean Gate",
    {
-    "at": "pw/lean_gate.py::ALLOWED_AXIOMS",
+    "at": "rust/src/lean.rs",
     "read": {
-     "python": "strings",
+     "within": "pub const ALLOWED_AXIOMS: \\[&str; \\d+\\] = \\[([^\\]]*)\\]",
+     "find_all": "\"([\\w.]+)\"",
      "sort": true
     }
    }
@@ -57,9 +58,10 @@
   "gloss": "the names of the conditions a row of the rules table may require for a reading of a place to stand, sorted alphabetically",
   "places": [
    {
-    "at": "pw/kernel.py::CONDITIONS",
+    "at": "rust/src/kernel.rs",
     "read": {
-     "python": "keys",
+     "within": "const CONDITIONS: \\[&str; \\d+\\] = \\[([^\\]]*)\\];",
+     "find_all": "\"([^\"]+)\"",
      "sort": true
     }
    },

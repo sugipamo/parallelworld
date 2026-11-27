@@ -1,22 +1,18 @@
+import os
+import shutil
+
 import pytest
 
-from pw.kernel import Kernel, KernelError
-from pw.lean_gate import GateError, LeanGate
+from pw.core import Kernel
+from pw.kernel import KernelError
+from pw.core import GateError, LeanGate
 
-
-class FakeGate(LeanGate):
-    """Accepts every proof. Stands in for Lean so kernel semantics can be tested alone."""
-    def check(self, relation, items, proof):
-        self.render(relation, items, proof)
-        return {"ok": True, "axioms": [], "gamma": "fake"}
-
-    def typecheck(self, items):
-        return {"ok": True, "reason": ""}
+LAKE = os.environ.get("PW_LAKE") or shutil.which("lake")
 
 
 @pytest.fixture
 def k(tmp_path):
-    return Kernel(str(tmp_path / "e.db"), gate=FakeGate())
+    return Kernel(str(tmp_path / "e.db"))
 
 
 def test_gate_is_the_only_way_in(tmp_path, monkeypatch):
@@ -29,9 +25,13 @@ def test_gate_is_the_only_way_in(tmp_path, monkeypatch):
     places = [{"at": name, "reader": pattern(find=r"v = (\d+)", kind="nat")} for name in ("a.txt", "b.txt")]
     k = Kernel(str(tmp_path / "e.db"))
     k.claim_fact("v", "Nat", places)
-    with pytest.raises(KernelError):
-        k.recheck(str(tmp_path))                                  # no gate: the equation cannot be settled
-    k = Kernel(str(tmp_path / "e.db"), gate=FakeGate())
+    monkeypatch.setenv("PW_LAKE", str(tmp_path / "no-lake"))
+    with pytest.raises(KernelError, match="Lean"):
+        k.recheck(str(tmp_path))                                  # no Lean: the equation cannot be settled
+    assert not k.state().proofs
+    monkeypatch.delenv("PW_LAKE")
+    if not LAKE:
+        pytest.skip("the rest needs Lean")
     assert k.recheck(str(tmp_path))["decisions"][0]["state"] == "current"
     f, = k.state().props
     with pytest.raises(KernelError):
@@ -225,7 +225,7 @@ def test_a_proposed_place_is_checked_against_the_file(tmp_path):
     part = {**screen(repo, "List String", "app.py::NAMES", ["a"], 'NAMES = ["b", "a"]'), "some": True}
     merged2, _ = merge([{"name": "names", "type": "List String", "places": ["guide.md::Limits"]}], [{"fact": "names", "place": part}])
     assert merged2[0]["places"] == ["guide.md::Limits", {"at": "app.py::NAMES", "some": True}]
-    k = Kernel(str(tmp_path / "e.db"), gate=FakeGate())
+    k = Kernel(str(tmp_path / "e.db"))
     (tmp_path / "facts.json").write_text(json.dumps(merged))
     assert len(k.sync_facts(str(tmp_path / "facts.json"))) == 2                      # what is merged is a valid declaration
 
@@ -283,7 +283,7 @@ def test_a_declared_place_that_cannot_be_read_is_said_and_can_be_repaired(tmp_pa
     repo = str(tmp_path)
     facts = [{"name": "limit", "type": "Nat", "places": ["guide.md::Limits", {"at": "app.py::LIMIT", "read": {"find": "LIMIT = (\\d+)", "as": "nat"}}]}]
     (tmp_path / "pw-facts.json").write_text(json.dumps(facts))
-    k = Kernel(str(tmp_path / "pw-log.jsonl"), gate=FakeGate())
+    k = Kernel(str(tmp_path / "pw-log.jsonl"))
     h, = k.sync_facts(str(tmp_path / "pw-facts.json"))
     k.read_place(h, "guide.md::Limits", "14", cwd=repo, quote="At most 14 atoms are solved.")
     assert k.recheck(repo)["decisions"][0]["state"] == "current" and unreadable("guide.md::Limits", repo) is None
@@ -294,7 +294,7 @@ def test_a_declared_place_that_cannot_be_read_is_said_and_can_be_repaired(tmp_pa
     r = k.recheck(repo)["decisions"][0]
     assert r["state"] == "stale" and [(u["at"], u["broken"]) for u in r["unread"]] == [("guide.md::Limits", True), ("app.py::LIMIT", True)]
     assert "no longer has a part named 'Limits'" in r["unread"][0]["why"]            # not quietly read off the whole file instead
-    from pw.lean_gate import LEAN_DIR
+    from pw.core import LEAN_DIR
     broken = discover.broken_places(repo, LEAN_DIR, facts)                           # (nothing is put to Lean while a place is unread)
     assert [(n, at) for n, at, _ in broken] == [("limit", "guide.md::Limits"), ("limit", "app.py::LIMIT")]
 
@@ -410,15 +410,28 @@ def test_a_proposed_pattern_must_not_spell_out_the_value(tmp_path):
     assert discover.screen(repo, "List String", "ch.rs", ["system.return"], 'vec!["system.return"]', find_all=r'"([a-z.]+)"')["read"]["find_all"]
 
 
-def test_what_differs_between_lists_is_named():
-    from pw.check import differences
-    place = lambda at, v, **more: {"at": at, "reads as": __import__("json").dumps(v), **more}
-    d = {"places": [place("README.md", ["a", "b", "z"]), place("m.py", ["a", "b", "c", "z"]), place("all.py", ["a", "b", "c", "z"]),
-                    place("start.md", ["a"], some=True)]}
-    assert differences(d) == ["only in all.py, m.py: c"]
-    d = {"places": [place("README.md", ["a", "x"]), place("m.py", ["a", "b"])], "instructions": [{"is": '["a", "b"]', "by": "ann"}]}
-    assert differences(d) == ["README.md has, beyond what was laid down: x", "README.md lacks, of what was laid down: b"]
-    assert differences({"places": [place("a.md", 14), place("k.py", 15)]}) == []                # single values are shown as they are
+def test_what_differs_between_lists_is_named(tmp_path):
+    """Where lists do not agree, the check names the entries that are not everywhere, and where they are."""
+    import json
+    from pw import check
+    read = {"find_all": '"(\\w+)"', "sort": True}
+    files = {"README.md": '"a" "b" "z"', "m.py": '"a" "b" "c" "z"', "all.py": '"a" "b" "c" "z"', "start.md": '"a"'}
+    for name, text in files.items():
+        (tmp_path / name).write_text(text + "\n")
+    def output(fact, capsys_text=None):
+        (tmp_path / "pw-facts.json").write_text(json.dumps([fact]))
+        import io
+        import contextlib
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            check.run(str(tmp_path), str(tmp_path / "pw-log.jsonl"), unconfirmed="warn")
+        return out.getvalue()
+    places = [{"at": n, "read": read} for n in ("README.md", "m.py", "all.py")] + [{"at": "start.md", "read": read, "some": True}]
+    assert "       only in all.py, m.py: c\n" in output({"name": "modes", "type": "List String", "places": places})
+    laid = {"name": "modes", "type": "List String", "places": places[:2], "instructions": [{"is": ["a", "b", "c", "z"], "by": "ann"}]}
+    (tmp_path / "README.md").write_text('"a" "x" "c" "z"\n')
+    got = output(laid)
+    assert "README.md has, beyond what was laid down: x" in got and "README.md lacks, of what was laid down: b" in got, got
 
 
 def test_the_documents_are_there_and_point_at_things_that_exist():
@@ -482,3 +495,25 @@ def test_a_long_place_read_by_structure_is_shown_in_part():
     assert shown.startswith("@route('/0')\ndef page0(request,\n          flag=False):\n@route('/1')") and "return" not in shown
     assert excerpt(reader({"python": "value"}, "app.py"), "X = " + repr(list(range(900)))) is None        # no smaller part can be told
     assert excerpt({"language": "pattern", "find": "(x)", "as": "string"}, "x" * 5000) is None
+
+
+def test_a_place_read_blind_already_is_not_paid_for_again(tmp_path):
+    """pw.maintain shows a blind reader a computed place once per content, question and instructions:
+    when that reading does not count yet, the reader has to be measured; asking again buys the same answer."""
+    from pw.kernel import pattern
+    from pw.maintain import read_blind_already
+    (tmp_path / "k.py").write_text("LIMIT = 14\n")
+    k = Kernel(str(tmp_path / "pw-log.jsonl"), actor="reader")
+    h = k.claim_fact("limit", "Nat", [{"at": "k.py", "reader": pattern(find=r"LIMIT = (\d+)", kind="nat")}], gloss="the limit")["h"]
+    m = k.read_place(h, "k.py", cwd=str(tmp_path))["m"]                       # computed
+    assert not read_blind_already(k.state(), h, "k.py", m, "opus")
+    k.read_place(h, "k.py", "14", cwd=str(tmp_path), quote="LIMIT = 14", blind=True, model="opus")
+    assert read_blind_already(k.state(), h, "k.py", m, "opus")
+    assert not read_blind_already(k.state(), h, "k.py", m, "sonnet")         # another model has not
+    (tmp_path / "k.py").write_text("LIMIT = 15\n")                            # the place changed: read it again
+    m = k.read_place(h, "k.py", cwd=str(tmp_path))["m"]
+    assert not read_blind_already(k.state(), h, "k.py", m, "opus")
+    k.claim_fact("limit", "Nat", [{"at": "k.py", "reader": pattern(find=r"LIMIT = (\d+)", kind="nat")}], gloss="the most there may be")
+    (tmp_path / "k.py").write_text("LIMIT = 14\n")                            # same content, another question: read it again
+    m = k.read_place(h, "k.py", cwd=str(tmp_path))["m"]
+    assert not read_blind_already(k.state(), h, "k.py", m, "opus")

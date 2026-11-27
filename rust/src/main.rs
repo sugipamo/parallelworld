@@ -2,6 +2,7 @@
 mod kernel;
 mod lean;
 mod mcp;
+mod ops;
 mod read;
 mod util;
 
@@ -317,7 +318,7 @@ fn confirm(args: &[String]) -> R<i32> {
     if !readings.is_empty() {
         let who = who.ok_or("say who is confirming: --who NAME")?;
         for m in &readings {
-            kernel::with_record(&record, &who, |st| kernel::sign_off(st, m, &who, !reject))?;
+            kernel::with_record(&record, &who, |st| kernel::sign_off(st, m, &who, !reject).map(|_| ()))?;
             println!("{}{}", if reject { "rejected " } else { "confirmed " }, m);
         }
         return Ok(0);
@@ -404,6 +405,8 @@ fn main() {
     let result = match args.first().map(String::as_str) {
         Some("confirm") => confirm(&args[1..]),
         Some("mcp") => Ok(mcp::serve()),
+        Some("kernel") => Ok(ops::kernel()),
+        Some("lean") => Ok(ops::lean()),
         Some(x @ ("state" | "sync" | "adopt")) => record_tool(x, &args[1..]),
         Some("check") => run(&args[1..]),
         _ => run(&args[..]),
@@ -411,7 +414,7 @@ fn main() {
     match result {
         Ok(code) => std::process::exit(code),
         Err(e) => {
-            eprintln!("pw: {}", e);
+            eprintln!("pw: {}", e.replace(kernel::GATE, ""));
             std::process::exit(2);
         }
     }

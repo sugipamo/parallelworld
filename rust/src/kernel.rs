@@ -112,6 +112,14 @@ fn pyshown(v: &Value) -> String {
     }
 }
 
+/// An error that comes from the Lean gate (pw/lean_gate.py's GateError), told apart by a mark
+/// the entry points take off again.
+pub const GATE: &str = "\u{1}GateError\u{1}";
+
+pub fn gate_err(e: String) -> String {
+    format!("{}{}", GATE, e)
+}
+
 /// An error a reader is told about, named as the Python kernel names it.
 pub type Told = (&'static str, String);
 
@@ -121,7 +129,8 @@ fn kernel_err(e: String) -> Told {
 
 /// What a reader says one place of a fact states, with the sentence that says it
 /// (pw/kernel.py read_place, for a reading stated by an agent).
-pub fn read_place(st: &mut State, judge: &Judge, h: &str, place: &str, obj: &str, cwd: &Path, quote: Option<&str>, blind: bool, model: Option<&str>) -> Result<Value, Told> {
+/// `under`: the id of the instructions the reader was given (None: this build's pw/reader.txt).
+pub fn read_place(st: &mut State, judge: &Judge, h: &str, place: &str, obj: Option<&str>, cwd: &Path, quote: Option<&str>, blind: bool, model: Option<&str>, under: Option<&str>) -> Result<Value, Told> {
     let fact = st.facts.get(h).cloned().ok_or_else(|| kernel_err(format!("{} is not a fact", h)))?;
     let places: Vec<Value> = fact["places"].as_array().cloned().unwrap_or_default();
     let decl = places.iter().find(|p| s(p, "at") == place).ok_or_else(|| {
@@ -134,10 +143,20 @@ pub fn read_place(st: &mut State, judge: &Judge, h: &str, place: &str, obj: &str
             return Err(kernel_err("the quote is not in the place word for word".into()));
         }
     }
-    let obj = norm(obj);
+    // without a value, the place's way of reading computes it
+    let how = match obj {
+        Some(_) => None,
+        None => Some(decl.get("reader").filter(|r| !r.is_null()).cloned().ok_or_else(|| kernel_err(format!("{} has no reader; state what it says", place)))?),
+    };
+    let obj = norm(&match (obj, &how) {
+        (Some(o), _) => o.to_string(),
+        (None, Some(how)) => compute(how, &String::from_utf8_lossy(&content)).map_err(kernel_err)?,
+        _ => unreachable!(),
+    });
+    let (blind, model) = if how.is_some() { (false, None) } else { (blind, model) };
     judge.gate.screen(&obj).map_err(|e| ("GateError", e))?;
     let typ = s(&fact, "type").to_string();
-    if json_like(&typ) && written(&typ, &obj).is_none() {
+    if how.is_none() && json_like(&typ) && written(&typ, &obj).is_none() {
         // what a reader says a place states is a value, not a computation
         let example = match typ.chars().next() { Some('S') => "\"fast\"", Some('N') => "14", Some('I') => "-3", _ => "[\"a\", \"b\"] or [1, 2]" };
         return Err(kernel_err(format!("state the value itself, written out: a {} such as {}", typ, example)));
@@ -147,8 +166,8 @@ pub fn read_place(st: &mut State, judge: &Judge, h: &str, place: &str, obj: &str
         judge.typed(&typ, &obj).map_err(kernel_err)?;
     }
     let version = subject_id(place, cwd);
-    let m = format!("M:{}", sha(&[h, &version, &o, ""]));
-    let literal = match serde_json::from_str::<Value>(&obj) {
+    let m = format!("M:{}", sha(&[h, &version, &o, &how.as_ref().map(|x| pyjson(x, true)).unwrap_or_default()]));
+    let literal = how.is_none() && match serde_json::from_str::<Value>(&obj) {
         Ok(said) => {
             let whole = String::from_utf8_lossy(&content).into_owned();
             let list = said.as_array().is_some();
@@ -160,16 +179,16 @@ pub fn read_place(st: &mut State, judge: &Judge, h: &str, place: &str, obj: &str
     };
     let a = &st.asked[h];
     let asked = if decl.get("some").and_then(Value::as_bool).unwrap_or(false) { sha(&[a, "some"]) } else { a.clone() };
-    let under = instructions_id();
+    let under = under.map(String::from).unwrap_or_else(instructions_id);
     let named = model.filter(|x| !x.is_empty());
     let known = st.models.get(&m).and_then(|x| x.asked.get(&asked)).cloned().unwrap_or_default();
     let read = st.readings.get(h).map_or(false, |l| l.contains(&(place.to_string(), m.clone())));
     let actor = st.actor.clone();
-    if !read || !known.by.contains(&actor) || (blind && !known.blind.contains(&actor))
-        || (blind && named.map_or(false, |x| !known.under.get(x).map_or(false, |u| u.contains(&Some(under.clone()))))) {
+    if !read || (how.is_none() && (!known.by.contains(&actor) || (blind && !known.blind.contains(&actor))
+        || (blind && named.map_or(false, |x| !known.under.get(x).map_or(false, |u| u.contains(&Some(under.clone()))))))) {
         let mut payload = vec![
             ("h", json!(h)), ("place", json!(place)), ("subject", json!(version)), ("m", json!(m)),
-            ("obj", json!({ "id": o, "type": typ, "text": obj })), ("binding", Value::Null), ("quote", json!(quote)),
+            ("obj", json!({ "id": o, "type": typ, "text": obj })), ("binding", json!(how)), ("quote", json!(quote)),
             ("asked", json!(asked)), ("blind", json!(blind)), ("model", if blind { json!(model) } else { Value::Null }),
         ];
         if blind && named.is_some() {
@@ -263,7 +282,7 @@ impl State {
 
 /// A person has compared a reading with the place itself, and confirms or rejects it
 /// (pw/kernel.py sign_off). True if it was recorded already.
-pub fn sign_off(st: &mut State, m: &str, who: &str, confirmed: bool) -> R<bool> {
+pub fn sign_off(st: &mut State, m: &str, who: &str, confirmed: bool) -> R<(String, bool)> {
     let outcome = if confirmed { "confirmed" } else { "rejected" };
     let mut asked = None;
     'facts: for h in &st.order {
@@ -286,11 +305,174 @@ pub fn sign_off(st: &mut State, m: &str, who: &str, confirmed: bool) -> R<bool> 
         if s(old, "outcome") != outcome {
             return Err(format!("{} already recorded this reading as {}", who, s(old, "outcome")));
         }
-        return Ok(true);
+        return Ok((eid, true));
     }
     st.emit("observe", vec![("eid", json!(eid)), ("target", json!(m)), ("kind", json!("sign_off")), ("outcome", json!(outcome)),
                             ("source", json!(source)), ("asked", json!(asked))]);
-    Ok(false)
+    Ok((eid, false))
+}
+
+impl Fact {
+    /// A fact as the record holds it (its last claim), to judge what the record declares.
+    fn from_recorded(h: &str, f: &Value) -> Fact {
+        let places = f["places"].as_array().into_iter().flatten().map(|p| Place {
+            at: s(p, "at").to_string(),
+            some: p.get("some").and_then(Value::as_bool).unwrap_or(false),
+            reader: p.get("reader").filter(|r| !r.is_null()).cloned(),
+        }).collect();
+        Fact {
+            h: h.to_string(),
+            name: s(f, "name").to_string(),
+            typ: s(f, "type").to_string(),
+            text: s(f, "text").to_string(),
+            asked: s(f, "asked").to_string(),
+            places,
+            instructions: f.get("instructions").and_then(Value::as_array).into_iter().flatten().filter_map(|i| i.as_object().cloned()).collect(),
+            defined: f.get("defined").filter(|d| !d.is_null()).cloned(),
+        }
+    }
+}
+
+impl State {
+    /// The facts the record declares now: claimed and not withdrawn, in the order it first heard of them.
+    pub fn live(&self) -> Vec<Fact> {
+        self.order.iter().filter(|h| !self.withdrawn.contains_key(*h)).filter_map(|h| self.facts.get(h).map(|f| Fact::from_recorded(h, f))).collect()
+    }
+}
+
+/// Declare that the listed places all state the same fact (pw/kernel.py claim_fact). `places`
+/// are "path", or {"at", "reader"?, "some"?} with the reader in the form the record keeps.
+pub fn claim_fact(st: &mut State, judge: &Judge, name: &str, typ: &str, places: &[Value], gloss: &str, instructions: &[Value], defined: Option<&Value>) -> R<String> {
+    let typ = norm(typ);
+    judge.gate.screen(&typ).map_err(gate_err)?;
+    let places: Vec<Place> = places.iter().map(|p| match p {
+        Value::String(at) => Place { at: at.clone(), some: false, reader: None },
+        p => Place { at: s(p, "at").to_string(), some: p.get("some").map_or(false, truthy), reader: p.get("reader").filter(|r| !r.is_null()).cloned() },
+    }).collect();
+    if places.iter().all(|p| p.some) {
+        return Err("a fact needs at least one place that states the whole of it".into());
+    }
+    let mut twice: Vec<&str> = places.iter().filter(|p| places.iter().filter(|q| q.at == p.at).count() > 1).map(|p| p.at.as_str()).collect();
+    twice.sort();
+    twice.dedup();
+    if !twice.is_empty() {
+        return Err(format!("{}: {} is listed more than once; a place is read one way per fact", name, twice.join(", ")));
+    }
+    if places.iter().any(|p| p.some) && !typ.starts_with("List ") {
+        return Err("only a list can be stated in part: a place that states some entries needs a List type".into());
+    }
+    let mut said: Vec<Map<String, Value>> = vec![];
+    for i in instructions {
+        let o = i.as_object().filter(|o| o.keys().all(|k| ["is", "by", "said", "on"].contains(&k.as_str())) && o.contains_key("is")
+                                      && !o.get("by").map(pystr_of).unwrap_or_default().trim().is_empty())
+            .ok_or_else(|| format!("{}: an instruction is {{\"is\": value, \"by\": who}}, optionally with \"said\" and \"on\"", name))?;
+        let term = norm(o["is"].as_str().ok_or_else(|| format!("{}: an instruction's value is a Lean term, as text", name))?);
+        judge.gate.screen(&term).map_err(gate_err)?;
+        judge.typed(&typ, &term)?;
+        let mut kept = Map::new();
+        kept.insert("is".into(), json!(term));
+        kept.insert("by".into(), json!(norm(&pystr_of(&o["by"]))));
+        for k in ["said", "on"] {
+            if let Some(v) = o.get(k).filter(|v| truthy(v)) {
+                kept.insert(k.into(), json!(norm(&pystr_of(v))));
+            }
+        }
+        said.push(kept);
+    }
+    let mut pairs: Vec<(String, String)> = said.iter().map(|i| (s(&Value::Object(i.clone()), "is").to_string(), s(&Value::Object(i.clone()), "by").to_string())).collect();
+    pairs.sort();
+    pairs.dedup();
+    if pairs.len() < said.len() {
+        return Err(format!("{}: the same instruction by the same person is listed twice", name));
+    }
+    let defined = match defined.filter(|d| !d.is_null()) {
+        None => None,
+        Some(d) => {
+            let from: Option<Vec<String>> = d.get("from").and_then(Value::as_array).map(|a| a.iter().filter_map(Value::as_str).map(String::from).collect());
+            let ok = d.as_object().map_or(false, |o| o.len() == 2) && d.get("as").and_then(Value::as_str).is_some()
+                && d["from"].as_array().map_or(false, |a| !a.is_empty() && a.iter().all(Value::is_string));
+            if !ok {
+                return Err(format!("{}: a definition is {{\"from\": [names of facts], \"as\": a Lean function of their values}}", name));
+            }
+            if !said.is_empty() {
+                return Err(format!("{}: its value comes from its definition; an instruction belongs to the facts it is defined from", name));
+            }
+            let from = from.unwrap();
+            if from.iter().any(|x| x == name) {
+                return Err(format!("{} is defined from itself", name));
+            }
+            judge.gate.screen(s(d, "as")).map_err(gate_err)?;
+            Some(json!({ "from": from, "as": norm(s(d, "as")) }))
+        }
+    };
+    let gloss = norm(gloss);
+    let fact = Fact {
+        h: format!("H:{}", sha(&["fact", name, &typ])),
+        name: name.to_string(),
+        text: if gloss.is_empty() { format!("the same {} is stated in {} place(s)", name, places.len()) } else { gloss.clone() },
+        asked: sha(&["asked", &gloss]),
+        typ,
+        places,
+        instructions: said,
+        defined,
+    };
+    claim(st, &fact);
+    Ok(fact.h)
+}
+
+/// Claim a fact, if the record does not hold it as it is now.
+fn claim(st: &mut State, f: &Fact) {
+    let fact = f.recorded();
+    let was = st.facts.get(&f.h).map(|x| {
+        let mut x = x.clone();
+        x.as_object_mut().map(|o| o.shift_remove("text"));
+        x
+    });
+    if was.as_ref() != Some(&fact) || st.withdrawn.contains_key(&f.h) {
+        st.emit("claim", vec![("h", json!(f.h)), ("text", json!(f.text)), ("fact", fact)]);
+    }
+}
+
+/// The fact is no longer declared.
+pub fn withdraw(st: &mut State, h: &str, justification: &str) -> R<()> {
+    if justification.trim().is_empty() {
+        return Err("withdrawing a fact needs a justification".into());
+    }
+    if !st.facts.contains_key(h) {
+        return Err(format!("unknown fact {}", h));
+    }
+    st.emit("withdraw", vec![("h", json!(h)), ("justification", json!(justification))]);
+    Ok(())
+}
+
+/// Ask the gate whether proposition `f` holds, or does not, with the caller's tactics. Nothing
+/// is recorded unless the gate accepts; a failed attempt is not evidence.
+pub fn prove(st: &mut State, judge: &Judge, relation: &str, f: &str, proof: &str) -> R<Value> {
+    if relation != "holds" && relation != "not" {
+        return Err("a proposition is shown to hold, or not to hold".into());
+    }
+    let prop = st.props.get(f).cloned().ok_or_else(|| format!("unknown proposition {}", f))?;
+    let v = judge.gate.check(relation, &[("Prop", &prop)], proof);
+    if !v.ok {
+        return Ok(json!({ "accepted": false, "reason": v.reason }));
+    }
+    st.emit("proof", vec![("relation", json!(relation)), ("args", json!([f])), ("proof_sha", json!(sha(&[proof]))), ("proof", json!(proof)),
+                          ("axioms", json!(v.axioms)), ("gamma", json!(v.gamma))]);
+    Ok(json!({ "accepted": true, "axioms": v.axioms, "gamma": v.gamma }))
+}
+
+/// Run recorded proofs (all, or the given ones) through the gate again; those it does not accept.
+pub fn verify(st: &State, judge: &Judge, proofs: Option<&[Value]>) -> Vec<Value> {
+    let proofs: Vec<Value> = proofs.map(<[Value]>::to_vec).unwrap_or_else(|| st.proofs.clone());
+    let jobs: Vec<(String, Vec<(String, String)>, String)> = proofs.iter().map(|p| {
+        let f = p["args"][0].as_str().unwrap_or("");
+        (s(p, "relation").to_string(), vec![("Prop".to_string(), st.props.get(f).cloned().unwrap_or_default())], s(p, "proof").to_string())
+    }).collect();
+    let verdicts = judge.gate.check_many(&jobs, 50);
+    proofs.iter().zip(verdicts).filter(|(_, v)| !v.ok).map(|(p, v)| {
+        let reason: String = v.reason.chars().rev().take(300).collect::<Vec<_>>().into_iter().rev().collect();
+        json!({ "relation": p["relation"], "args": p["args"], "reason": reason })
+    }).collect()
 }
 
 fn s<'a>(v: &'a Value, key: &str) -> &'a str {
@@ -475,6 +657,9 @@ pub fn declared(path: &Path) -> R<Vec<Fact>> {
         let typ = d.get("type").and_then(Value::as_str).filter(|x| !x.trim().is_empty()).ok_or_else(|| format!("{}: it needs a \"type\", the Lean type of its value: String, Nat, Int, List String, List Nat", what))?;
         let places = d.get("places").and_then(Value::as_array).filter(|p| !p.is_empty()).ok_or_else(|| format!("{}: it needs \"places\", the list of places that state it", what))?;
         let unknown: Vec<&String> = d.as_object().unwrap().keys().filter(|k| !["name", "type", "gloss", "places", "instructions", "defined", "value"].contains(&k.as_str())).collect();
+        if d.get("value").is_some() {
+            return Err(format!("{}: \"value\" is no longer read; say whose instruction it is: \"instructions\": [{{\"is\": ..., \"by\": ...}}]", fname));
+        }
         if !unknown.is_empty() {
             let mut unknown = unknown;
             unknown.sort();
@@ -643,15 +828,7 @@ impl Fact {
 /// no longer declared (pw/kernel.py sync_facts).
 pub fn sync(st: &mut State, facts: &[Fact], file: &str) {
     for f in facts {
-        let fact = f.recorded();
-        let was = st.facts.get(&f.h).map(|x| {
-            let mut x = x.clone();
-            x.as_object_mut().map(|o| o.shift_remove("text"));
-            x
-        });
-        if was.as_ref() != Some(&fact) || st.withdrawn.contains_key(&f.h) {
-            st.emit("claim", vec![("h", json!(f.h)), ("text", json!(f.text)), ("fact", fact)]);
-        }
+        claim(st, f);
     }
     for h in st.order.clone() {
         if !facts.iter().any(|f| f.h == h) && !st.withdrawn.contains_key(&h) {
@@ -706,13 +883,13 @@ pub fn premises(facts: &[Fact], judge: &Judge, file: &str) -> R<()> {
         let Some(how) = &f.defined else { continue };
         let from: Vec<&str> = how["from"].as_array().unwrap().iter().filter_map(Value::as_str).collect();
         let fun = from.iter().map(|x| format!("({})", facts.iter().find(|g| g.name == *x).unwrap().typ)).collect::<Vec<_>>().join(" → ");
-        judge.gate.screen(s(how, "as"))?;
+        judge.gate.screen(s(how, "as")).map_err(gate_err)?;
         judge.well_typed(&[(&format!("{} → ({})", fun, f.typ), s(how, "as"))])?;
     }
     for f in facts {
         for i in &f.instructions {
             let term = i["is"].as_str().unwrap_or("");
-            judge.gate.screen(term)?;
+            judge.gate.screen(term).map_err(gate_err)?;
             judge.typed(&f.typ, term)?;
         }
     }

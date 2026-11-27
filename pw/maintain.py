@@ -33,9 +33,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 from .check import FACTS
-from .core import Kernel, pw_binary
-from .kernel import LOG, READER, _sha, context, excerpt, locate, question
-from .lean_gate import LEAN_DIR
+from .core import Kernel, LeanGate, pw_binary
+from .kernel import INSTRUCTIONS, LOG, READER, _sha, context, excerpt, locate, question
+from .core import LEAN_DIR
 
 
 def ready(own_tools=False):
@@ -68,7 +68,7 @@ def blind_read(repo, lean_dir, model, actor, items, budget, db=None):
     with open(cfg, "w") as fh:
         json.dump({"mcpServers": {"pw": {"command": pw_binary(), "args": ["mcp"], "env": {
             "PW_DB": db or os.path.join(repo, LOG), "PW_AGENT": actor, "PW_WORKDIR": repo, "PW_LEAN_DIR": lean_dir,
-            "PW_BLIND": "1", "PW_MODEL": model}}}}, fh)
+            "PW_BLIND": "1", "PW_MODEL": model, "PW_INSTRUCTIONS": _sha(READER)}}}}, fh)
     prompt = READER
     for h, place, typ, what, around, *shown in items:
         text = shown[0] if shown and shown[0] else locate(place, repo).decode("utf-8", "replace")
@@ -91,6 +91,21 @@ def blind_read(repo, lean_dir, model, actor, items, budget, db=None):
     if out.get("is_error") or out.get("subtype", "success") != "success":
         run["error"] = f"the session ended with {out.get('subtype') or 'an error'}: {str(out.get('result', ''))[:300]}"
     return run
+
+
+def read_blind_already(st, h, at, m, model):
+    """Has `model`, shown only this place, read it as it is now (the content the computed reading
+    `m` is of), answering the question asked now, under the instructions readers are given now?"""
+    fact = st.facts[h]
+    asked = question(fact, next(p for p in fact["places"] if p["at"] == at))[1]
+    subject = st.models[m]["subject"]
+    for place, x in fact["readings"]:
+        info = st.models[x]
+        if place == at and not info["binding"] and info["subject"] == subject:
+            who = info["asked"].get(asked, {})
+            if model in who.get("models", ()) and INSTRUCTIONS in who.get("under", {}).get(model, ()):
+                return True
+    return False
 
 
 def answered(kernel, actor):
@@ -140,7 +155,9 @@ def main():
     repo = os.path.abspath(args.repo)
     kernel = Kernel(os.path.join(repo, LOG), actor="maintain", lean_dir=args.lean_dir)
     kernel.sync_facts(os.path.join(repo, FACTS))
-    report = kernel.recheck(repo)            # (says so, and stops, if Lean is needed and not there)
+    if kernel.needs_lean():
+        LeanGate(args.lean_dir).usable()
+    report = kernel.recheck(repo)
 
     def needs_agent(d, u):
         # (a place that cannot be found as declared is not for a reader: the declaration has to be repaired)
@@ -148,10 +165,15 @@ def main():
                 and "disagree" not in u["why"] and not u.get("broken"))
 
     def unchecked(report):
-        """Computed places no blind reader has looked at: is the pattern reading the thing asked?"""
+        """Computed places no blind reader has looked at: is the pattern reading the thing asked?
+        A place the model has read already, as it is now and under the instructions readers have
+        now, is not read again: if that reading does not count yet, it is the reader that has to be
+        measured (the check says so), and asking again would only pay for the same answer."""
+        st = kernel.state()
         return [(d, p["at"]) for d in report["decisions"] for p in d["places"]
                 if p["by"] == "reader" and not p["stands"]
-                and not (p["read blind as"] or any(x["model"] == args.model for x in p["declined"]))]
+                and not (p["read blind as"] or any(x["model"] == args.model for x in p["declined"])
+                         or read_blind_already(st, d["h"], p["at"], p["m"], args.model))]
 
     unread = [(d, u["at"]) for d in report["decisions"] for u in d.get("unread", [])
               if needs_agent(d, u) and not any(x["model"] == args.model for x in u.get("declined", []))]

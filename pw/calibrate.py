@@ -54,9 +54,9 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 
 from .check import FACTS
-from .core import Kernel
+from .core import Kernel, LeanGate
 from .kernel import INSTRUCTIONS, LOG, context, interval, locate, reader_measurements
-from .lean_gate import LEAN_DIR
+from .core import LEAN_DIR
 from .maintain import blind_read, ready
 
 RESULTS = "pw-calibration.json"
@@ -294,6 +294,8 @@ def main():
         shutil.copy(os.path.join(repo, LOG), scratch)
     kernel = Kernel(scratch, actor="calibrate", lean_dir=args.lean_dir)
     kernel.sync_facts(os.path.join(repo, FACTS))
+    if kernel.needs_lean():
+        LeanGate(args.lean_dir).usable()
     todo = trials(kernel, repo, args.per_place, random.Random(args.seed), args.decoys, args.twice)
     if not todo:
         sys.exit("no place read by an agent whose value occurs literally in it: nothing to plant")

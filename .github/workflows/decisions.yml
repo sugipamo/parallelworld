@@ -31,7 +31,7 @@ jobs:
       - name: Facts and decisions, with the recorded proofs verified again
         uses: ./
 
-      # The agents' side and the tests are Python.
+      # The agents' side and the tests are Python; the kernel they use is the Rust build.
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0    # v7.1.0
         if: always()
         with:
@@ -41,15 +41,14 @@ jobs:
         if: always()
         run: pip install --require-hashes -r requirements-ci.txt
 
+      # python -m pw.confirm and the tests run the Rust build from where a checkout has it.
+      - name: The Rust build, where Python looks for it
+        if: always()
+        run: cargo build --release --locked --manifest-path rust/Cargo.toml
+
       - name: What a person still has to confirm
         if: always()
         run: python -m pw.confirm | tee -a "$GITHUB_STEP_SUMMARY"
-
-      # The tests hold the Rust check's verdicts against the Python check's; they use the binary
-      # built where they expect it.
-      - name: The Rust check, where the tests look for it
-        if: always()
-        run: cargo build --release --locked --manifest-path rust/Cargo.toml
 
       - name: Packages the tests need, by hash
         if: always()

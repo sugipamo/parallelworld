@@ -17,17 +17,16 @@ v0.4 までにあった主張・接続・確率の区間・並列ワーカーの
 
 | ファイル | 役割 |
 |----------|------|
-| `pw/kernel.py` | 記録（追記式）と、事実・読み・一致の判定・規則の適用（Python 版。`python -m pw.check`・`pw.confirm` とテストが使う） |
-| `pw/core.py` | エージェント側のツール（maintain・calibrate・discover・propagate）が使うカーネル。Rust 版の実行ファイルを呼ぶだけで、判定も記録への書き込みも Rust 版がする |
-| `pw/lean_gate.py` | Lean による等式の判定 |
-| `pw/check.py` | 宣言された事実を、いまのファイルに当て直す。エージェントなし。記録は読むだけ |
-| `rust/` | 同じ `check` の Rust での実装。アクションはこちらを使う。判定が同じであることを履歴と CI で突き合わせている |
+| `rust/` | カーネル：記録（追記式）、事実・読み・一致の判定、規則の適用、Lean による判定（`rust/src/lean.rs`）。`pw check`・`pw confirm`・`pw mcp`、Python から使う `pw kernel`・`pw lean` |
+| `pw/core.py` | Python からカーネルを使う入口（`Kernel`、`LeanGate`）。Rust 版を呼ぶだけで、判定も記録への書き込みもしない |
+| `pw/kernel.py` | 箇所の読み方（節・キー・名前の切り出し、パターン、構文での読み、書き戻し、読み手に見せる抜粋）。探索役と書き戻しが記録の前に文面で試すためのもので、Rust 版と同じに読むことをテストで確かめている |
+| `pw/check.py` | `python -m pw.check`：Rust 版の `pw check` を呼ぶ。エージェントなし。記録は読むだけ |
 | `pw/maintain.py` | 変わった箇所・未読の箇所を、目隠しの読み手に読ませる |
 | `rust/src/mcp.rs`（`pw mcp`） | 読み手が答えるための道具（MCP）。`pw.maintain`・`pw.calibrate`・`pw.discover`・`pw.propagate` の読み手は、これで答える |
 | `pw/reader.txt` | 読み手に渡す指示文 |
 | `pw/calibrate.py` | 読み手を測る（わざと書き換えた本文、おとり） |
 | `pw/discover.py` | 宣言に漏れている箇所と、未宣言の事実をエージェントに探させる |
-| `pw/confirm.py` | エージェントの読みを、人が根拠の一文と見比べて確認する（任意） |
+| `pw/confirm.py` | `python -m pw.confirm`：Rust 版の `pw confirm` を呼ぶ。エージェントの読みを、人が根拠の一文と見比べて確認する（任意） |
 | `pw/propagate.py` | 人が定めた値（または仮に置いた値）を、それと違う箇所に書き戻す |
 | `pw-facts.json` | このリポジトリの事実と箇所の宣言 |
 | `pw-log.jsonl` | 記録 |
@@ -43,7 +42,8 @@ v0.4 までにあった主張・接続・確率の区間・並列ワーカーの
 {"name": "axioms a proof may depend on", "type": "List String",
  "gloss": "the axioms an accepted proof may depend on, sorted alphabetically (capital letters first)",
  "places": ["docs/spec.md::3. Lean Gate",
-            {"at": "pw/lean_gate.py::ALLOWED_AXIOMS", "read": {"find_all": "\"([^\"]+)\"", "as": "string", "sort": true}}]}
+            {"at": "rust/src/lean.rs", "read": {"within": "pub const ALLOWED_AXIOMS: \\[&str; \\d+\\] = \\[([^\\]]*)\\]",
+                                                "find_all": "\"([\\w.]+)\"", "sort": true}}]}
 ```
 
 - 型は Lean の型で書く。使ってきたのは `String`、`Nat`、`Int`、`List String`、`List Nat`。

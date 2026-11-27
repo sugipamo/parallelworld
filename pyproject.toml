@@ -1,7 +1,7 @@
 # So that another repository can use the checker without a PYTHONPATH:
 #     pip install /path/to/parallelworld        (or: pip install git+https://github.com/sugipamo/parallelworld@<commit>)
 #     python -m pw.check --repo .
-# The Lean project (lean/) is installed inside the package; pw.lean_gate looks for it there.
+# The Lean project (lean/) is installed inside the package; pw.core looks for it there (and hands it to the Rust build).
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "parallelworld"
-version = "0.12.0"
+version = "0.13.0"
 description = "Declare what a project states in several places, and keep the places saying the same thing"
 readme = "README.md"
 requires-python = ">=3.11"

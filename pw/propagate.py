@@ -42,7 +42,7 @@ import time
 from .check import FACTS
 from .core import Kernel
 from .kernel import LOG, KernelError, _json_part, _md_section, _py_part, _sha, compute, context, question, write_pattern
-from .lean_gate import LEAN_DIR
+from .core import LEAN_DIR
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SUPPOSED = "(supposed)"

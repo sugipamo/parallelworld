@@ -5,8 +5,9 @@ import subprocess
 
 import pytest
 
-from pw.kernel import Kernel, KernelError
-from pw.lean_gate import LeanGate
+from pw.core import Kernel
+from pw.kernel import KernelError
+from pw.core import LeanGate
 
 LAKE = os.environ.get("PW_LAKE") or shutil.which("lake")
 pytestmark = pytest.mark.skipif(not LAKE, reason="Lean not installed (set PW_LAKE)")
@@ -590,7 +591,7 @@ def test_what_was_laid_down_is_written_into_the_places_and_read_back(tmp_path):
     into it, confirmed by reading it back. A value can also be supposed, to see what would follow."""
     import json
     from pw.propagate import SUPPOSED, diff, plan
-    from pw.lean_gate import LEAN_DIR
+    from pw.core import LEAN_DIR
     (tmp_path / "app.py").write_text('def run(mode="fast", limit=0.9):\n    return mode\n\nMODES = ["fast", "safe"]\n')
     (tmp_path / "conf.toml").write_text('[a]\nmode = "x"\n\n[b]\nmode = "fast"\n')
     (tmp_path / "doc.md").write_text("## Mode\n\nThe default mode is `fast`.\n")
@@ -649,7 +650,7 @@ def test_a_definition_takes_its_value_from_other_facts(tmp_path):
     """A count, a first entry: nothing new is claimed, only what follows from facts already declared."""
     import json
     from pw.propagate import plan
-    from pw.lean_gate import LEAN_DIR
+    from pw.core import LEAN_DIR
     (tmp_path / "app.py").write_text('MODES = ["fast", "safe"]\nVERSIONS = ["3.10", "3.11"]\n')
     (tmp_path / "doc.md").write_text("## Modes\n\nThere are 2 modes.\n")
     (tmp_path / "pyproject.toml").write_text('requires-python = ">=3.10"\nversions = ["3.10", "3.11"]\n')
@@ -714,7 +715,7 @@ def test_an_agent_may_propose_the_new_text_of_a_place_and_it_is_read_back(tmp_pa
     it is an edit, leaves every other declared place as it reads, and reads back as the value."""
     import json
     from pw.propagate import plan
-    from pw.lean_gate import LEAN_DIR
+    from pw.core import LEAN_DIR
     code = 'MODES = ["fast", "safe"]\nDEFAULT = "fast"\n'
     (tmp_path / "app.py").write_text(code)
     (tmp_path / "doc.md").write_text("## Modes\n\nThe modes are `fast` and `safe`. The default is `fast`.\n")
@@ -817,7 +818,7 @@ def test_checking_does_not_write_to_the_record(tmp_path, capsys):
 
 def test_lean_is_not_run_where_the_tool_is_kept(tmp_path, monkeypatch):
     """The Lean project may be a shared checkout or a read-only install: the gate builds and checks elsewhere."""
-    from pw.lean_gate import LEAN_DIR
+    from pw.core import LEAN_DIR
     project, work = tmp_path / "lean", tmp_path / "work"
     project.mkdir()
     names = [n for n in ("lean-toolchain", "Gamma.lean", "lakefile.toml", "lake-manifest.json") if os.path.exists(os.path.join(LEAN_DIR, n))]

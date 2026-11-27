@@ -10,16 +10,15 @@
 
 設計は [docs/spec.md](docs/spec.md)。もとは、並列コーディングエージェントが共有する知識をベイズ推定と Lean の証明で扱うバックエンドの叩き台だった。その層は使われなかったので削除した（経緯は仕様書の §7、当時の仕様は [docs/archive/](docs/archive/)、知見は [docs/natural-language.md](docs/natural-language.md)）。
 
-- `pw/kernel.py` — 記録と、事実・読み・一致の判定・規則の適用（Python 版。判定と記録への書き込みは Rust 版に移った。`python -m pw.check`・`pw.confirm` とテストが使う）
-- `pw/core.py` — エージェント側のツールが使うカーネル。中身は Rust 版の実行ファイル（`pw state`・`pw sync`・`pw check --record --json`・`pw adopt`）で、Python では判定も書き込みもしない
-- `pw/lean_gate.py` — Lean による等式の判定
-- `pw/check.py` — 宣言された事実を、いまのファイルに当て直す（言語モデルなし。記録は読むだけで、書き足さない）
-- `rust/` — 同じ `check` を Rust で書いたもの（移行の途中。下の「Rust 版」）
+- `rust/` — カーネル。記録、事実・読み・一致の判定、規則の適用、Lean による判定（`pw check`、`pw confirm`、`pw mcp` など。下の「Rust 版」）
+- `pw/core.py` — Python からカーネルを使う入口。`Kernel` と `LeanGate` は Rust 版の実行ファイルを呼ぶだけで、Python では判定も記録への書き込みもしない
+- `pw/kernel.py` — 箇所の読み方の道具（節・キー・名前の切り出し、パターン、構文での読み、書き戻し、読み手に見せる抜粋）。探索役と書き戻しが、記録する前に文面で試すのに使う
+- `pw/check.py` — `python -m pw.check`。Rust 版の `pw check` を呼ぶ（言語モデルなし。記録は読むだけで、書き足さない）
 - `pw/maintain.py` — 変わった箇所・未読の箇所を、目隠しの読み手に読ませる
 - `pw mcp`（`rust/src/mcp.rs`）— 読み手が答えるための道具（MCP）。`pw.maintain` が Rust 版の実行ファイルから起動する
 - `pw/calibrate.py` — 読み手を測る
 - `pw/discover.py` — 宣言した事実の面倒を探索役に見させる（読めなくなった箇所の付け替え、漏れている箇所の探索。頼めば新しい事実の提案も）
-- `pw/confirm.py` — エージェントの読みを、根拠の一文と並べて人が確認する
+- `pw/confirm.py` — `python -m pw.confirm`。Rust 版の `pw confirm` を呼ぶ。エージェントの読みを、根拠の一文と並べて人が確認する
 - `pw/propagate.py` — 人が定めた値（または仮に置いた値）を、それと違う箇所に書き戻す
 - `pw-facts.json` — このプロジェクトの事実と、それを述べている箇所の一覧
 - `pw-log.jsonl` — 記録（読み、証明、人の確認）。追記式のテキストで、リポジトリに含める
@@ -58,17 +57,18 @@ Lean は `lean/` の中では動かさない。`lean/` の中身を `~/.cache/pa
 
 ## Rust 版
 
-この仕組みを Rust に移している途中。`check` は移し終えた。Python 版と同じ宣言・記録・規則を読み、同じ判定と同じ表示を返す。アクション（`action.yml`）は Rust 版を使う。
+カーネル（判定、記録、Lean）は Rust で書いてある（`rust/`）。`python -m pw.check` と `python -m pw.confirm` も、これを呼ぶ。エージェント側のツール（`pw.maintain` など）は Python のままで、判定と記録はこの実行ファイルに任せる（`pw/core.py`）。
 
 ```
 cargo build --release --manifest-path rust/Cargo.toml
-rust/target/release/pw check --repo .            # --verify、--unconfirmed warn、--lean always、--json、--needs-lean、--lean-dir も同じ
+rust/target/release/pw check --repo .            # --verify、--unconfirmed warn、--lean always、--json、--needs-lean、--record、--db、--facts
+rust/target/release/pw confirm --repo .          # 人の確認（--who NAME M:...、--reject）
 ```
 
-- 実行ファイル 1 つで動く。Python は要らない。Lean は Python 版と同じく、定義のある事実か `--lean always` のときだけ要る（同じ `~/.cache/parallelworld` の写しを使うので、ビルドは両方で 1 回）。
-- このリポジトリの確認は 0.5 秒（Python 版は 1.8 秒）、`--verify` つきで 1.3 秒（2.6 秒）。
-- 判定が Python 版と同じであることは、2 つのリポジトリの全履歴で突き合わせてある（`experiments/history/RESULTS.md`）。CI でも毎回、両方の出力を比べている（`tests/test_rust.py`）。
-- Rust 版にないのは `--record` と `--db`（記録に書くこと）。記録に書くもの（`pw.maintain`、`pw.calibrate` など、エージェントを使う部分）は、まだ Python 版だけ。
+- 実行ファイル 1 つで動く。Lean は、定義のある事実か `--lean always` のときだけ要る。
+- このリポジトリの確認は 0.5 秒、`--verify` つきで 1.3 秒（以前の Python 版は 1.8 秒と 2.6 秒）。
+- 以前は同じカーネルが Python にもあった。2 つのリポジトリの全履歴（判定 3,670 件）で両方の判定が 1 件も違わないこと、記録に書く行が 1 行ずつ同じことを確かめてから、Python 版を消した（`experiments/history/RESULTS.md`）。Python 版を直接使う古い実験は、それがあった最後のコミット `5130a42` で動く（`experiments/README.md`）。
+- 残っている二重化は、箇所の読み方だけ。探索役と書き戻しは、記録する前に文面で読み方を試すので、`pw/kernel.py` にも読み方がある。どの箇所も同じに読むことを、CI で確かめている（`tests/test_rust.py`）。
 
 ## 他のリポジトリから使う
 

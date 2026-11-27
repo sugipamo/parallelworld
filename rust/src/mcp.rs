@@ -3,7 +3,8 @@
 //!
 //! Env: PW_DB (the record), PW_AGENT (the reader's name), PW_WORKDIR (the repository),
 //! PW_LEAN_DIR (the Lean project), PW_BLIND ("1" if the reader is shown the place and nothing
-//! else), PW_MODEL (which model the reader is).
+//! else), PW_MODEL (which model the reader is), PW_INSTRUCTIONS (the id of the instructions it was
+//! given; by default those this build has, pw/reader.txt).
 use crate::kernel;
 use crate::lean;
 use serde_json::{json, Value};
@@ -52,7 +53,7 @@ fn call(name: &str, args: &Value) -> Value {
     let mut told: Option<kernel::Told> = None;
     let out = kernel::with_record(&db, &actor, |st| {
         let r = match name {
-            "read_place" => kernel::read_place(st, &judge, &arg("h"), &arg("place"), &arg("object"), &cwd, args.get("quote").and_then(Value::as_str), blind, model.as_deref()),
+            "read_place" => kernel::read_place(st, &judge, &arg("h"), &arg("place"), Some(&arg("object")), &cwd, args.get("quote").and_then(Value::as_str), blind, model.as_deref(), env("PW_INSTRUCTIONS").as_deref()),
             "not_stated" => kernel::decline(st, &arg("h"), &arg("place"), &arg("why"), &cwd, blind, model.as_deref()),
             other => Err(("ValueError", format!("no tool {}", other))),
         };
@@ -61,7 +62,10 @@ fn call(name: &str, args: &Value) -> Value {
     match (out, told) {
         (Ok(v), _) => v,
         (Err(_), Some((kind, e))) => json!({ "error": format!("{}: {}", kind, e) }),
-        (Err(e), None) => json!({ "error": format!("KernelError: {}", e) }),
+        (Err(e), None) => match e.strip_prefix(kernel::GATE) {
+            Some(rest) => json!({ "error": format!("GateError: {}", rest) }),
+            None => json!({ "error": format!("KernelError: {}", e) }),
+        },
     }
 }
 
