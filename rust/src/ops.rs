@@ -58,6 +58,9 @@ pub fn kernel() -> i32 {
     if let Some(out) = crate::text::op(&req) {          // text, files and measurements: no record involved
         return reply(out.map_err(told));
     }
+    if let Some(out) = crate::discover::op(&req) {      // a place an agent proposes, screened as the find tools screen it
+        return reply(out.map_err(|e| ("Refused".to_string(), e)));
+    }
     if s(&req, "op") == "read_text" {
         // how a declared way of reading reads a place: no record involved
         let cwd = PathBuf::from(opt(&req, "cwd").unwrap_or("."));

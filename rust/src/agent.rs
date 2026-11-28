@@ -78,14 +78,24 @@ pub fn me() -> String {
 
 /// Run one `claude -p` session with this executable's MCP tools (`tools`, the names it may call).
 pub fn session(prompt: &str, model: &str, budget: f64, env: &[(&str, String)], tools: &[&str], cwd: Option<&Path>) -> (Option<Value>, String) {
-    let work = std::env::temp_dir().join(format!("pw-agent-{}-{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0)));
+    session_reading(prompt, model, budget, env, tools, cwd, &[])
+}
+
+/// The same, where the agent may also use some of claude's own tools (`own`, e.g. Read, Grep, Glob:
+/// pw discover's searcher reads the repository it runs in). With none, it has only ours.
+pub fn session_reading(prompt: &str, model: &str, budget: f64, env: &[(&str, String)], tools: &[&str], cwd: Option<&Path>, own: &[&str]) -> (Option<Value>, String) {
+    // (sessions run at once in one process, each with a directory of its own)
+    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let n = N.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    let work = std::env::temp_dir().join(format!("pw-agent-{}-{}-{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0), n));
     let _ = std::fs::create_dir_all(&work);
     let envs: serde_json::Map<String, Value> = env.iter().map(|(k, v)| (k.to_string(), json!(v))).collect();
     let cfg = work.join("mcp.json");
     let _ = std::fs::write(&cfg, json!({ "mcpServers": { "pw": { "command": me(), "args": ["mcp"], "env": envs } } }).to_string());
-    let allowed: Vec<String> = tools.iter().map(|t| format!("mcp__pw__{}", t)).collect();
+    let mut allowed: Vec<String> = own.iter().map(|t| t.to_string()).collect();
+    allowed.extend(tools.iter().map(|t| format!("mcp__pw__{}", t)));
     let r = Command::new(claude())
-        .args(["-p", prompt, "--model", model, "--tools", "", "--mcp-config"]).arg(&cfg)
+        .args(["-p", prompt, "--model", model, "--tools", &own.join(","), "--mcp-config"]).arg(&cfg)
         .args(["--strict-mcp-config", "--allowedTools", &allowed.join(","), "--output-format", "json", "--max-budget-usd", &budget.to_string()])
         .current_dir(cwd.unwrap_or(&work)).output();
     let _ = std::fs::remove_dir_all(&work);
