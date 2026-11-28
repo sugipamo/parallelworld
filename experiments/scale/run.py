@@ -4,10 +4,10 @@
 
 A repository is made up with N facts, each stated in a code file (read by a pattern) and in
 a table of a document (read by a pattern). Timed, each in a fresh process, as `python -m
-pw.check` would run:
+pw check` would run:
 
   cold     no record yet: every equation is put to Lean
-  warm     the record holds the proofs (after `pw.check --record`): nothing is put to Lean
+  warm     the record holds the proofs (after `pw check --record`): nothing is put to Lean
   verify   warm, with --verify: every recorded proof is run through Lean again (what CI does)
   one      warm, after one value was changed in one place: one new equation
 
@@ -46,8 +46,8 @@ LEAN = "always"
 
 def check(repo, *args):
     t = time.time()
-    r = subprocess.run([sys.executable, "-m", "pw.check", "--repo", repo, "--unconfirmed", "warn", "--lean", LEAN, *args],
-                       capture_output=True, text=True, env={**os.environ, "PYTHONPATH": ROOT})
+    r = subprocess.run([os.environ.get("PW_BIN") or os.path.join(ROOT, "rust", "target", "release", "pw"), "check", "--repo", repo,
+                        "--unconfirmed", "warn", "--lean", LEAN, *args], capture_output=True, text=True)
     return round(time.time() - t, 1), r.returncode, r.stdout
 
 

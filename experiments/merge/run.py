@@ -22,11 +22,11 @@ import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.join(ROOT, "tests"))        # pwt: the tests' way of asking the pw executable
 
-from pw.core import Kernel
-from pw.kernel import INSTRUCTIONS      # noqa: E402
-from pw.core import LeanGate               # noqa: E402
+from pwt.core import Kernel
+from pwt.kernel import INSTRUCTIONS      # noqa: E402
+from pwt.core import LeanGate               # noqa: E402
 
 MODEL = "claude-opus-5-5"
 LIMIT = {"name": "limit", "type": "Nat", "gloss": "the largest number of atoms that is solved",

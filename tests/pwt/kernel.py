@@ -8,7 +8,7 @@ nothing in Python judges, reads a place or writes the record. The functions here
 
     pattern, reader          a way of reading, as a declaration describes it, in the form the record keeps
     compute                  what a way of reading reads off a text
-    write_pattern            the text with the value a pattern reads replaced (pw.propagate)
+    write_pattern            the text with the value a pattern reads replaced (pw propagate)
     locate, subject_id       the content a place names, and the place plus a hash of it
     unreadable, _anchored    why a declared place cannot be found; is a quote in a place
     _md_section, _json_part, _py_part    the part of a text a place names
@@ -31,11 +31,11 @@ def _sha(*parts):
 
 LOG = "pw-log.jsonl"     # the record, kept in the repository it is about
 RULES = "pw-rules.json"              # a project's own decision about when a reading stands
-CALIBRATION = "pw-calibration.json"  # what pw.calibrate measured about the readers
+CALIBRATION = "pw-calibration.json"  # what pw calibrate measured about the readers
 
 # What a blind reader is told. A reader is a model together with these instructions: what was
 # measured about a model under other instructions says nothing about this reader.
-with open(os.path.join(os.path.dirname(__file__), "reader.txt"), encoding="utf-8") as _fh:
+with open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "pw", "reader.txt"), encoding="utf-8") as _fh:
     READER = _fh.read()
 INSTRUCTIONS = _sha(READER)
 

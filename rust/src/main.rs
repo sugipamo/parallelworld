@@ -6,9 +6,11 @@ mod kernel;
 mod lean;
 mod mcp;
 mod ops;
+mod propagate;
 mod structured;
 mod text;
 mod read;
+mod start;
 mod util;
 
 use serde_json::Value;
@@ -156,7 +158,7 @@ fn show(report: &Value, warn: bool) -> bool {
                     println!("          {}", has.iter().map(|(c, v)| format!("{}: {}", c, if v.as_bool().unwrap_or(false) { "yes" } else { "no" })).collect::<Vec<_>>().join(", "));
                     let un = list(p, "unmeasured readers");
                     if !un.is_empty() {
-                        println!("          read blind by {}: not a measured reader here, with the instructions it read this under (python -m pw.calibrate --model ...)", un.iter().map(show_str).collect::<Vec<_>>().join(", "));
+                        println!("          read blind by {}: not a measured reader here, with the instructions it read this under (pw calibrate --model ...)", un.iter().map(show_str).collect::<Vec<_>>().join(", "));
                     }
                     for other in list(p, "read blind as") {
                         let sorted = |t: &str| serde_json::from_str::<Vec<Value>>(t).ok().map(|mut v| { v.sort_by_key(|x| x.to_string()); v });
@@ -190,11 +192,11 @@ fn show(report: &Value, warn: bool) -> bool {
                 println!("       a declared place cannot be read as declared any more, though its text is as it was when last read: what changed is how it is read (the declaration, or this tool's version: CHANGES.md); fix the way of reading"),
             "stale" if unread.iter().filter(|u| u.get("broken").is_some()).all(|u| u.get("text as last read").is_some() || u.get("how to fix the way of reading").is_some())
                        && unread.iter().any(|u| u.get("broken").is_some()) =>
-                println!("       a declared place cannot be read as declared any more, and the reason above says how to fix its way of reading: fix that first; if it still cannot be read, python -m pw.discover looks for where the statement went"),
-            "stale" if unread.iter().any(|u| u.get("broken").is_some()) => println!("       a declared place cannot be read as declared any more: python -m pw.discover (it looks for where the statement went)"),
-            "stale" => println!("       read the place(s) again: python -m pw.maintain"),
-            "disputed" => println!("       a person has to say which reading is right: python -m pw.confirm --who NAME M:... and --reject M:..."),
-            "contested" => println!("       the record holds proofs both that the values agree and that they differ; one is not Lean's: python -m pw.check --verify"),
+                println!("       a declared place cannot be read as declared any more, and the reason above says how to fix its way of reading: fix that first; if it still cannot be read, pw discover looks for where the statement went"),
+            "stale" if unread.iter().any(|u| u.get("broken").is_some()) => println!("       a declared place cannot be read as declared any more: pw discover (it looks for where the statement went)"),
+            "stale" => println!("       read the place(s) again: pw maintain"),
+            "disputed" => println!("       a person has to say which reading is right: pw confirm --who NAME M:... and --reject M:..."),
+            "contested" => println!("       the record holds proofs both that the values agree and that they differ; one is not Lean's: pw check --verify"),
             "uncovered" => println!("       Lean could settle neither that the values are the same nor that they differ"),
             _ if !ok => {
                 // where every loose reading was read blind by readers not measured here, reading again does not help: measuring does
@@ -206,9 +208,9 @@ fn show(report: &Value, warn: bool) -> bool {
                 println!("       the places agree, but a reading does not stand by the rules (pw-rules.json):");
                 if !unmeasured.is_empty() && loose.iter().all(|p| !list(p, "unmeasured readers").is_empty()) {
                     println!("       it was read blind, by a reader not measured here: measure it first, reading again would not count either");
-                    println!("       {}", unmeasured.iter().map(|m| format!("python -m pw.calibrate --model {}", m)).collect::<Vec<_>>().join("; "));
+                    println!("       {}", unmeasured.iter().map(|m| format!("pw calibrate --model {}", m)).collect::<Vec<_>>().join("; "));
                 } else {
-                    println!("       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)");
+                    println!("       pw maintain (a blind reading) or pw confirm (a person)");
                 }
             }
             _ => {}
@@ -305,7 +307,7 @@ fn run(args: &[String]) -> R<i32> {
     fresh.sort();
     fresh.dedup();
     if !fresh.is_empty() && !keep {
-        println!("note: the way {} {} read is not in the record yet. It stands for the text as it is; to have it stand when the text changes, run `python -m pw.maintain` (or `python -m pw.check --record`) now and commit pw-log.jsonl. No reader is called for that.",
+        println!("note: the way {} {} read is not in the record yet. It stands for the text as it is; to have it stand when the text changes, run `pw maintain` (or `pw check --record`) now and commit pw-log.jsonl. No reader is called for that.",
                  cut(&fresh.join(", "), 300), if fresh.len() == 1 { "is" } else { "are" });
     }
     if verify && !with_lean && !judge.gate.available() {
@@ -388,7 +390,7 @@ fn confirm(args: &[String]) -> R<i32> {
             }
         }
     }
-    let how = if todo.is_empty() { String::new() } else { format!("; confirm with: python -m pw.confirm --who NAME {}", todo.join(" ")) };
+    let how = if todo.is_empty() { String::new() } else { format!("; confirm with: pw confirm --who NAME {}", todo.join(" ")) };
     println!("{} reading(s) nobody has confirmed{}", todo.len(), how);
     Ok(0)
 }
@@ -535,24 +537,30 @@ fn init(args: &[String]) -> R<i32> {
     }
     println!("Next:");
     println!("  1. declare what this repository states in more than one place, in pw-facts.json (docs/spec.md, section 2),");
-    println!("     or have an agent propose facts: python -m pw.discover --repo {} --new --apply", repo);
-    println!("  2. have the places read: python -m pw.maintain --repo {}   (a blind reader reads what no pattern can)", repo);
+    println!("     or have an agent propose facts: pw discover --repo {} --new --apply", repo);
+    println!("  2. have the places read: pw maintain --repo {}   (a blind reader reads what no pattern can)", repo);
     println!("  3. commit pw-facts.json, pw-log.jsonl, .gitattributes and .github/workflows/facts.yml");
+    println!("pw start --repo {} takes these steps in turn, saying first what each may cost.", repo);
     Ok(0)
 }
 
 const USAGE: &str = "pw: keep what a repository states in several places saying the same thing (parallelworld)
 
+  pw start   [--repo DIR] [--yes]             the way in: set up, propose facts, measure, read, check
   pw check   [--repo DIR]                     hold the declared facts (pw-facts.json) against the files
   pw confirm [--repo DIR] [--who NAME [--reject] M:...]
                                               the readings nobody has confirmed; confirm or reject them
   pw init    [--repo DIR] [--pin COMMIT]      a first step for a repository that does not use this yet
   pw version
-  pw help [check | confirm | init]
+  pw help [COMMAND]
 
-The agents' side (reading places blind, measuring readers, looking for places) is Python:
-python -m pw.maintain, pw.calibrate, pw.discover, pw.propagate. They use these, which are not
-for typing by hand: mcp, kernel, lean, state, sync, adopt.
+With agents (the `claude` command; they cost money, and say what they spent):
+  pw maintain  [--repo DIR]                   have a blind reader read what is not read yet
+  pw calibrate [--repo DIR] [--model M]       measure a reader on planted changes, with known answers
+  pw discover  [--repo DIR] [--new] [--apply] look for places a fact is stated that are not declared
+  pw propagate [--repo DIR] [--apply]         write what was laid down into the places that say otherwise
+
+Not for typing by hand: mcp, kernel, lean, state, sync, adopt.
 ";
 
 const CHECK_USAGE: &str = "pw check: hold the declared facts against the files as they are now
@@ -577,6 +585,55 @@ const CONFIRM_USAGE: &str = "pw confirm: let a person confirm what an agent said
   pw confirm [--repo DIR] --who NAME --reject M:...
 ";
 
+const MAINTAIN_USAGE: &str = "pw maintain: have the places read that are not read as they are now
+
+  pw maintain [--repo DIR] [--model M] [--second-model M] [--budget DOLLARS]
+
+A blind reader (a `claude` session whose only tools are pw mcp's) is shown each place nobody has
+read and asked what it says, not what it should say; and each place a pattern reads that no blind
+reader has looked at, as it is now. Where the model is measured here (pw-calibration.json), places
+read only by readers not measured are read by it too. With a second model (--second-model M,
+default claude-sonnet-5-5, \"\" for none), what rests on one reader is read by another. What
+was read, as it is now, is not paid for again. Then the facts are held against the files.
+
+  --model M          the reader (default claude-opus-5-5)
+  --budget DOLLARS   the most one session may spend (default 3)
+";
+
+const CALIBRATE_USAGE: &str = "pw calibrate: measure a reader on passages whose answers are known
+
+  pw calibrate [--repo DIR] [--model M] [--per-place 5] [--decoys 30] [--twice 2] [--seed 0]
+               [--budget 2] [--parallel 4] [--passages auto|repo|bundled]
+
+Changes are planted in the passages readers have read (a value replaced, an entry renamed, a row
+taken out), and each changed passage is shown to a blind reader: does it read what is there now?
+Decoys (a place asked about a fact it does not state) should be declined. The counts go into
+pw-calibration.json, which pw-rules.json holds against its bar. Where the repository gives fewer
+than 27 planted changes, passages that come with this tool make up the rest (--passages auto).
+";
+
+const PROPAGATE_USAGE: &str = "pw propagate: write what was laid down into the places that say otherwise
+
+  pw propagate [--repo DIR] [--suppose 'FACT NAME=VALUE' ...] [--apply]
+               [--agent [--model M] [--reader-model M] [--budget DOLLARS]] [--json]
+
+For a fact with an instruction (or a definition), each place against it gets the value: a place a
+simple pattern reads is written mechanically and read back by the pattern; any other is left to
+change by hand or, with --agent, an agent proposes the new text, taken only if it is an edit, no
+other declared place reads differently afterwards, and the place read back gives the value.
+Nothing is written without --apply. --suppose tries a value nobody laid down.
+";
+
+const START_USAGE: &str = "pw start: the way in, one step at a time
+
+  pw start [--repo DIR] [--yes] [--model M] [--budget DOLLARS]
+
+Does what is not done yet, and says what each step costs before it is taken: pw init; facts
+proposed by an agent (pw discover --new), if none are declared; pw calibrate, if the reader is not
+measured here; pw maintain; and pw check. Run it again to go on from where it stopped. Without
+--yes, it stops before each step that calls an agent and says how to go on.
+";
+
 const INIT_USAGE: &str = "pw init: a first step for a repository
 
   pw init [--repo DIR] [--pin COMMIT] [--action OWNER/REPO]
@@ -589,7 +646,7 @@ that is there.
 
 /// Options the agent commands share, from the command line.
 fn agent_opts(args: &[String], usage: &str) -> R<(agent::Opts, Vec<(String, String)>)> {
-    let mut o = agent::Opts { repo: PathBuf::from("."), lean_dir: lean::lean_dir(), model: "claude-opus-5-5".into(), second: "claude-sonnet-5-5".into(), budget: 3.0 };
+    let mut o = agent::Opts { repo: PathBuf::from("."), lean_dir: lean::lean_dir(), model: agent::MODEL.into(), second: agent::SECOND.into(), budget: 3.0 };
     let mut rest = vec![];
     let mut i = 0;
     while i < args.len() {
@@ -648,13 +705,15 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let help = |a: &[String]| a.iter().any(|x| x == "--help" || x == "-h");
     let usage = |which: Option<&str>| {
-        print!("{}", match which { Some("check") => CHECK_USAGE, Some("confirm") => CONFIRM_USAGE, Some("init") => INIT_USAGE, _ => USAGE });
+        print!("{}", match which { Some("check") => CHECK_USAGE, Some("confirm") => CONFIRM_USAGE, Some("init") => INIT_USAGE,
+                                   Some("maintain") => MAINTAIN_USAGE, Some("calibrate") => CALIBRATE_USAGE, Some("propagate") => PROPAGATE_USAGE,
+                                   Some("start") => START_USAGE, _ => USAGE });
         std::process::exit(0)
     };
     match args.first().map(String::as_str) {
         None => usage(None),
         Some("help" | "--help" | "-h") => usage(args.get(1).map(String::as_str)),
-        Some(c @ ("check" | "confirm" | "init")) if help(&args[1..]) => usage(Some(c)),
+        Some(c @ ("check" | "confirm" | "init" | "maintain" | "calibrate" | "propagate" | "start")) if help(&args[1..]) => usage(Some(c)),
         Some(x) if x.starts_with("--") && help(&args) => usage(Some("check")),
         _ => {}
     }
@@ -664,6 +723,8 @@ fn main() {
         Some("maintain") => maintain(&args[1..]),
         Some("calibrate") => calibrate(&args[1..]),
         Some("discover") => discover::command(&args[1..]),
+        Some("propagate") => propagate::command(&args[1..]),
+        Some("start") => start::command(&args[1..]),
         Some("init") => init(&args[1..]),
         Some("version") => {
             println!("parallelworld {}", env!("CARGO_PKG_VERSION"));

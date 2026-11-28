@@ -3,9 +3,9 @@ import json
 
 import pytest
 
-from pw import check
-from pw.core import Kernel
-from pw.kernel import KernelError, pattern
+from pwt import check
+from pwt.core import Kernel
+from pwt.kernel import KernelError, pattern
 
 
 def repo(tmp_path, code="LIMIT = 14\nMODES = ['fast', \"safe\"]\n", doc="## Limits\n\nAt most 14.\n\n## Modes\n\n`fast`, `safe`\n"):

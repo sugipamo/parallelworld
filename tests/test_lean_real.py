@@ -5,9 +5,9 @@ import subprocess
 
 import pytest
 
-from pw.core import Kernel
-from pw.kernel import KernelError
-from pw.core import LeanGate
+from pwt.core import Kernel
+from pwt.kernel import KernelError
+from pwt.core import LeanGate
 
 LAKE = os.environ.get("PW_LAKE") or shutil.which("lake")
 pytestmark = pytest.mark.skipif(not LAKE, reason="Lean not installed (set PW_LAKE)")
@@ -76,7 +76,7 @@ def test_a_statement_settled_by_unfolding_alone_is_accepted(gate):
 
 def test_a_fact_stated_in_several_places(tmp_path):
     """No place is the truth: the decision is that they all say the same thing."""
-    from pw.kernel import pattern
+    from pwt.kernel import pattern
     k = Kernel(str(tmp_path / "e.db"), gate=LeanGate())
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -165,7 +165,7 @@ def test_a_list_is_read_off_the_whole_place(tmp_path):
 
 def test_the_record_is_text_in_the_repository_and_is_not_believed_where_it_can_be_checked(tmp_path):
     import json
-    from pw.kernel import pattern
+    from pwt.kernel import pattern
     log = tmp_path / "pw-log.jsonl"
     (tmp_path / "k.py").write_text('LIMIT = 14\n')
     (tmp_path / "doc.md").write_text("## Limits\n\nAt most 14 atoms.\n")
@@ -211,7 +211,7 @@ def test_the_record_is_text_in_the_repository_and_is_not_believed_where_it_can_b
 
 def test_a_fact_keeps_its_readings_when_its_declaration_changes(tmp_path):
     """How a place is read, or which places are listed, can change without the fact becoming another one."""
-    from pw.kernel import pattern
+    from pwt.kernel import pattern
     k = Kernel(str(tmp_path / "e.jsonl"), gate=LeanGate())
     (tmp_path / "doc.md").write_text("## Limits\n\nAt most 14 atoms.\n")
     (tmp_path / "k.py").write_text("LIMIT = 14\n")
@@ -232,10 +232,10 @@ def test_a_fact_keeps_its_readings_when_its_declaration_changes(tmp_path):
 
 
 def _measure(cwd, keep=False, instructions=None, **readers):
-    """Write what pw.calibrate would: for each model, how many of 27 planted changes it read
+    """Write what pw calibrate would: for each model, how many of 27 planted changes it read
     (and, of 27 decoys, how many it declined). With keep, the runs are added to those there."""
     import json
-    from pw.kernel import INSTRUCTIONS
+    from pwt.kernel import INSTRUCTIONS
     path = os.path.join(cwd, "pw-calibration.json")
     runs = json.load(open(path)) if keep and os.path.exists(path) else []
     runs += [{"model": m, "instructions": instructions or INSTRUCTIONS, "planted": {"n": 27, "read": k, "stuck": 27 - k},
@@ -246,7 +246,7 @@ def _measure(cwd, keep=False, instructions=None, **readers):
 
 def test_a_reading_stands_by_the_rules_not_by_a_number(tmp_path):
     import json
-    from pw.kernel import pattern
+    from pwt.kernel import pattern
     log = str(tmp_path / "pw-log.jsonl")
     (tmp_path / "doc.md").write_text("## Limits\n\nAt most 14 atoms.\n")
     (tmp_path / "notes.md").write_text("## Size\n\nComponents have up to 14 atoms.\n")
@@ -351,7 +351,7 @@ def test_readers_who_disagree_stop_the_fact(tmp_path):
 def test_a_reading_answers_the_question_as_it_was_asked(tmp_path):
     """When a fact's description changes, what was read before answered another question."""
     import json
-    from pw.kernel import pattern
+    from pwt.kernel import pattern
     log = str(tmp_path / "pw-log.jsonl")
     (tmp_path / "doc.md").write_text("## Versions\n\nWe use Lean v4.9.0.\n")
     (tmp_path / "pin.txt").write_text("lean4:v4.9.0\n")
@@ -411,7 +411,7 @@ def test_a_place_that_writes_the_value_another_way_is_still_read_by_a_declaratio
     """A list scoped inside a place and rewritten into the other places' spelling; and a reading
     made before these keys existed is the same reading."""
     import json
-    from pw.kernel import pattern
+    from pwt.kernel import pattern
     (tmp_path / "pyproject.toml").write_text('classifiers = ["Python :: 3.10", "Python :: 3.11"]\n')
     (tmp_path / "tox.ini").write_text("[tox]\nenvlist = lint,py{310,311}\n\n[testenv:lint]\ncommands = check --target=312\n")
     cwd = str(tmp_path)
@@ -434,7 +434,7 @@ def test_a_place_that_writes_the_value_another_way_is_still_read_by_a_declaratio
 
 
 def test_a_small_place_is_shown_with_what_surrounds_it(tmp_path):
-    from pw.kernel import context
+    from pwt.kernel import context
     (tmp_path / "rules.json").write_text('{"note": "readers", "bar": {"read at least": 0.85, "stuck at most": 0.15}, "rows": [["a"]]}')
     (tmp_path / "app.py").write_text("# how many atoms a component may have\nLIMIT = 14\n\ndef f():\n    return LIMIT\n")
     (tmp_path / "doc.md").write_text("# Doc\n\n## Limits\n\n" + "A long section. " * 30 + "\n")
@@ -449,7 +449,7 @@ def test_a_small_place_is_shown_with_what_surrounds_it(tmp_path):
 def test_changing_a_pattern_keeps_what_a_reader_confirmed_on_the_same_content(tmp_path):
     """A reader read the value off the place; another pattern that computes that value from the same
     content is confirmed by the same reading, at the first check and not only at the second."""
-    from pw.kernel import pattern
+    from pwt.kernel import pattern
     (tmp_path / "pin.toml").write_text('name = "x"\nversion = "0.1.0"\n')
     cwd = str(tmp_path)
     _measure(cwd, opus=27)
@@ -465,7 +465,7 @@ def test_changing_a_pattern_keeps_what_a_reader_confirmed_on_the_same_content(tm
 def test_a_place_may_state_only_some_entries_of_a_list(tmp_path):
     """An example uses some of the keys there are. It need not list all of them; what it lists has to exist."""
     import json
-    from pw.kernel import pattern
+    from pwt.kernel import pattern
     (tmp_path / "config.py").write_text('KEYS = ["args", "command", "env_vars", "name"]\n')
     (tmp_path / "doc.md").write_text("## Format\n\nKeys: `args`, `command`, `env_vars`, `name`.\n\n"
                                      "## Example\n\nA task sets `name` and `command`.\n")
@@ -586,12 +586,35 @@ def test_what_a_person_laid_down_is_an_axiom_and_conflicting_axioms_are_set_asid
         Kernel(str(tmp_path / "pw-log.jsonl"), gate=LeanGate()).sync_facts(str(tmp_path / "pw-facts.json"))
 
 
+FAKE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fake_claude.py")
+SUPPOSED = "(supposed)"
+
+
+def propagate(cwd, facts, suppose=None, told=None, apply=False, json_out=True):
+    """pw propagate on `cwd`, whose pw-facts.json is `facts`; with `told`, its agents are the
+    stand-in of tests/fake_claude.py, told what to answer. The plan it makes, or what it prints."""
+    import json
+    assert json.loads(open(os.path.join(cwd, "pw-facts.json")).read()) == facts
+    from pwt.core import pw_binary
+    args = [pw_binary(), "propagate", "--repo", cwd] + ["--json"] * json_out + ["--apply"] * apply
+    for name, value in (suppose or {}).items():
+        args += ["--suppose", f"{name}={json.dumps(value) if not isinstance(value, str) else value}"]
+    env = dict(os.environ)
+    if told is not None:
+        spec = os.path.join(cwd, "..", "told.json")
+        open(spec, "w").write(json.dumps(told))
+        env.update(PW_CLAUDE=FAKE, FAKE_CLAUDE=spec)
+        args.append("--agent")
+    r = subprocess.run(args, capture_output=True, text=True, env=env)
+    if r.returncode == 2:
+        raise KernelError(r.stderr.strip().removeprefix("pw: "))
+    return json.loads(r.stdout) if json_out else r.stdout
+
+
 def test_what_was_laid_down_is_written_into_the_places_and_read_back(tmp_path):
     """The check in reverse: a place read by a simple pattern gets the instructed value written
     into it, confirmed by reading it back. A value can also be supposed, to see what would follow."""
     import json
-    from pw.propagate import SUPPOSED, diff, plan
-    from pw.core import LEAN_DIR
     (tmp_path / "app.py").write_text('def run(mode="fast", limit=0.9):\n    return mode\n\nMODES = ["fast", "safe"]\n')
     (tmp_path / "conf.toml").write_text('[a]\nmode = "x"\n\n[b]\nmode = "fast"\n')
     (tmp_path / "doc.md").write_text("## Mode\n\nThe default mode is `fast`.\n")
@@ -612,18 +635,19 @@ def test_what_was_laid_down_is_written_into_the_places_and_read_back(tmp_path):
     fs, k = declare({"is": "fast", "by": "alice"})
     h = next(h for h, f in k.state().facts.items() if f["name"] == "mode")
     k.read_place(h, "doc.md::Mode", '"fast"', cwd=cwd, quote="The default mode is `fast`.")
-    got = plan(cwd, LEAN_DIR, fs)
+    got = propagate(cwd, fs)
     assert got["files"] == {} and not got["written"] and not got["by hand"]            # every place already says it
 
     # alice changes her mind: the instruction is edited, and the places follow
     fs, k = declare({"is": "safe", "by": "alice"})
-    got = plan(cwd, LEAN_DIR, fs)
+    got = propagate(cwd, fs)
     assert [(w["at"], w["to"]) for w in got["written"]] == [("app.py::run", '"safe"'), ("conf.toml", '"safe"')]
     assert [(b["at"], "reader" in b["why"]) for b in got["by hand"]] == [("doc.md::Mode", True)]   # prose is not written by a pattern
     assert sorted(got["files"]) == ["app.py", "conf.toml"]
     assert got["files"]["app.py"][1] == 'def run(mode="safe", limit=0.9):\n    return mode\n\nMODES = ["fast", "safe"]\n'   # that piece and nothing else
     assert got["files"]["conf.toml"][1] == '[a]\nmode = "x"\n\n[b]\nmode = "safe"\n'                                     # the one inside [b]
-    assert '-def run(mode="fast"' in diff(got["files"]) and '+def run(mode="safe"' in diff(got["files"])
+    shown = propagate(cwd, fs, json_out=False)
+    assert '-def run(mode="fast"' in shown and '+def run(mode="safe"' in shown and "nothing was written" in shown
     assert (tmp_path / "app.py").read_text().startswith('def run(mode="fast"')                # looking writes nothing
     for path, (_, new) in got["files"].items():
         (tmp_path / path).write_text(new)
@@ -632,25 +656,23 @@ def test_what_was_laid_down_is_written_into_the_places_and_read_back(tmp_path):
 
     # a hypothesis: nobody laid it down, nothing is added to the declaration, but what would follow is shown
     fs, _ = declare({"is": "safe", "by": "alice"})
-    got = plan(cwd, LEAN_DIR, fs, {"limit": 850, "modes": ["fast"]})
+    got = propagate(cwd, fs, {"limit": 850, "modes": ["fast"]})
     assert got["files"]["app.py"][1].startswith('def run(mode="safe", limit=0.85):') and got["written"][0]["by"] == [SUPPOSED]
     assert [b["fact"] for b in got["by hand"]] == ["mode", "modes"] and "find" in got["by hand"][1]["why"]   # a list is not written back
     assert json.loads((tmp_path / "pw-facts.json").read_text()) == fs
     # supposing something against what a person laid down is refused, and nothing is written for that fact
-    got = plan(cwd, LEAN_DIR, fs, {"mode": "turbo"})
+    got = propagate(cwd, fs, {"mode": "turbo"})
     assert got["files"] == {} and got["refused"][0]["supposed"] and {i["by"] for i in got["refused"][0]["instructions"]} == {"alice", SUPPOSED}
     with pytest.raises(KernelError):
-        plan(cwd, LEAN_DIR, fs, {"no such fact": 1})
+        propagate(cwd, fs, {"no such fact": 1})
     # what the pattern cannot confirm is not written: "so safe" is not a word the pattern reads
-    got = plan(cwd, LEAN_DIR, declare()[0], {"mode": "so safe"})
+    got = propagate(cwd, declare()[0], {"mode": "so safe"})
     assert got["files"] == {} and all("can no longer be read" in b["why"] for b in got["by hand"] if b["at"] != "doc.md::Mode")
 
 
 def test_a_definition_takes_its_value_from_other_facts(tmp_path):
     """A count, a first entry: nothing new is claimed, only what follows from facts already declared."""
     import json
-    from pw.propagate import plan
-    from pw.core import LEAN_DIR
     (tmp_path / "app.py").write_text('MODES = ["fast", "safe"]\nVERSIONS = ["3.10", "3.11"]\n')
     (tmp_path / "doc.md").write_text("## Modes\n\nThere are 2 modes.\n")
     (tmp_path / "pyproject.toml").write_text('requires-python = ">=3.10"\nversions = ["3.10", "3.11"]\n')
@@ -677,7 +699,7 @@ def test_a_definition_takes_its_value_from_other_facts(tmp_path):
     d = r["number of modes"]
     assert r["modes"]["state"] == "re-established" and d["state"] == "violated" and d["gives"] == "3", d
     assert d["places"][0]["differs from the definition"] and "against" not in d["places"][0]
-    got = plan(cwd, LEAN_DIR, [count, modes, versions, oldest])                  # and written back, it reads 3
+    got = propagate(cwd, [count, modes, versions, oldest])                       # and written back, it reads 3
     assert got["files"]["doc.md"][1] == "## Modes\n\nThere are 3 modes.\n" and got["written"][0]["by"] == ["the definition from modes"]
     (tmp_path / "doc.md").write_text(got["files"]["doc.md"][1])
     assert check(count, modes, versions, oldest)["number of modes"]["state"] in ("current", "re-established")
@@ -692,7 +714,8 @@ def test_a_definition_takes_its_value_from_other_facts(tmp_path):
     assert r["versions"]["state"] == "violated" and d["state"] == "violated" and d["gives"] == '"3.9"' and d["places"][0]["differs from the definition"], d
     # supposing a value for a fact shows what follows for the facts defined from it
     (tmp_path / "pyproject.toml").write_text('requires-python = ">=3.10"\nversions = ["3.10", "3.11"]\n')
-    got = plan(cwd, LEAN_DIR, [count, modes, versions, oldest], {"versions": ["3.11", "3.12"]})
+    check(count, modes, versions, oldest)
+    got = propagate(cwd, [count, modes, versions, oldest], {"versions": ["3.11", "3.12"]})
     assert ('pyproject.toml', '"3.11"') in [(w["at"], w["to"]) for w in got["written"]]
     assert 'requires-python = ">=3.11"' in got["files"]["pyproject.toml"][1]
 
@@ -714,8 +737,6 @@ def test_an_agent_may_propose_the_new_text_of_a_place_and_it_is_read_back(tmp_pa
     """Where a pattern cannot write (a list, prose), an agent's proposed text is taken only if
     it is an edit, leaves every other declared place as it reads, and reads back as the value."""
     import json
-    from pw.propagate import plan
-    from pw.core import LEAN_DIR
     code = 'MODES = ["fast", "safe"]\nDEFAULT = "fast"\n'
     (tmp_path / "app.py").write_text(code)
     (tmp_path / "doc.md").write_text("## Modes\n\nThe modes are `fast` and `safe`. The default is `fast`.\n")
@@ -728,40 +749,37 @@ def test_an_agent_may_propose_the_new_text_of_a_place_and_it_is_read_back(tmp_pa
     k.sync_facts(str(tmp_path / "pw-facts.json"))
     h = next(h for h, f in k.state().facts.items() if f["name"] == "modes")
     k.read_place(h, "doc.md::Modes", '["fast", "safe"]', cwd=cwd, quote="The modes are `fast` and `safe`. The default is `fast`.")
-    got = plan(cwd, LEAN_DIR, facts)
+    got = propagate(cwd, facts)
     assert [b["at"] for b in got["by hand"]] == ["app.py", "doc.md::Modes"] and got["files"] == {}       # without an agent: left by hand
 
     new_doc = "## Modes\n\nThe modes are `fast`, `safe` and `turbo`. The default is `fast`.\n"
-    def editor(answers):
-        return lambda items: ({i["id"]: answers.get(i["at"]) for i in items}, {}, [], 0)
-    def reader(read):
-        def run(kernel, files, wanted):
-            r = Kernel(kernel.db_path, gate=LeanGate(), actor="written-test")
-            for hh, at in wanted:
-                assert open(os.path.join(files, "doc.md")).read() == new_doc                            # it is shown the proposed text
-                r.read_place(hh, at, read, cwd=files, quote="The modes are `fast`, `safe` and `turbo`. The default is `fast`.", blind=True, model="opus")
-            events = [e for e in r.events() if e.get("actor") == "written-test"]
-            return {(e["h"], e["place"]): e["obj"]["text"] for e in events}, events, 0
-        return run
+    log = tmp_path.parent / "prompts.jsonl"
+    def told(edit, read='["fast", "safe", "turbo"]'):
+        log.write_text("")
+        return {"edit": edit, "log": str(log),
+                "read": {"doc.md::Modes": {"object": read, "quote": "The modes are `fast`, `safe` and `turbo`. The default is `fast`."}}}
     good = {"app.py": 'MODES = ["fast", "safe", "turbo"]\nDEFAULT = "fast"\n', "doc.md::Modes": new_doc}
 
-    got = plan(cwd, LEAN_DIR, facts, None, editor(good), reader('["fast", "safe", "turbo"]'))
+    got = propagate(cwd, facts, told=told(good))
     assert [(w["at"], w["how"]) for w in got["written"]] == [("app.py", "changed by an agent; read back with its pattern"),
                                                              ("doc.md::Modes", "changed by an agent; read back by a blind reader")]
     assert got["files"]["app.py"][1] == good["app.py"] and got["files"]["doc.md"][1] == new_doc and not got["by hand"]
     assert len(got["readings"]) == 1 and (tmp_path / "app.py").read_text() == code                       # nothing written by looking
+    sessions = [json.loads(l) for l in log.read_text().splitlines()]
+    assert [s["env"].get("PW_TOOLS", "read") for s in sessions] == ["edit", "read"]
+    assert "The modes are `fast` and `safe`." in sessions[0]["prompt"] and "alice" not in sessions[1]["prompt"]
+    assert new_doc.split("\n")[2] in sessions[1]["prompt"] and "turbo" not in sessions[1]["prompt"].split("=== h:")[0]   # the reader is shown the proposed text, not what to expect
 
     # written, with the reader's reading taken over: the places now say what was laid down
-    for path, (_, new) in got["files"].items():
-        (tmp_path / path).write_text(new)
-    k.adopt(got["readings"])
+    propagate(cwd, facts, told=told(good), apply=True)
+    assert (tmp_path / "app.py").read_text() == good["app.py"] and (tmp_path / "doc.md").read_text() == new_doc
     r = next(d for d in k.recheck(cwd)["decisions"] if d["fact"] == "modes")
     assert r["state"] in ("current", "re-established") and all("against" not in p for p in r["places"]), r
     (tmp_path / "app.py").write_text(code)
     (tmp_path / "doc.md").write_text("## Modes\n\nThe modes are `fast` and `safe`. The default is `fast`.\n")
 
     def why(answers, read='["fast", "safe", "turbo"]'):
-        got = plan(cwd, LEAN_DIR, facts, None, editor(answers), reader(read))
+        got = propagate(cwd, facts, told=told(answers, read))
         return {b["at"]: b["why"] for b in got["by hand"]}, got
     # the edit does not give the value when read back
     assert "reads as" in why({**good, "app.py": 'MODES = ["fast", "turbo"]\nDEFAULT = "fast"\n'})[0]["app.py"]
@@ -769,18 +787,19 @@ def test_an_agent_may_propose_the_new_text_of_a_place_and_it_is_read_back(tmp_pa
     assert "would read as" in why({**good, "app.py": 'MODES = ["fast", "safe", "turbo"]\nDEFAULT = "turbo"\n'})[0]["app.py"]
     # a rewrite, not an edit
     assert "rewrote" in why({**good, "app.py": "# modes\n" * 60 + 'MODES = ["fast", "safe", "turbo"]\nDEFAULT = "fast"\n'})[0]["app.py"]
-    # no answer; and the passage returned as it was
+    # no answer; the passage returned as it was; and an agent that says it cannot
     assert "no answer" in why({"doc.md::Modes": new_doc})[0]["app.py"]
     assert "unchanged" in why({**good, "app.py": code})[0]["app.py"]
+    assert "cannot be done: no room" in why({**good, "app.py": {"cannot": "no room"}})[0]["app.py"]
     # the blind reader does not read the value off the proposed prose: the prose is not taken
     left, got = why(good, '["fast", "safe"]')
     assert "a blind reader shown it reads" in left["doc.md::Modes"] and "doc.md" not in got["files"] and "app.py" in got["files"]
 
 
 def test_checking_does_not_write_to_the_record(tmp_path, capsys):
-    """pw.check works on a copy of the record: trying something out leaves nothing in a committed file."""
+    """pw check works on a copy of the record: trying something out leaves nothing in a committed file."""
     import json
-    from pw import check
+    from pwt import check
     repo, record = str(tmp_path), str(tmp_path / "pw-log.jsonl")
     (tmp_path / "k.py").write_text("LIMIT = 14\n")
     (tmp_path / "doc.md").write_text("## Limits\n\nAt most 14 atoms.\n")
@@ -818,7 +837,7 @@ def test_checking_does_not_write_to_the_record(tmp_path, capsys):
 
 def test_lean_is_not_run_where_the_tool_is_kept(tmp_path, monkeypatch):
     """The Lean project may be a shared checkout or a read-only install: the gate builds and checks elsewhere."""
-    from pw.core import LEAN_DIR
+    from pwt.core import LEAN_DIR
     project, work = tmp_path / "lean", tmp_path / "work"
     project.mkdir()
     names = [n for n in ("lean-toolchain", "Gamma.lean", "lakefile.toml", "lake-manifest.json") if os.path.exists(os.path.join(LEAN_DIR, n))]
@@ -846,8 +865,8 @@ def test_a_reading_counts_by_the_reader_that_made_it(tmp_path, monkeypatch):
     """A reader is a model with its instructions. When the instructions change, what was read
     under the earlier ones still rests on the reader that read it, as measured then; only what
     is read from now on needs the new reader measured."""
-    import pw.kernel as K
-    from pw.kernel import pattern
+    import pwt.kernel as K
+    from pwt.kernel import pattern
     (tmp_path / "k.py").write_text("LIMIT = 14\nSIZE = 3\n")
     (tmp_path / "doc.md").write_text("## Limits\n\nAt most 14 atoms.\n\n## Size\n\nThree, that is 3, parts.\n")
     cwd = str(tmp_path)
@@ -875,47 +894,12 @@ def test_a_reading_counts_by_the_reader_that_made_it(tmp_path, monkeypatch):
     assert stands(size) and not stands(limit)                          # ...and the earlier reading has nothing to rest on
 
 
-def test_a_decoy_is_a_place_that_states_none_of_it(tmp_path):
-    """A place that names one entry of a list states part of it: showing it with that list's
-    question is not a decoy, and a reader who reads the entry off it is right."""
-    import random
-    from pw import calibrate
-    (tmp_path / "methods.md").write_text("## Methods\n\n`send`, `receive`.\n\n## Start\n\nCall `connect()` first, then `send`.\n")
-    (tmp_path / "functions.md").write_text("## Functions\n\n`connect`, `version`.\n\n## Notes\n\nNothing here.\n")
-    cwd = str(tmp_path)
-    _measure(cwd, opus=27)
-    k = Kernel(str(tmp_path / "pw-log.jsonl"), gate=LeanGate(), actor="reader")
-    m = k.claim_fact("methods", "List String", ["methods.md::Methods", {"at": "methods.md::Start", "some": True}])["h"]
-    f = k.claim_fact("functions", "List String", ["functions.md::Functions"])["h"]
-    k.read_place(m, "methods.md::Methods", '["receive", "send"]', cwd=cwd, quote="`send`, `receive`.", blind=True, model="opus")
-    k.read_place(m, "methods.md::Start", '["send"]', cwd=cwd, quote="Call `connect()` first, then `send`.", blind=True, model="opus")
-    k.read_place(f, "functions.md::Functions", '["connect", "version"]', cwd=cwd, quote="`connect`, `version`.", blind=True, model="opus")
-    facts = [d for d in k.recheck(cwd)["decisions"]]
-    got = {(t["place"], t["fact"]) for t in calibrate.decoys(facts, k.state(), cwd, random.Random(0), 10)}
-    assert ("methods.md::Start", "functions") not in got               # it names `connect`, which is one of the functions
-    assert ("methods.md::Methods", "functions") in got and ("functions.md::Functions", "methods") in got
-
-
-def test_agents_are_not_started_without_what_they_answer_with(monkeypatch, capsys, tmp_path):
-    import importlib.util
-    from pw import maintain
-    monkeypatch.setenv("PW_BIN", str(tmp_path / "no-pw"))           # the readers' tools are served by the Rust build
-    with pytest.raises(SystemExit) as e:
-        maintain.ready()
-    assert "cargo build" in str(e.value) and "Nothing was read" in str(e.value)
-    real = importlib.util.find_spec                                  # an agent with tools of its own serves them from Python
-    monkeypatch.setattr(importlib.util, "find_spec", lambda name, *a: None if name == "mcp" else real(name, *a))
-    with pytest.raises(SystemExit) as e:
-        maintain.ready(own_tools=True)
-    assert "mcp" in str(e.value)
-
-
 def test_a_way_of_reading_new_to_the_record_is_pointed_out(tmp_path, capsys):
     """A check does not write. A computed place whose way of reading is not in the record stands
     for the text as it is, and would stop standing at the next edit: the check says so, and
     recording once (no reader is called) keeps it."""
     import json
-    from pw import check
+    from pwt import check
     repo, record = str(tmp_path), str(tmp_path / "pw-log.jsonl")
     (tmp_path / "k.py").write_text("LIMIT = 14\n")
     (tmp_path / "doc.md").write_text("## Limits\n\nAt most 14 atoms.\n")

@@ -589,3 +589,58 @@ fn today() -> String {
     let y = yoe + era * 400 + if m <= 2 { 1 } else { 0 };
     format!("{:04}-{:02}-{:02}", y, m, d)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn src(fact: &str, typ: &str, place: &str, text: &str, value: Value) -> Source {
+        Source { fact: fact.into(), asked: fact.into(), typ: typ.into(), place: place.into(), text: text.into(), value: Some(value), span: None, around: None }
+    }
+
+    #[test]
+    fn planted_changes_have_known_answers() {
+        for seed in 0..20 {
+            let mut rng = Rng::new(seed);
+            let text = "## Model\n\nThe default class is `pqd`; `pqd` is positive dependence. Not `pqdx`.\nAt most 14 atoms, range 0-15, 114 in total.\n";
+            let made = mutants(text, &json!("pqd"), &mut rng, 3);
+            assert!(!made.is_empty() && made.len() <= 3 && made.iter().all(|(k, _, _)| k == "value replaced"));
+            for (_, changed, planted) in &made {
+                let p = planted.as_str().unwrap();
+                assert!(p != "pqd" && changed.matches(&format!("`{}`", p)).count() == 2 && changed.contains("`pqdx`") && !changed.contains("`pqd`"));
+            }
+            let made = mutants(text, &json!(14), &mut rng, 1);
+            let (_, changed, planted) = &made[0];
+            assert!(planted != &json!(14) && changed.contains(&format!("At most {} atoms", planted)) && changed.contains("114 in total") && changed.contains("0-15"));
+            assert!(mutants(text, &json!("frechet"), &mut rng, 3).is_empty());         // not in the words: cannot be planted
+
+            let table = "| `claim(text)` | registers |\n| `prove(r)` | proves |\n| `claim_formal` | other |\n| `status()` | shows |\n";
+            for (kind, changed, planted) in mutants(table, &json!(["claim", "prove", "status"]), &mut rng, 3) {
+                let p = planted.as_array().unwrap();
+                assert!(["entry renamed", "row removed"].contains(&kind.as_str()));
+                assert!(p.len() == if kind == "row removed" { 2 } else { 3 } && changed.contains("claim_formal"));
+                assert!(p.iter().all(|e| changed.contains(&format!("`{}", e.as_str().unwrap()))));      // every planted entry is in the changed text
+            }
+            for (_, changed, planted) in mutants("`blind` and `read blind` and `computed`", &json!(["blind", "computed", "read blind"]), &mut rng, 1) {
+                let p = planted.as_array().unwrap();
+                assert!(p.len() == 3 && p.iter().all(|e| changed.contains(&format!("`{}`", e.as_str().unwrap()))));   // an entry inside another changes with it
+            }
+        }
+        assert!(same(&json!(["b", "a"]), &json!(["a", "b"])) && !same(&json!(["a"]), &json!(["a", "b"])) && same(&json!(14), &json!(14)) && !same(&json!("14"), &json!(14)));
+    }
+
+    /// A place that names one entry of a list states part of it: showing it with that list's
+    /// question is not a decoy, and a reader who reads the entry off it is right.
+    #[test]
+    fn a_decoy_is_a_place_that_states_none_of_it() {
+        let sources = [
+            src("methods", "List String", "methods.md::Methods", "`send`, `receive`.", json!(["receive", "send"])),
+            src("methods", "List String", "methods.md::Start", "Call `connect()` first, then `send`.", json!(["send"])),
+            src("functions", "List String", "functions.md::Functions", "`connect`, `version`.", json!(["connect", "version"])),
+        ];
+        let got: Vec<(String, String)> = decoys(&sources, &mut Rng::new(0), 10).iter()
+            .map(|t| (t["place"].as_str().unwrap().to_string(), t["fact"].as_str().unwrap().to_string())).collect();
+        assert!(!got.contains(&("methods.md::Start".into(), "functions".into())));     // it names `connect`, which is one of the functions
+        assert!(got.contains(&("methods.md::Methods".into(), "functions".into())) && got.contains(&("functions.md::Functions".into(), "methods".into())));
+    }
+}

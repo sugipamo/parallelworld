@@ -1,7 +1,7 @@
 //! What is done with a place's text besides reading it: writing a value back through a pattern,
 //! the part of a long place a reader is shown, what surrounds a small one, the question a reader
-//! is asked, and what calibration measured about readers. pw.discover, pw.propagate, pw.maintain
-//! and pw.calibrate use these through `pw kernel` (pw/kernel.py names them as before).
+//! is asked, and what calibration measured about readers (pw maintain, calibrate, discover and
+//! propagate use them; `pw kernel` serves them to the tests).
 use crate::kernel::interval;
 use crate::read::*;
 use crate::util::*;

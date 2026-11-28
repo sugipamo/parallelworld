@@ -43,6 +43,11 @@ pub fn claude() -> String {
 }
 
 /// Stop before any session is paid for, if a reader could not answer.
+/// The model that reads places by default (pw maintain, calibrate, start, discover), and the one
+/// that reads what rests on one reader (pw maintain) and what an editing agent wrote (pw propagate).
+pub const MODEL: &str = "claude-opus-5-5";
+pub const SECOND: &str = "claude-sonnet-5-5";
+
 pub fn ready() -> R<()> {
     let c = claude();
     let found = Path::new(&c).is_file() || std::env::var_os("PATH").map_or(false, |p| std::env::split_paths(&p).any(|d| d.join(&c).is_file()));

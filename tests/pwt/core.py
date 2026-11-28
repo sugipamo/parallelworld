@@ -1,4 +1,4 @@
-"""The kernel and the Lean gate, as Python uses them: the Rust build of this tool (rust/), called as a program.
+"""The kernel and the Lean gate, as the tests (and some experiments) use them: the pw executable, called as a program.
 
 Nothing in Python judges or writes the record. Every verdict and every line of the record comes
 from the Rust build; this module only asks it and reads its answers:
@@ -6,11 +6,11 @@ from the Rust build; this module only asks it and reads its answers:
     pw kernel   one operation on a record: claim, sync, read, decline, sign_off, prove, verify,
                 withdraw, recheck, needs_lean, adopt, state (a JSON request on stdin, a JSON reply)
     pw lean     one operation of the Lean gate: check, check_many, typecheck, evaluate, screen, ...
-    pw check    hold the declared facts against the files (python -m pw.check runs it)
-    pw mcp      the readers' tools (pw.maintain starts it)
+    pw check    hold the declared facts against the files
+    pw mcp      the readers' tools (pw maintain starts it)
 
-`Kernel` and `LeanGate` keep the methods the Python implementation had, so that the agent tools
-and the tests read as before.
+`Kernel` and `LeanGate` keep the methods the Python implementation had, so that the tests read as
+they did. This is not part of the tool: the tool is the one executable.
 """
 import functools
 import hashlib
@@ -22,11 +22,8 @@ from subprocess import run as _call      # (bound here: a test standing in for a
 
 from .kernel import KernelError
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_HERE = os.path.dirname(os.path.abspath(__file__))
-# The Lean project: next to the package in a checkout, inside it when installed (pyproject.toml).
-LEAN_DIR = next((d for d in (os.path.join(_HERE, "lean"), os.path.join(ROOT, "lean"))
-                 if os.path.exists(os.path.join(d, "lean-toolchain"))), os.path.join(ROOT, "lean"))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+LEAN_DIR = os.path.join(ROOT, "lean")
 FACTS = "pw-facts.json"      # a project's list of facts and the places that state them
 ALLOWED_AXIOMS = frozenset({"propext", "Classical.choice", "Quot.sound"})
 
@@ -59,13 +56,8 @@ def _on_path():
 
 
 def missing():
-    """What to do when the Rust build is not there: said for how this package was installed."""
-    if os.path.exists(os.path.join(ROOT, "rust", "Cargo.toml")):
-        return (f"the Rust build of this tool is not there ({pw_binary()}): "
-                "cargo build --release --manifest-path rust/Cargo.toml (or point PW_BIN at it)")
-    return ("the Rust build of this tool is not there: this Python package is installed outside a checkout of it, "
-            "so build the Rust part in a checkout, then put it on PATH (cargo install --path rust) or point PW_BIN at "
-            "rust/target/release/pw there")
+    return (f"the pw executable is not there ({pw_binary()}): "
+            "cargo build --release --manifest-path rust/Cargo.toml (or point PW_BIN at it)")
 
 
 def fact_id(name, typ):

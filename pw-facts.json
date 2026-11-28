@@ -131,24 +131,20 @@
  {
   "name": "default reader model",
   "type": "String",
-  "gloss": "the model ID of the Claude model that reads places by default, in pw.maintain and pw.calibrate",
+  "gloss": "the model ID of the Claude model that reads places by default, in pw maintain, pw calibrate and pw start",
   "places": [
    {
-    "at": "pw/maintain.py::main",
+    "at": "rust/src/agent.rs",
     "read": {
-     "python": "keyword",
-     "call": "add_argument",
-     "with": "--model",
-     "keyword": "default"
+     "find": "pub const MODEL: &str = \"([^\"]+)\";",
+     "as": "string"
     }
    },
    {
-    "at": "pw/calibrate.py::main",
+    "at": "rust/src/main.rs",
     "read": {
-     "python": "keyword",
-     "call": "add_argument",
-     "with": "--model",
-     "keyword": "default"
+     "find": "--model M +the reader \\(default ([^)]+)\\)",
+     "as": "string"
     }
    }
   ]
@@ -218,14 +214,8 @@
  {
   "name": "version of this tool",
   "type": "String",
-  "gloss": "the version number of this tool (parallelworld): the one its Python package and its Rust crate are published as, and the newest entry of its change log",
+  "gloss": "the version number of this tool (parallelworld): the one its executable is built and published as, and the newest entry of its change log",
   "places": [
-   {
-    "at": "pyproject.toml",
-    "read": {
-     "data": "project.version"
-    }
-   },
    {
     "at": "rust/Cargo.toml",
     "read": {

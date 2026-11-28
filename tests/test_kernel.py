@@ -3,9 +3,9 @@ import shutil
 
 import pytest
 
-from pw.core import Kernel
-from pw.kernel import KernelError
-from pw.core import GateError, LeanGate
+from pwt.core import Kernel
+from pwt.kernel import KernelError
+from pwt.core import GateError, LeanGate
 
 LAKE = os.environ.get("PW_LAKE") or shutil.which("lake")
 
@@ -21,7 +21,7 @@ def test_gate_is_the_only_way_in(tmp_path, monkeypatch):
     monkeypatch.setattr(Kernel, "compare", "always")
     (tmp_path / "a.txt").write_text("v = 1\n")
     (tmp_path / "b.txt").write_text("v = 1\n")
-    from pw.kernel import pattern
+    from pwt.kernel import pattern
     places = [{"at": name, "reader": pattern(find=r"v = (\d+)", kind="nat")} for name in ("a.txt", "b.txt")]
     k = Kernel(str(tmp_path / "e.db"))
     k.claim_fact("v", "Nat", places)
@@ -69,7 +69,7 @@ def test_gate_screening_and_axiom_judgement():
 
 def test_a_subject_is_a_file_or_a_part_of_one(tmp_path):
     """A reading is tied to the content it is about, not to the rest of the file."""
-    from pw.kernel import locate, subject_id
+    from pwt.kernel import locate, subject_id
     cwd = str(tmp_path)
     md = "# Title\n\nintro\n\n## Rules\n\n- one\n\n```\n# not a heading\n```\n\n### Detail\n\nmore\n\n## Other\n\ntext\n"
     (tmp_path / "doc.md").write_text(md)
@@ -98,7 +98,7 @@ def test_a_subject_is_a_file_or_a_part_of_one(tmp_path):
 
 
 def test_a_place_is_read_by_a_description_not_by_code():
-    from pw.kernel import _read_pattern, pattern
+    from pwt.kernel import _read_pattern, pattern
     text = 'def __init__(self, max_atoms=14, dependence="pqd"):\nALLOWED = {"propext", "Quot.sound", "propext", "Classical.choice"}\nthreshold 0.9 and -3\n'
     assert _read_pattern(pattern(find=r'dependence="(\w+)"'), text) == '"pqd"'
     assert _read_pattern(pattern(find=r"max_atoms=(\d+)", kind="nat"), text) == "14"
@@ -125,29 +125,9 @@ def test_a_place_is_read_by_a_description_not_by_code():
             pattern(**bad)
 
 
-def test_planted_changes_have_known_answers():
-    import random
-    from pw.calibrate import interval, mutants, same
-    rng = random.Random(0)
-    text = "## Model\n\nThe default class is `pqd`; `pqd` is positive dependence. Not `pqdx`.\nAt most 14 atoms, range 0-15, 114 in total.\n"
-    made = mutants(text, "pqd", rng, 3)
-    assert len(made) == 3 and all(k == "value replaced" for k, _, _ in made)
-    for _, changed, planted in made:
-        assert planted != "pqd" and changed.count(f"`{planted}`") == 2 and "`pqdx`" in changed and "`pqd`" not in changed
-    (_, changed, planted), = mutants(text, 14, rng, 1)
-    assert planted != 14 and f"At most {planted} atoms" in changed and "114 in total" in changed and "0-15" in changed
-    assert mutants(text, "frechet", rng, 3) == []                                   # not in the words: cannot be planted
-
-    table = "| `claim(text)` | registers |\n| `prove(r)` | proves |\n| `claim_formal` | other |\n| `status()` | shows |\n"
-    made = mutants(table, ["claim", "prove", "status"], random.Random(1), 3)
-    assert {k for k, _, _ in made} == {"entry renamed", "row removed"}
-    for kind, changed, planted in made:
-        assert len(planted) == (2 if kind == "row removed" else 3) and "claim_formal" in changed
-        for e in planted:
-            assert f"`{e}" in changed                                               # every planted entry is in the changed text
-    (_, changed, planted), = mutants("`blind` and `read blind` and `computed`", ["blind", "computed", "read blind"], random.Random(3), 1)
-    assert all(f"`{e}`" in changed for e in planted) and len(planted) == 3          # an entry inside another entry changes with it
-    assert same(["b", "a"], ["a", "b"]) and not same(["a"], ["a", "b"]) and same(14, 14) and not same("14", 14)
+def test_a_measured_rate_is_held_by_its_bounds():
+    """(How the planted changes are made, and the decoys: rust/src/calibrate.rs, cargo test.)"""
+    from pwt.kernel import interval
     lo, hi = interval(30, 30)
     assert 0.88 < lo < 0.89 and hi == 1.0                                           # thirty out of thirty: at least 0.88
     lo, hi = interval(0, 30)
@@ -277,7 +257,7 @@ def test_a_search_that_failed_does_not_look_like_one_that_found_nothing(tmp_path
 def test_a_declared_place_that_cannot_be_read_is_said_and_can_be_repaired(tmp_path, monkeypatch):
     import json
     from pw import discover
-    from pw.kernel import unreadable
+    from pwt.kernel import unreadable
     (tmp_path / "guide.md").write_text("## Limits\n\nAt most 14 atoms are solved.\n")
     (tmp_path / "app.py").write_text("LIMIT = 14\n")
     repo = str(tmp_path)
@@ -294,7 +274,7 @@ def test_a_declared_place_that_cannot_be_read_is_said_and_can_be_repaired(tmp_pa
     r = k.recheck(repo)["decisions"][0]
     assert r["state"] == "stale" and [(u["at"], u["broken"]) for u in r["unread"]] == [("guide.md::Limits", True), ("app.py::LIMIT", True)]
     assert "no longer has a part named 'Limits'" in r["unread"][0]["why"]            # not quietly read off the whole file instead
-    from pw.core import LEAN_DIR
+    from pwt.core import LEAN_DIR
     broken = discover.broken_places(repo, LEAN_DIR, facts)                           # (nothing is put to Lean while a place is unread)
     assert [(n, at) for n, at, _ in broken] == [("limit", "guide.md::Limits"), ("limit", "app.py::LIMIT")]
 
@@ -330,7 +310,7 @@ def test_a_declared_place_that_cannot_be_read_is_said_and_can_be_repaired(tmp_pa
 
 
 def test_a_pattern_reads_the_same_whatever_the_line_ends():
-    from pw.kernel import _read_pattern, pattern
+    from pwt.kernel import _read_pattern, pattern
     text = '@tool()\ndef read(x):\n    pass\n\n@tool()\ndef decline(x):\n    pass\n'
     rd = pattern(find_all=r"@tool\(\)\ndef (\w+)\(", sort=True)
     assert _read_pattern(rd, text) == _read_pattern(rd, text.replace("\n", "\r\n")) == '["decline", "read"]'
@@ -360,7 +340,7 @@ def test_a_reader_states_a_value_not_a_computation(tmp_path):
 def test_a_place_can_be_read_by_its_structure():
     """By the syntax of Python or a path into TOML or JSON: spelling does not matter, an entry
     added in another style is seen, and what is not written out as a literal is not guessed."""
-    from pw.kernel import compute, reader
+    from pwt.kernel import compute, reader
     py = lambda read, text: compute(reader(read, "m.py"), text)
     assert py({"python": "value"}, 'MODE = "fast"') == py({"python": "value"}, "MODE='fast'  # x") == '"fast"'
     assert py({"python": "value", "as": "nat"}, "LIMIT: int = 14") == "14"
@@ -413,7 +393,7 @@ def test_a_proposed_pattern_must_not_spell_out_the_value(tmp_path):
 def test_what_differs_between_lists_is_named(tmp_path):
     """Where lists do not agree, the check names the entries that are not everywhere, and where they are."""
     import json
-    from pw import check
+    from pwt import check
     read = {"find_all": '"(\\w+)"', "sort": True}
     files = {"README.md": '"a" "b" "z"', "m.py": '"a" "b" "c" "z"', "all.py": '"a" "b" "c" "z"', "start.md": '"a"'}
     for name, text in files.items():
@@ -483,7 +463,7 @@ def test_a_declaration_that_cannot_be_used_is_said_in_a_line(tmp_path):
 
 
 def test_a_long_place_read_by_structure_is_shown_in_part():
-    from pw.kernel import excerpt, reader
+    from pwt.kernel import excerpt, reader
     lock = "version = 4\n\n" + "".join(f'[[package]]\nname = "dep{i}"\nversion = "1.{i}.0"\ndependencies = [\n "a",\n]\n\n' for i in range(40))
     lock += '[[package]]\nname = "mine"\nversion = "0.1.0"\n'
     shown = excerpt(reader({"data": "package[name=mine].version"}, "Cargo.lock"), lock)
@@ -495,49 +475,6 @@ def test_a_long_place_read_by_structure_is_shown_in_part():
     assert shown.startswith("@route('/0')\ndef page0(request,\n          flag=False):\n@route('/1')") and "return" not in shown
     assert excerpt(reader({"python": "value"}, "app.py"), "X = " + repr(list(range(900)))) is None        # no smaller part can be told
     assert excerpt({"language": "pattern", "find": "(x)", "as": "string"}, "x" * 5000) is None
-
-
-def test_a_place_read_blind_already_is_not_paid_for_again(tmp_path):
-    """pw.maintain shows a blind reader a computed place once per content, question and instructions:
-    when that reading does not count yet, the reader has to be measured; asking again buys the same answer."""
-    from pw.kernel import pattern
-    from pw.maintain import read_blind_already
-    (tmp_path / "k.py").write_text("LIMIT = 14\n")
-    k = Kernel(str(tmp_path / "pw-log.jsonl"), actor="reader")
-    h = k.claim_fact("limit", "Nat", [{"at": "k.py", "reader": pattern(find=r"LIMIT = (\d+)", kind="nat")}], gloss="the limit")["h"]
-    m = k.read_place(h, "k.py", cwd=str(tmp_path))["m"]                       # computed
-    assert not read_blind_already(k.state(), h, "k.py", m, "opus")
-    k.read_place(h, "k.py", "14", cwd=str(tmp_path), quote="LIMIT = 14", blind=True, model="opus")
-    assert read_blind_already(k.state(), h, "k.py", m, "opus")
-    assert not read_blind_already(k.state(), h, "k.py", m, "sonnet")         # another model has not
-    (tmp_path / "k.py").write_text("LIMIT = 15\n")                            # the place changed: read it again
-    m = k.read_place(h, "k.py", cwd=str(tmp_path))["m"]
-    assert not read_blind_already(k.state(), h, "k.py", m, "opus")
-    k.claim_fact("limit", "Nat", [{"at": "k.py", "reader": pattern(find=r"LIMIT = (\d+)", kind="nat")}], gloss="the most there may be")
-    (tmp_path / "k.py").write_text("LIMIT = 14\n")                            # same content, another question: read it again
-    m = k.read_place(h, "k.py", cwd=str(tmp_path))["m"]
-    assert not read_blind_already(k.state(), h, "k.py", m, "opus")
-
-
-def test_the_rust_build_is_found_however_this_was_installed(tmp_path, monkeypatch):
-    """Installed outside a checkout (pip install, not editable): a `pw` on PATH is used if it says it
-    is this tool; if there is none, what to do is said for that way of installing."""
-    from pw import core
-    monkeypatch.delenv("PW_BIN", raising=False)
-    monkeypatch.setattr(core, "ROOT", str(tmp_path / "site-packages"))
-    (tmp_path / "bin").mkdir()
-    monkeypatch.setenv("PATH", str(tmp_path / "bin"))
-    core._on_path.cache_clear()
-    assert core.pw_binary().startswith(str(tmp_path / "site-packages")) and "PW_BIN" in core.missing() and "cargo install" in core.missing()
-    other = tmp_path / "bin" / "pw"
-    other.write_text("#!/bin/sh\necho something else\n")
-    other.chmod(0o755)
-    core._on_path.cache_clear()
-    assert core.pw_binary().startswith(str(tmp_path / "site-packages"))              # another program called pw is not taken
-    other.write_text("#!/bin/sh\necho parallelworld 0.0.0\n")
-    core._on_path.cache_clear()
-    assert core.pw_binary() == str(other)
-    core._on_path.cache_clear()
 
 
 def test_the_published_executable_is_named_for_its_source():

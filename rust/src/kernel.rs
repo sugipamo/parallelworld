@@ -88,6 +88,12 @@ impl State {
     pub fn quote(&self, m: &str) -> (Option<String>, bool) {
         self.models.get(m).map_or((None, false), |x| (x.quote.clone(), x.anchor))
     }
+
+    /// The sentences readings of a fact at a place quote, where the kernel checked they are in it.
+    pub fn quotes(&self, h: &str, at: &str) -> Vec<String> {
+        self.readings.get(h).into_iter().flatten().filter(|(p, _)| p == at)
+            .filter_map(|(_, m)| self.models.get(m)).filter(|x| x.anchor).filter_map(|x| x.quote.clone()).collect()
+    }
 }
 
 /// What a blind reader is told (pw/reader.txt): a reader is a model together with these instructions.

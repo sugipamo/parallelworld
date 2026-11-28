@@ -6,7 +6,7 @@ name: decisions
 # for the exact content they were made for.
 #
 # Everything this job fetches is pinned to content, not to a name that can be moved:
-# the actions by commit, the Python packages by hash (requirements-test.txt),
+# the actions by commit, the Python packages the tests use by hash (requirements-test.txt),
 # Lean by checksum (ci/lean.sh), the Rust crates by checksum (rust/Cargo.lock). The Rust compiler
 # is the runner's own.
 # The job can read the repository and nothing else.
@@ -32,20 +32,21 @@ jobs:
       - name: Facts and decisions, with the recorded proofs verified again
         uses: ./
 
-      # The agents' side and the tests are Python; the kernel they use is the Rust build.
+      # The tests drive the executable from outside (tests/pwt is how they ask it); the build is the checkout's own.
+      - name: The executable, built from this checkout, and its own tests
+        if: always()
+        run: |
+          cargo build --release --locked --manifest-path rust/Cargo.toml
+          cargo test --release --locked --manifest-path rust/Cargo.toml
+
+      - name: What a person still has to confirm
+        if: always()
+        run: rust/target/release/pw confirm | tee -a "$GITHUB_STEP_SUMMARY"
+
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0    # v7.1.0
         if: always()
         with:
           python-version: "3.13"     # requirements-test.txt pins wheels for this version
-
-      # python -m pw.confirm and the tests run the Rust build from where a checkout has it.
-      - name: The Rust build, where Python looks for it
-        if: always()
-        run: cargo build --release --locked --manifest-path rust/Cargo.toml
-
-      - name: What a person still has to confirm
-        if: always()
-        run: python -m pw.confirm | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Packages the tests need, by hash
         if: always()

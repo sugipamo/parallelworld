@@ -12,8 +12,8 @@ name: release
 #                                 rust/release.txt naming it, so that the action and ci/pw.sh take
 #                                 it (about a second) instead of building (a minute and a half)
 #   other, version published      fail: the source changed and the version did not. A version is
-#                                 published once; bump it (rust/Cargo.toml, pyproject.toml,
-#                                 CHANGES.md: a declared fact keeps the three the same)
+#                                 published once; bump it (rust/Cargo.toml and CHANGES.md: a
+#                                 declared fact keeps the two the same)
 #
 # It can also be started by hand. The commit it adds changes rust/release.txt only.
 
@@ -55,7 +55,7 @@ jobs:
             echo "rust/release.txt names the executable of this source already"
             echo "publish=no" >> "$GITHUB_OUTPUT"
           elif gh release view "v$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "::error::the source compiled into pw changed, but version $version is published already (from other source). Bump the version: rust/Cargo.toml, pyproject.toml and CHANGES.md"
+            echo "::error::the source compiled into pw changed, but version $version is published already (from other source). Bump the version: rust/Cargo.toml and CHANGES.md"
             exit 1
           else
             echo "publish=yes" >> "$GITHUB_OUTPUT"

@@ -35,9 +35,9 @@ import tomllib
 from collections import Counter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.join(ROOT, "tests"))        # pwt: the tests' way of asking the pw executable
 
-from pw.kernel import KernelError, compute, locate, pattern, reader      # noqa: E402
+from pwt.kernel import KernelError, compute, locate, pattern, reader      # noqa: E402
 
 HASH = (".py", ".toml", ".yml", ".yaml", ".lock", ".sh", ".cfg", ".ini")
 SLASH = (".rs", ".js", ".ts", ".go", ".c", ".h", ".java")
@@ -222,7 +222,7 @@ def means(path, text):
     if path.endswith(".json"):
         return json.loads(text)
     if path.endswith(".rs"):                      # (its tokens: layout and comments aside; raises if it is not Rust)
-        from pw.kernel import _ask
+        from pwt.kernel import _ask
         return _ask("rust_tokens", text=text)
     return None
 

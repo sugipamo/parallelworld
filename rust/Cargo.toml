@@ -1,6 +1,6 @@
 [package]
 name = "pw"
-version = "0.16.3"
+version = "0.17.0"
 edition = "2021"
 description = "Declare what a project states in several places, and keep the places saying the same thing"
 license = "MIT"
