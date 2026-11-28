@@ -198,9 +198,22 @@ pub fn read_rust(rd: &Value, text: &str) -> R<Lit> {
     let file = syn::parse_file(text).map_err(|e| format!("the file does not parse as Rust: {}", e))?;
     let name = s(rd, "item");
     let found = items_named(&file.items, name);
+    // a type named alone is the type, not its impl blocks (since 0.16): say so where that is what was meant
+    let impls = !name.starts_with("impl ") && !items_named(&file.items, &format!("impl {}", name)).is_empty();
+    let hint = |e: String| if impls {
+        format!("{}; {} has impl blocks: \"item\": \"impl {}\" reads them (since 0.16 a type's name alone does not)", e, pyrepr(name), name)
+    } else { e };
     if found.is_empty() {
-        return Err(format!("{} is not an item of this file", pyrepr(name)));
+        return Err(hint(format!("{} is not an item of this file", pyrepr(name))));
     }
+    let lit = take_rust(rd, name, &found)?;
+    match &lit {
+        Lit::Many(v) if v.is_empty() => Err(hint(format!("nothing is found in {} here", pyrepr(name)))),
+        _ => Ok(lit),
+    }
+}
+
+fn take_rust(rd: &Value, name: &str, found: &[&syn::Item]) -> R<Lit> {
     match s(rd, "take") {
         "value" => {
             let exprs: Vec<&syn::Expr> = found.iter().filter_map(|i| match i {
@@ -223,14 +236,14 @@ pub fn read_rust(rd: &Value, text: &str) -> R<Lit> {
         "arms" => Ok(Lit::Many(found.iter().flat_map(|i| arm_strings(i)).map(|n| json!(n)).collect())),
         "strings" => {
             let mut out = vec![];
-            for i in &found {
+            for i in found {
                 token_strings(quote_item(i), &mut out);
             }
             Ok(Lit::Many(out))
         }
         _ => {
             let mut names = vec![];
-            for i in &found {
+            for i in found {
                 match i {
                     syn::Item::Enum(e) => names.extend(e.variants.iter().map(|v| v.ident.to_string())),
                     syn::Item::Struct(st) => names.extend(st.fields.iter().filter_map(|f| f.ident.as_ref().map(|x| x.to_string()))),

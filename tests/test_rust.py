@@ -363,3 +363,19 @@ def test_the_lean_project_is_built_in(pw, tmp_path):
         pytest.skip("Lean not installed")
     r = check(pw, ROOT, "--verify", env={"PW_LEAN_DIR": ""})          # (the empty path: no project on disk)
     assert r.returncode == 0 and r.stdout.strip().endswith("0 refused") and "verified again" in r.stdout, r.stdout[-300:]
+
+
+def test_a_place_whose_text_is_unchanged_is_not_sent_to_be_searched_for(pw, tmp_path):
+    """The text is as it was read, but the way of reading no longer reads it (a declaration, or this
+    tool's version): the way of reading is what to fix, not the place to look for; and "impl NAME" is
+    said where that is what was meant (#19)."""
+    text = 'pub enum S { A, B }\nimpl std::fmt::Display for S {\n    fn fmt(&self, f: &mut F) -> R { match self { S::A => write!(f, "ok"), S::B => write!(f, "no") } }\n}\n'
+    fact = lambda item: [{"name": "words", "type": "List String", "places": [{"at": "s.rs", "read": {"rust": "strings", "item": item, "sort": True}}]}]
+    repo = declare(tmp_path, fact("impl S"), **{"s.rs": text})
+    assert check(pw, repo, "--record", "--unconfirmed", "warn").returncode == 0
+    declare(tmp_path, fact("S"))
+    r = check(pw, repo, "--unconfirmed", "warn")
+    assert r.returncode == 1 and '"item": "impl S" reads them' in r.stdout
+    assert "its text is as it was when last read" in r.stdout and "pw.discover" not in r.stdout
+    (tmp_path / "s.rs").write_text(text.replace("pub enum S", "pub enum T"))              # the text did change: look for it
+    assert "pw.discover" in check(pw, repo, "--unconfirmed", "warn").stdout

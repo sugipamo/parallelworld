@@ -1126,7 +1126,13 @@ pub fn recheck_fact(st: &mut State, judge: &Judge, fact: &Fact, cwd: &Path, give
                     have = vec![m];
                 }
                 Err(e) => {
-                    unread.push(fail(about, e, true));
+                    // the text is as it was when it was read: what changed is how it is read (a declaration, or this tool)
+                    let same_text = ever.iter().any(|m| st.models.get(*m).map_or(false, |x| x.subject == now));
+                    let mut u = fail(about, e, true);
+                    if same_text {
+                        u["text as last read"] = json!(true);
+                    }
+                    unread.push(u);
                     continue;
                 }
             }

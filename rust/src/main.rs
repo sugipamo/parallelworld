@@ -182,6 +182,8 @@ fn show(report: &Value, warn: bool) -> bool {
             "violated" if any("against") => println!("       a place does not say what was laid down: change the place, or have the instruction withdrawn"),
             "violated" if any("not in the whole") => println!("       a place lists something the others do not have; which one is right is for a person to say"),
             "violated" => println!("       the places do not say the same thing; which one is right is for a person to say"),
+            "stale" if unread.iter().filter(|u| u.get("broken").is_some()).all(|u| u.get("text as last read").is_some()) && unread.iter().any(|u| u.get("broken").is_some()) =>
+                println!("       a declared place cannot be read as declared any more, though its text is as it was when last read: what changed is how it is read (the declaration, or this tool's version: CHANGES.md); fix the way of reading"),
             "stale" if unread.iter().any(|u| u.get("broken").is_some()) => println!("       a declared place cannot be read as declared any more: python -m pw.discover (it looks for where the statement went)"),
             "stale" => println!("       read the place(s) again: python -m pw.maintain"),
             "disputed" => println!("       a person has to say which reading is right: python -m pw.confirm --who NAME M:... and --reject M:..."),

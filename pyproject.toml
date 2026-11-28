@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "parallelworld"
-version = "0.16.1"
+version = "0.16.2"
 description = "Declare what a project states in several places, and keep the places saying the same thing"
 readme = "README.md"
 requires-python = ">=3.11"
