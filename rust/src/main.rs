@@ -12,8 +12,9 @@ use serde_json::Value;
 use std::path::{Path, PathBuf};
 use util::R;
 
+/// At most n characters; where more were there, the cut is marked (the whole of it is in --json).
 fn cut(s: &str, n: usize) -> String {
-    s.chars().take(n).collect()
+    if s.chars().count() <= n { s.to_string() } else { s.chars().take(n).collect::<String>() + "…" }
 }
 
 fn s<'a>(v: &'a Value, key: &str) -> &'a str {
@@ -171,7 +172,7 @@ fn show(report: &Value, warn: bool) -> bool {
         }
         let unread = list(d, "unread");
         for u in &unread {
-            println!("       {}: {}", s(u, "at"), cut(s(u, "why"), 160));
+            println!("       {}: {}", s(u, "at"), cut(s(u, "why"), 600));
             declined(&list(u, "declined"));
         }
         let any = |key: &str| places.iter().any(|p| p.get(key).map_or(false, |v| !v.is_null() && v.as_array().map_or(true, |a| !a.is_empty())));
@@ -184,6 +185,9 @@ fn show(report: &Value, warn: bool) -> bool {
             "violated" => println!("       the places do not say the same thing; which one is right is for a person to say"),
             "stale" if unread.iter().filter(|u| u.get("broken").is_some()).all(|u| u.get("text as last read").is_some()) && unread.iter().any(|u| u.get("broken").is_some()) =>
                 println!("       a declared place cannot be read as declared any more, though its text is as it was when last read: what changed is how it is read (the declaration, or this tool's version: CHANGES.md); fix the way of reading"),
+            "stale" if unread.iter().filter(|u| u.get("broken").is_some()).all(|u| u.get("text as last read").is_some() || u.get("how to fix the way of reading").is_some())
+                       && unread.iter().any(|u| u.get("broken").is_some()) =>
+                println!("       a declared place cannot be read as declared any more, and the reason above says how to fix its way of reading: fix that first; if it still cannot be read, python -m pw.discover looks for where the statement went"),
             "stale" if unread.iter().any(|u| u.get("broken").is_some()) => println!("       a declared place cannot be read as declared any more: python -m pw.discover (it looks for where the statement went)"),
             "stale" => println!("       read the place(s) again: python -m pw.maintain"),
             "disputed" => println!("       a person has to say which reading is right: python -m pw.confirm --who NAME M:... and --reject M:..."),

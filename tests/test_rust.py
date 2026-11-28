@@ -377,5 +377,10 @@ def test_a_place_whose_text_is_unchanged_is_not_sent_to_be_searched_for(pw, tmp_
     r = check(pw, repo, "--unconfirmed", "warn")
     assert r.returncode == 1 and '"item": "impl S" reads them' in r.stdout
     assert "its text is as it was when last read" in r.stdout and "pw.discover" not in r.stdout
-    (tmp_path / "s.rs").write_text(text.replace("pub enum S", "pub enum T"))              # the text did change: look for it
-    assert "pw.discover" in check(pw, repo, "--unconfirmed", "warn").stdout
+    assert "a type's name alone does not)" in r.stdout                                      # the reason is not cut (#20)
+    (tmp_path / "s.rs").write_text(text + "// touched\n")                                    # the text changed, the fix is known: that first (#20)
+    out = check(pw, repo, "--unconfirmed", "warn").stdout
+    assert "says how to fix its way of reading: fix that first; if it still cannot be read, python -m pw.discover" in out
+    (tmp_path / "s.rs").write_text(text.replace("pub enum S", "pub enum T").replace("for S", "for T"))   # nothing to say how: look for it
+    out = check(pw, repo, "--unconfirmed", "warn").stdout
+    assert "pw.discover (it looks for where the statement went)" in out and "fix that first" not in out
