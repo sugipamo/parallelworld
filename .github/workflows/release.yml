@@ -1,56 +1,110 @@
 name: release
 
-# Build the executable once, statically linked (it runs on any Linux x86_64), and publish it with
-# its SHA-256 as a release named after the version in rust/Cargo.toml. Started by hand. The
-# release says the digest of the source it was built from (ci/pw.sh source_digest); writing its
-# lines into rust/release.txt, in a commit of that same source, is what lets ci/pw.sh and the
-# action take it instead of building. A version that is published already is not published again.
+# Keep a published executable for the source on main, and rust/release.txt naming it.
+#
+# At every push to main that touches what is compiled into the executable (rust/, and the two
+# files it takes in: pw/reader.txt, pw/rules.json), the digest of that source (ci/pw.sh
+# --source-digest) is held against the one rust/release.txt names:
+#
+#   the same                      nothing to do
+#   other, version not published  build it statically linked (it runs on any Linux x86_64),
+#                                 publish it with its SHA-256 as release v<version>, and commit
+#                                 rust/release.txt naming it, so that the action and ci/pw.sh take
+#                                 it (about a second) instead of building (a minute and a half)
+#   other, version published      fail: the source changed and the version did not. A version is
+#                                 published once; bump it (rust/Cargo.toml, pyproject.toml,
+#                                 CHANGES.md: a declared fact keeps the three the same)
+#
+# It can also be started by hand. The commit it adds changes rust/release.txt only.
 
 on:
+  push:
+    branches: [main]
+    paths: ["rust/**", "pw/reader.txt", "pw/rules.json", "ci/pw.sh", ".github/workflows/release.yml"]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
-  build:
+  release:
     runs-on: ubuntu-24.04
     permissions:
-      contents: write          # to create the release, and nothing else
+      contents: write          # to publish the release and commit rust/release.txt; nothing else
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1        # v7.0.1
         with:
           persist-credentials: false
 
+      - name: Is there anything to publish?
+        id: need
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          digest=$(ci/pw.sh --source-digest)
+          named=$(sed -n 's/^source=//p' rust/release.txt 2>/dev/null | head -n 1)
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' rust/Cargo.toml | head -n 1)
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "DIGEST=$digest" >> "$GITHUB_ENV"
+          if [ "$digest" = "$named" ]; then
+            echo "rust/release.txt names the executable of this source already"
+            echo "publish=no" >> "$GITHUB_OUTPUT"
+          elif gh release view "v$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::the source compiled into pw changed, but version $version is published already (from other source). Bump the version: rust/Cargo.toml, pyproject.toml and CHANGES.md"
+            exit 1
+          else
+            echo "publish=yes" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build, statically linked
+        if: steps.need.outputs.publish == 'yes'
         run: |
           rustup target add x86_64-unknown-linux-musl
           cargo build --release --locked --target x86_64-unknown-linux-musl --manifest-path rust/Cargo.toml
-          version=$(sed -n 's/^version = "\(.*\)"/\1/p' rust/Cargo.toml | head -n 1)
-          mkdir out && cp rust/target/x86_64-unknown-linux-musl/release/pw "out/pw-$version-linux-x86_64"
-          out/pw-$version-linux-x86_64 version | grep -qx "parallelworld $version"
-          echo "VERSION=$version" >> "$GITHUB_ENV"
-
-      - name: What rust/release.txt is to say
-        run: |
-          digest=$(ci/pw.sh --source-digest)
-          sum=$(sha256sum "out/pw-$VERSION-linux-x86_64" | cut -c1-64)
+          mkdir out && cp rust/target/x86_64-unknown-linux-musl/release/pw "out/pw-$VERSION-linux-x86_64"
+          "out/pw-$VERSION-linux-x86_64" version | grep -qx "parallelworld $VERSION"
           {
             echo "version=$VERSION"
-            echo "source=$digest"
+            echo "source=$DIGEST"
             echo "url=https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/pw-$VERSION-linux-x86_64"
-            echo "sha256=$sum"
+            echo "sha256=$(sha256sum "out/pw-$VERSION-linux-x86_64" | cut -c1-64)"
           } > out/release.txt
           cat out/release.txt
           { echo '```'; cat out/release.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish
+        if: steps.need.outputs.publish == 'yes'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "v$VERSION is published already: a version is published once"; exit 1
-          fi
           gh release create "v$VERSION" "out/pw-$VERSION-linux-x86_64" out/release.txt --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" --title "v$VERSION" \
             --notes "The pw executable for Linux x86_64, statically linked, built from $GITHUB_SHA. release.txt is what rust/release.txt says for it."
+
+      # The commit goes onto main as it is by then. If the compiled-in source changed again in
+      # the meantime, this release is not of that source, and is not named: the next run sees to it.
+      - name: Name it in rust/release.txt
+        if: steps.need.outputs.publish == 'yes'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/$GITHUB_REPOSITORY"
+          for attempt in 1 2 3 4; do
+            git fetch -q origin main && git checkout -q -B main FETCH_HEAD
+            if [ "$(ci/pw.sh --source-digest)" != "$DIGEST" ]; then
+              echo "main has other source by now; v$VERSION is published, and is not named"; exit 0
+            fi
+            cp out/release.txt rust/release.txt
+            git add rust/release.txt
+            git diff --cached --quiet && { echo "named already"; exit 0; }
+            git commit -q -m "Name the published executable: v$VERSION" -m "Built from $GITHUB_SHA by the release workflow."
+            git push -q origin main && exit 0
+            sleep $((attempt * 5))
+          done
+          exit 1
