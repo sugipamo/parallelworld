@@ -18,6 +18,15 @@ pub const ALLOWED_AXIOMS: [&str; 3] = ["Classical.choice", "Quot.sound", "propex
 const PROJECT: [&str; 3] = ["lean-toolchain", "Gamma.lean", "lakefile.toml"];
 const COPIED: [&str; 4] = ["lean-toolchain", "Gamma.lean", "lakefile.toml", "lake-manifest.json"];
 
+/// The Lean project (lean/) as it was when this was built: used where no project is found on
+/// disk (an executable published or installed on its own), so that it can still run proofs.
+const BUILT_IN: [(&str, &str); 4] = [
+    ("lean-toolchain", include_str!("../../lean/lean-toolchain")),
+    ("Gamma.lean", include_str!("../../lean/Gamma.lean")),
+    ("lakefile.toml", include_str!("../../lean/lakefile.toml")),
+    ("lake-manifest.json", include_str!("../../lean/lake-manifest.json")),
+];
+
 pub struct Verdict {
     pub ok: bool,
     pub reason: String,
@@ -63,7 +72,8 @@ fn forbidden() -> &'static Regex {
 }
 
 /// The Lean project next to this tool: PW_LEAN_DIR, else a `lean` directory beside the binary's
-/// checkout (rust/target/release/pw is three levels down), else the one this was built from.
+/// checkout (rust/target/release/pw is three levels down), else the one this was built from;
+/// else none (the empty path), and the project built into this executable is used.
 pub fn lean_dir() -> PathBuf {
     if let Ok(d) = std::env::var("PW_LEAN_DIR") {
         return PathBuf::from(d);
@@ -73,7 +83,7 @@ pub fn lean_dir() -> PathBuf {
         candidates.extend(exe.ancestors().skip(1).map(|a| a.join("lean")));
     }
     candidates.push(Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("lean"));
-    candidates.iter().find(|d| d.join("lean-toolchain").exists()).cloned().unwrap_or_else(|| candidates.last().unwrap().clone())
+    candidates.iter().find(|d| d.join("lean-toolchain").exists()).cloned().unwrap_or_default()
 }
 
 /// Run a command to its end, or kill it after `timeout`. None if it did not finish in time.
@@ -108,12 +118,24 @@ impl Gate {
         Gate { dir, timeout: Duration::from_secs(300), ready: RefCell::new(None), runs: RefCell::new(0) }
     }
 
+    /// One file of the project: from its directory, or the one built in (the empty path).
+    fn file(&self, name: &str) -> Option<Vec<u8>> {
+        if self.dir.as_os_str().is_empty() {
+            return BUILT_IN.iter().find(|(n, _)| *n == name).map(|(_, c)| c.as_bytes().to_vec());
+        }
+        std::fs::read(self.dir.join(name)).ok()
+    }
+
+    fn where_(&self, name: &str) -> String {
+        if self.dir.as_os_str().is_empty() { format!("{}, built into this executable", name) } else { self.dir.join(name).display().to_string() }
+    }
+
     /// The directory Lean is run in: a copy of the project, named after its content.
     fn home(&self) -> Result<PathBuf, String> {
         let mut h = Sha256::new();
         let mut files = vec![];
         for name in COPIED {
-            match std::fs::read(self.dir.join(name)) {
+            match self.file(name).ok_or(()) {
                 Ok(content) => {
                     h.update(name.as_bytes());
                     h.update(b"\0");
@@ -161,7 +183,7 @@ impl Gate {
     pub fn gamma(&self) -> String {
         let mut h = Sha256::new();
         for name in PROJECT {
-            h.update(std::fs::read(self.dir.join(name)).unwrap_or_default());
+            h.update(self.file(name).unwrap_or_default());
         }
         h.update(ALLOWED_AXIOMS.join(",").as_bytes());
         h.finalize().iter().map(|b| format!("{:02x}", b)).collect::<String>()[..12].to_string()
@@ -201,7 +223,7 @@ impl Gate {
         if !out.contains(&format!("Lean version {})", want)) {
             let said = if out.trim().is_empty() { err.trim().chars().take(200).collect() } else { out.trim().to_string() };
             return Err(format!("Gamma pins Lean {} ({}) but lake reports: {}. Install Lean {}, or point PW_LAKE at its lake",
-                               want, self.dir.join("lean-toolchain").display(), said, want));
+                               want, self.where_("lean-toolchain"), said, want));
         }
         match run(Command::new(&lake).arg("build").current_dir(&home), self.timeout) {
             None => return Err("Gamma did not build in time".into()),

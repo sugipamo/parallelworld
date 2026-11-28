@@ -2,8 +2,8 @@ name: release
 
 # Keep a published executable for the source on main, and rust/release.txt naming it.
 #
-# At every push to main that touches what is compiled into the executable (rust/, and the two
-# files it takes in: pw/reader.txt, pw/rules.json), the digest of that source (ci/pw.sh
+# At every push to main that touches what is compiled into the executable (rust/, and the files
+# it takes in: pw/reader.txt, pw/rules.json, the Lean project lean/), the digest of that source (ci/pw.sh
 # --source-digest) is held against the one rust/release.txt names:
 #
 #   the same                      nothing to do
@@ -20,7 +20,7 @@ name: release
 on:
   push:
     branches: [main]
-    paths: ["rust/**", "pw/reader.txt", "pw/rules.json", "ci/pw.sh", ".github/workflows/release.yml"]
+    paths: ["rust/**", "pw/reader.txt", "pw/rules.json", "lean/**", "ci/pw.sh", ".github/workflows/release.yml"]
   workflow_dispatch:
 
 permissions:

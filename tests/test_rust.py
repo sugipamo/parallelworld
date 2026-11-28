@@ -129,7 +129,7 @@ def test_without_lean_what_needs_it_is_not_checked(pw, tmp_path):
     r = check(pw, declare(tmp_path, [LIMIT, count], **FILES), env=no)
     assert r.returncode == 2 and "Lean" in r.stderr and r.stdout == ""
     r = check(pw, declare(tmp_path, [LIMIT], **FILES), "--verify", "--unconfirmed", "warn", env=no)
-    assert r.returncode == 0 and "not run again: Lean is not here" in r.stdout
+    assert r.returncode == 0 and "not run again: Lean (lake) is not installed" in r.stdout and "nothing declared needs Lean" in r.stdout
 
 
 def test_checking_writes_nothing_and_recording_writes_once(pw, tmp_path):
@@ -341,3 +341,25 @@ def test_rust_struct_fields_as_serde_has_them_and_the_strings_a_match_takes(pw):
     assert read(rust="fields", item="TaskConfig") == '["task_name", "view"]'
     assert read(rust="strings", item="impl Status") == '["error", "ok"]'
     assert read(rust="arms", item="route") == '["system.halt", "system.status", "system.stop"]'    # (a guard is not a string it matches)
+
+
+def test_entries_in_another_order_are_said_to_be_that(pw, tmp_path):
+    """Two lists with the same entries in another order differ; what to do about it is said (#18)."""
+    facts = [{"name": "modes", "type": "List String", "places": [{"at": "a.py", "read": {"find_all": '"(\\w+)"'}},
+                                                                 {"at": "b.py", "read": {"find_all": '"(\\w+)"'}}]}]
+    r = check(pw, declare(tmp_path, facts, **{"a.py": 'M = ["fast", "safe"]\n', "b.py": 'M = ["safe", "fast"]\n'}), "--unconfirmed", "warn")
+    assert r.returncode == 1 and 'the same entries in another order: give the ways of reading "sort": true' in r.stdout
+
+
+def test_the_version_says_what_it_was_built_from(pw):
+    out = subprocess.run([pw, "version"], capture_output=True, text=True).stdout.splitlines()
+    assert out[0].startswith("parallelworld ") and (len(out) == 1 or (out[1].startswith("built from ") and len(out[1].split()[-1]) == 40))
+
+
+def test_the_lean_project_is_built_in(pw, tmp_path):
+    """An executable with no lean/ next to it (published, or installed on its own) still runs the
+    record's proofs again: the Lean project is built into it (#17)."""
+    if not LAKE:
+        pytest.skip("Lean not installed")
+    r = check(pw, ROOT, "--verify", env={"PW_LEAN_DIR": ""})          # (the empty path: no project on disk)
+    assert r.returncode == 0 and r.stdout.strip().endswith("0 refused") and "verified again" in r.stdout, r.stdout[-300:]

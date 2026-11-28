@@ -76,7 +76,12 @@ fn differences(d: &Value) -> Vec<String> {
             groups.entry(places).or_default().push(x);
         }
     }
-    groups.into_iter().map(|(places, xs)| format!("only in {}: {}", places.join(", "), show(&xs))).collect()
+    let out: Vec<String> = groups.into_iter().map(|(places, xs)| format!("only in {}: {}", places.join(", "), show(&xs))).collect();
+    if out.is_empty() && whole.len() > 1 && whole.windows(2).any(|w| w[0].1 != w[1].1) {
+        // the same entries, as many of each, listed in another order
+        return vec!["the places list the same entries in another order: give the ways of reading \"sort\": true".into()];
+    }
+    out
 }
 
 /// Print where every fact stands. Returns true if anything needs attention.
@@ -150,7 +155,10 @@ fn show(report: &Value, warn: bool) -> bool {
                         println!("          read blind by {}: not a measured reader here, with the instructions it read this under (python -m pw.calibrate --model ...)", un.iter().map(show_str).collect::<Vec<_>>().join(", "));
                     }
                     for other in list(p, "read blind as") {
-                        println!("          a blind reader reads {} off it, not what the pattern computes", cut(&show_str(&other), 100));
+                        let sorted = |t: &str| serde_json::from_str::<Vec<Value>>(t).ok().map(|mut v| { v.sort_by_key(|x| x.to_string()); v });
+                        let order = sorted(&show_str(&other)).is_some() && sorted(&show_str(&other)) == sorted(s(p, "reads as"));
+                        println!("          a blind reader reads {} off it, not what its way of reading computes{}", cut(&show_str(&other), 100),
+                                 if order { " (the same entries in another order: \"sort\": true in the way of reading?)" } else { "" });
                     }
                     declined(&list(p, "declined"));
                 }
@@ -282,7 +290,9 @@ fn run(args: &[String]) -> R<i32> {
     }
     if verify && !with_lean && !judge.gate.available() {
         // Nothing here is judged by a proof: the values are written out and compared as they stand.
-        println!("{} recorded proof(s) not run again: Lean is not here, and nothing declared needs it", recorded.len());
+        let why = judge.gate.usable().err().unwrap_or_default();
+        let why = why.split(". Whether places agree").next().unwrap_or("Lean cannot be run here").to_string();
+        println!("{} recorded proof(s) not run again: {}; nothing declared needs Lean", recorded.len(), why);
     } else if verify {
         let jobs: Vec<(String, Vec<(String, String)>, String)> = recorded.iter().map(|p| {
             let f = p["args"][0].as_str().unwrap_or("");
@@ -450,14 +460,21 @@ fn init(args: &[String]) -> R<i32> {
     if !cwd.is_dir() {
         return Err(format!("{} is not a directory", repo));
     }
-    // the commit to pin the action at: given, or the one this tool's own checkout is at
+    // the commit to pin the action at: given; or the one this tool's own checkout is at; or the
+    // one this executable was built from (a published one, or one installed on its own)
+    let mut built_from = false;
     let pin = match pin {
         Some(p) => p,
         None => {
             let here = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
             let head = std::process::Command::new("git").arg("-C").arg(&here).args(["rev-parse", "HEAD"]).output().ok()
-                .filter(|o| o.status.success()).map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string());
-            head.ok_or("say which commit of this tool the CI job is to use: --pin COMMIT (this build is not in a checkout to take it from)")?
+                .filter(|o| o.status.success() && here.join("rust").join("Cargo.toml").exists())
+                .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string());
+            match head {
+                Some(h) => h,
+                None if !env!("PW_COMMIT").is_empty() => { built_from = true; env!("PW_COMMIT").to_string() }
+                None => return Err("say which commit of this tool the CI job is to use: --pin COMMIT (this build is not in a checkout to take it from)".into()),
+            }
         }
     };
     if !regex::Regex::new(r"^[0-9a-f]{40}$").unwrap().is_match(&pin) {
@@ -492,7 +509,10 @@ fn init(args: &[String]) -> R<i32> {
     for line in &said {
         println!("{}", line);
     }
-    println!("\nThe CI job uses {}@{}.", action, &pin[..12]);
+    println!("\nThe CI job uses {}@{}{}.", action, &pin[..12], if built_from { " (the commit this executable was built from)" } else { "" });
+    if built_from {
+        println!("A later commit whose rust/release.txt names this version lets the job take the published executable instead of building it (about a minute and a half).");
+    }
     println!("Next:");
     println!("  1. declare what this repository states in more than one place, in pw-facts.json (docs/spec.md, section 2),");
     println!("     or have an agent propose facts: python -m pw.discover --repo {} --new --apply", repo);
@@ -565,7 +585,13 @@ fn main() {
         Some("confirm") => confirm(&args[1..]),
         Some("mcp") => Ok(mcp::serve()),
         Some("init") => init(&args[1..]),
-        Some("version") => { println!("parallelworld {}", env!("CARGO_PKG_VERSION")); Ok(0) }
+        Some("version") => {
+            println!("parallelworld {}", env!("CARGO_PKG_VERSION"));
+            if !env!("PW_COMMIT").is_empty() {
+                println!("built from {}", env!("PW_COMMIT"));
+            }
+            Ok(0)
+        }
         Some("kernel") => Ok(ops::kernel()),
         Some("lean") => Ok(ops::lean()),
         Some(x @ ("state" | "sync" | "adopt")) => record_tool(x, &args[1..]),
