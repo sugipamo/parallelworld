@@ -1,4 +1,4 @@
-version=0.16.1
-source=d89a4407dbafbdc74e776a8652967a5f226b6c88daa4cafeffd4b11b6500cde5
-url=https://github.com/sugipamo/parallelworld/releases/download/v0.16.1/pw-0.16.1-linux-x86_64
-sha256=55360be15a2d396262ca9066fa8882710050b5889ec8fcff6a34fec1dcfea368
+version=0.16.2
+source=cf96df81885f017d597e2243f1906a6c41d87beab3401587bd6f16b34de5bbc8
+url=https://github.com/sugipamo/parallelworld/releases/download/v0.16.2/pw-0.16.2-linux-x86_64
+sha256=e9fdd546a94b54314a26f7ec164b8f16f0ed5e97432690a97f29dedbfc736fb1
