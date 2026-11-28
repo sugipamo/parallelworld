@@ -118,8 +118,8 @@ pub fn diff(files: &BTreeMap<String, (String, String)>) -> String {
         let (mut ops, mut i, mut j) = (vec![], 0, 0);           // (' ' | '-' | '+', line)
         while i < a.len() || j < b.len() {
             if i < a.len() && j < b.len() && a[i] == b[j] { ops.push((' ', i, j)); i += 1; j += 1; }
-            else if j < b.len() && (i == a.len() || t[i][j + 1] >= t[i + 1][j]) { ops.push(('+', i, j)); j += 1; }
-            else { ops.push(('-', i, j)); i += 1; }
+            else if i < a.len() && (j == b.len() || t[i + 1][j] >= t[i][j + 1]) { ops.push(('-', i, j)); i += 1; }
+            else { ops.push(('+', i, j)); j += 1; }
         }
         let changed: Vec<usize> = ops.iter().enumerate().filter(|(_, o)| o.0 != ' ').map(|(k, _)| k).collect();
         if changed.is_empty() {
@@ -210,6 +210,25 @@ fn read_back(db: &Path, lean_dir: &Path, files: &Path, wanted: &[(String, String
     Ok((read, events, (cost * 100.0).round() / 100.0))
 }
 
+/// That no other place declared in the file reads differently in `new` than in `old` (one that
+/// could not be read before is not held to it).
+fn unchanged_elsewhere(st: &kernel::State, declared: &[(String, Value)], path: &str, h: &str, at: &str, old: &str, new: &str, to: &str) -> R<()> {
+    for (oh, p) in declared {
+        if s(p, "at").split("::").next() != Some(path) || (oh == h && s(p, "at") == at) {
+            continue;
+        }
+        let Some(rd) = p.get("reader").filter(|r| !r.is_null()) else { continue };
+        let name = st.fact(oh).map(|f| s(f, "name").to_string()).unwrap_or_default();
+        let Ok(before) = compute(rd, &read_text(old, s(p, "at"))) else { continue };
+        let after = compute(rd, &read_text(new, s(p, "at"))).map_err(|e| format!("afterwards {} could no longer be read for {}: {}", s(p, "at"), name, e))?;
+        // (another place of the same fact may come to say the new value too: it is against it as well)
+        if after != before && !(oh == h && same(&after, to, false)) {
+            return Err(format!("afterwards {} would read as {} for {}, not {}", s(p, "at"), after.chars().take(60).collect::<String>(), name, before.chars().take(60).collect::<String>()));
+        }
+    }
+    Ok(())
+}
+
 pub struct Agents {
     pub editor: String,
     pub reader: String,
@@ -244,6 +263,9 @@ pub fn plan(repo: &Path, lean_dir: &Path, facts: &[Value], suppose: &Map<String,
     let text_of = |path: &str, texts: &mut BTreeMap<String, (String, String)>| -> String {
         texts.entry(path.to_string()).or_insert_with(|| { let t = std::fs::read_to_string(repo.join(path)).unwrap_or_default(); (t.clone(), t) }).1.clone()
     };
+    // what is declared, and read how, in the files that may be written
+    let declared: Vec<(String, Value)> = kernel::declared(&work.join("pw-facts.json"))?.iter()
+        .flat_map(|f| st.fact(&f.h).map(|x| list(x, "places").into_iter().map(|p| (f.h.clone(), p)).collect::<Vec<_>>()).unwrap_or_default()).collect();
     let (mut written, mut by_hand, mut refused, mut unread) = (vec![], vec![], vec![], vec![]);
     let mut todo: Vec<Map<String, Value>> = vec![];
     for d in list(&report, "decisions") {
@@ -286,15 +308,18 @@ pub fn plan(repo: &Path, lean_dir: &Path, facts: &[Value], suppose: &Map<String,
                 if p.get("some").is_some() {
                     return Err("it lists some entries: which to take out or rename is not determined by the instruction".into());
                 }
-                let rd = decl.get("reader").filter(|r| !r.is_null()).ok_or("it is read by a reader, not by a pattern")?;
-                let new = text_of(&path, &mut texts);
-                let part = part_of(&new, s(&p, "at")).filter(|x| new.matches(x.as_str()).count() == 1).ok_or("the part cannot be pointed at in the file as text")?;
-                Ok(new.replacen(&part, &text::write_pattern(rd, &part, to)?, 1))
+                let rd = decl.get("reader").filter(|r| !r.is_null()).ok_or("it is read by a reader, not by a way of reading")?;
+                let now = text_of(&path, &mut texts);
+                let part = part_of(&now, s(&p, "at")).filter(|x| now.matches(x.as_str()).count() == 1).ok_or("the part cannot be pointed at in the file as text")?;
+                let new = now.replacen(&part, &if s(rd, "language") == "pattern" { text::write_pattern(rd, &part, to)? } else { text::write_value(rd, &part, to)? }, 1);
+                unchanged_elsewhere(&st, &declared, &path, s(&d, "h"), s(&p, "at"), &now, &new, to)?;
+                Ok(new)
             })();
             match tried {
                 Ok(new) => {
                     texts.get_mut(&path).unwrap().1 = new;
-                    item.insert("how".into(), json!("read back with its pattern"));
+                    let by_pattern = decl.get("reader").map_or(false, |r| s(r, "language") == "pattern");
+                    item.insert("how".into(), json!(if by_pattern { "read back with its pattern" } else { "read back with its way of reading" }));
                     written.push(Value::Object(item));
                 }
                 Err(e) => {
@@ -316,9 +341,6 @@ pub fn plan(repo: &Path, lean_dir: &Path, facts: &[Value], suppose: &Map<String,
     match agents {
         None => by_hand.extend(todo.iter().map(|t| Value::Object(plain(t)))),
         Some(ag) => {
-            // what is declared, and read how, in the files an agent may edit
-            let declared: Vec<(String, Value)> = kernel::declared(&work.join("pw-facts.json"))?.iter()
-                .flat_map(|f| st.fact(&f.h).map(|x| list(x, "places").into_iter().map(|p| (f.h.clone(), p)).collect::<Vec<_>>()).unwrap_or_default()).collect();
             while !todo.is_empty() {
                 let (mut batch, mut seen, mut rest): (Vec<Map<String, Value>>, Vec<String>, Vec<Map<String, Value>>) = (vec![], vec![], vec![]);
                 for t in std::mem::take(&mut todo) {      // one place per file at a time: the next is cut from the text as edited
@@ -513,6 +535,9 @@ pub fn command(args: &[String]) -> R<i32> {
         }
         for b in list(&got, "by hand") {
             println!("{}: {} reads as {} and is left to change by hand to {}: {}", s(&b, "fact"), s(&b, "at"), short(s(&b, "reads as"), 80), short(s(&b, "to"), 80), s(&b, "why"));
+        }
+        if !use_agent && !list(&got, "by hand").is_empty() {
+            println!("(or: pw propagate --agent, and an agent proposes the new text of these; it is taken only if it reads back as the value. It costs money.)");
         }
     }
     if !files.is_empty() {

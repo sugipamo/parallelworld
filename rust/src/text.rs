@@ -54,6 +54,63 @@ pub fn write_pattern(rd: &Value, text: &str, term: &str) -> R<String> {
     Ok(new)
 }
 
+/// The text with the one value a structured way of reading reads (a key of a TOML, JSON or YAML
+/// file, a Python or Rust literal) replaced by `term`, the rest of the file as it was written: the
+/// value is found as it is spelled in the text, and of its occurrences exactly one must be the one
+/// that is read (replacing it, and only it, makes the place read `term`). For a data file, the file
+/// read whole must then differ from what it was in that one value and nothing else.
+pub fn write_value(rd: &Value, text: &str, term: &str) -> R<String> {
+    let now = compute(rd, text).map_err(|e| format!("it cannot be read now: {}", e))?;
+    let (was, to): (Value, Value) = match (serde_json::from_str(&now), serde_json::from_str(term)) {
+        (Ok(a @ (Value::String(_) | Value::Number(_))), Ok(b @ (Value::String(_) | Value::Number(_)))) => (a, b),
+        _ => return Err("only one value (a string or a number), not a list, can be written back into its place".into()),
+    };
+    let plain = |v: &Value| match v { Value::String(x) => x.clone(), other => other.to_string() };
+    let (old, new) = (plain(&was), plain(&to));
+    if old.is_empty() || new.chars().any(|c| matches!(c, '"' | '\'' | '\\' | '\n' | '\r')) {
+        return Err("the value cannot be written in the place's own spelling (it is empty, or would need quoting)".into());
+    }
+    let numeric = was.is_number();
+    let starts: Vec<usize> = text.match_indices(old.as_str()).map(|(i, _)| i).filter(|&i| {
+        // a number as a whole token: 14 is not the 14 inside 114 or 1.14
+        !numeric || {
+            let before = text[..i].chars().next_back();
+            let after = text[i + old.len()..].chars().next();
+            !before.map_or(false, |c| c.is_ascii_digit() || c == '.') && !after.map_or(false, |c| c.is_ascii_digit() || c == '.')
+        }
+    }).collect();
+    let fits: Vec<String> = starts.iter().map(|&i| format!("{}{}{}", &text[..i], new, &text[i + old.len()..]))
+        .filter(|n| compute(rd, n).ok().and_then(|b| serde_json::from_str::<Value>(&b).ok()) == Some(to.clone())).collect();
+    let written = match fits.len() {
+        1 => fits.into_iter().next().unwrap(),
+        0 => return Err(format!("{} is not written in the place as a value can be replaced in it", now)),
+        n => return Err(format!("{} is written {} times in the place, and replacing any one of them reads as the new value", now, n)),
+    };
+    if s(rd, "language") == "data" {
+        let whole = |t: &str| -> Option<Value> {
+            let fmt = s(rd, "format");
+            if fmt == "toml" { t.parse::<toml::Table>().ok().and_then(|x| serde_json::to_value(x).ok()) }
+            else if fmt == "yaml" { crate::structured::yaml_value(t).ok() }
+            else { serde_json::from_str(t).ok() }
+        };
+        fn leaves(v: &Value, at: String, out: &mut Vec<(String, Value)>) {
+            match v {
+                Value::Object(o) => o.iter().for_each(|(k, x)| leaves(x, format!("{}.{}", at, k), out)),
+                Value::Array(a) => a.iter().enumerate().for_each(|(i, x)| leaves(x, format!("{}[{}]", at, i), out)),
+                other => out.push((at, other.clone())),
+            }
+        }
+        let (mut a, mut b) = (vec![], vec![]);
+        leaves(&whole(text).ok_or("the file does not parse")?, String::new(), &mut a);
+        leaves(&whole(&written).ok_or("after writing, the file does not parse")?, String::new(), &mut b);
+        let differ = a.len() != b.len() || a.iter().zip(&b).filter(|(x, y)| x != y).count() != 1;
+        if differ {
+            return Err("after writing, the file would differ in more than the one value".into());
+        }
+    }
+    Ok(written)
+}
+
 fn lines_keep(text: &str) -> Vec<&str> {
     text.split_inclusive('\n').collect()
 }

@@ -36,6 +36,7 @@ pw confirm --repo .                     # エージェントの読みのうち�
 pw calibrate --repo .                   # 値をわざと書き換えた本文とおとりを読ませ、読み手を測る（課金あり）
 pw discover --repo . --apply            # 宣言した事実について、読めなくなった箇所を付け替え、漏れている箇所を探す（課金あり）
 pw discover --repo . --new --apply      # 加えて、まだ宣言されていない事柄を提案させる
+pw discover --repo . --apply-last       # --apply なしで見た結果を、探索をやり直さずにそのとおり書き込む
 pw propagate --repo .                   # 人が定めた値と違う箇所への書き戻しを、差分で示す（--apply で適用）
 pw propagate --repo . --suppose 'Lean version=4.15.0'   # 仮にこの値にしたら、どこを書き換えることになるか
 pw propagate --repo . --agent           # 一覧や散文は、エージェントに新しい本文を出させて読み戻す（課金あり）

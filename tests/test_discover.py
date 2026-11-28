@@ -271,7 +271,8 @@ def run(pw, tmp_path):
             log.unlink()
         r = subprocess.run([PW, "discover", "--repo", str(tmp_path / "repo"), "--model", "m", "--confirm-model", "r", "--budget", "1", *args],
                            capture_output=True, text=True, timeout=300,
-                           env={**os.environ, "PW_CLAUDE": str(fake), "FAKE_PLAN": str(tmp_path / "plan.json"), "FAKE_LOG": str(log)})
+                           env={**os.environ, "PW_CLAUDE": str(fake), "FAKE_PLAN": str(tmp_path / "plan.json"), "FAKE_LOG": str(log),
+                                "XDG_CACHE_HOME": str(tmp_path / "cache")})
         assert "Traceback" not in r.stdout + r.stderr, r.stdout + r.stderr
         return r, [json.loads(x) for x in log.read_text().splitlines()] if log.exists() else []
     return go
@@ -332,7 +333,7 @@ def test_a_search_that_failed_does_not_look_like_one_that_found_nothing(run, tmp
     assert "   further: 1 of 1 hidden known places came back" in r.stdout and r.returncode == 0, r.stdout
     assert "   keep other.py::LIMIT  says 14\n        LIMIT = 14\n        a blind reader reads 14 off it\n" in r.stdout
     assert "1 of 1 proposed place(s) kept, 0 dropped, 0 not checked" in r.stdout
-    assert "nothing was written (--apply writes the kept places to pw-facts.json)" in r.stdout
+    assert "nothing was written. To write the kept places as shown, without searching again: pw discover --apply-last" in r.stdout
     reader = sessions[1]["argv"]                                     # the blind reader: the place alone, and nothing to read files with
     assert reader[reader.index("--tools") + 1] == "" and reader[reader.index("--allowedTools") + 1] == "mcp__pw__read_place,mcp__pw__not_stated"
     assert reader[reader.index("--model") + 1] == "r" and "place: other.py::LIMIT" in sessions[1]["prompt"]
@@ -384,15 +385,33 @@ def test_a_declared_place_that_cannot_be_read_is_said_and_can_be_repaired(run, t
     assert [f["name"] for f in sessions[0]["told"]] == ["limit"]
     assert "the agent says the project no longer states limit at guide.md::Limits: x\n   taking a declared place away is for a person: remove it from pw-facts.json if that is so" in out
     assert "\nplace(s) of: limit\n   keep guide.md::Bounds  (instead of guide.md::Limits)  says 14\n" in out
-    assert "   keep app.py::MAX_ATOMS  (instead of app.py::LIMIT)  says 14  (computed)\n" in out
+    assert "   keep app.py::MAX_ATOMS  (instead of app.py::LIMIT)  says 14  (computed)\n        MAX_ATOMS = 14\n        read: {\"as\": \"nat\", \"find\": \"MAX_ATOMS = (\\\\d+)\"}\n" in out, out   # the way of reading, as it would be written (#21)
     assert "2 of 2 proposed place(s) kept, 0 dropped, 0 not checked" in out and "nothing was written" in out
     assert "still cannot be read" not in out and r.returncode == 0
     assert (repo / "pw-log.jsonl").read_text() == record and json.loads((repo / "pw-facts.json").read_text()) == facts   # (without --apply: only looked)
 
-    r, _ = run(fix, "--only", "repair", "--apply")
-    assert "written to pw-facts.json; their blind readings are in the record. Then: pw maintain" in r.stdout and r.returncode == 0
     merged = [{"name": "limit", "type": "Nat", "places": ["guide.md::Bounds", {"at": "app.py::MAX_ATOMS", "read": {"as": "nat", "find": r"MAX_ATOMS = (\d+)"}}]},
               facts[1]]
+    # what was shown is written as it was shown, with no search (#21); not once a file it read has changed
+    (repo / "app.py").write_text("MAX_ATOMS = 14\n# touched\n")
+    r, sessions = run({}, "--apply-last")
+    assert r.returncode == 2 and "app.py changed since that run" in r.stderr and sessions == []
+    (repo / "app.py").write_text("MAX_ATOMS = 14\n")
+    r, sessions = run({}, "--apply-last")
+    assert sessions == [] and r.returncode == 0, r.stdout + r.stderr
+    assert "kept: limit at guide.md::Bounds\nkept: limit at app.py::MAX_ATOMS\n" in r.stdout and "with its 2 blind reading(s) in the record; nothing was searched again" in r.stdout
+    assert (repo / "pw-facts.json").read_text() == json.dumps(merged, ensure_ascii=False, indent=1) + "\n"
+    events = [json.loads(x) for x in (repo / "pw-log.jsonl").read_text().splitlines()]
+    assert {(e["place"], e["blind"]) for e in events if e["type"] == "reading" and e["actor"].startswith("proposed-")} == {("guide.md::Bounds", True), ("app.py::MAX_ATOMS", True)}
+    check = subprocess.run([PW, "check", "--repo", str(repo), "--unconfirmed", "warn"], capture_output=True, text=True)
+    assert "cannot be read as declared" not in check.stdout
+    r, _ = run({}, "--apply-last")
+    assert r.returncode == 2 and "there is no result of a run without --apply" in r.stderr       # (taken once)
+
+    (repo / "pw-facts.json").write_text(json.dumps(facts))
+    (repo / "pw-log.jsonl").write_text(record)
+    r, _ = run(fix, "--only", "repair", "--apply")
+    assert "written to pw-facts.json; their blind readings are in the record. Then: pw maintain" in r.stdout and r.returncode == 0
     assert (repo / "pw-facts.json").read_text() == json.dumps(merged, ensure_ascii=False, indent=1) + "\n"
     events = [json.loads(x) for x in (repo / "pw-log.jsonl").read_text().splitlines()]
     assert {(e["place"], e["blind"]) for e in events if e["type"] == "reading" and e["actor"].startswith("proposed-")} == {("guide.md::Bounds", True), ("app.py::MAX_ATOMS", True)}

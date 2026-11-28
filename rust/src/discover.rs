@@ -1029,6 +1029,66 @@ fn broken_places(repo: &Path, lean_dir: &Path, facts: &[Value]) -> R<Vec<(String
         .collect())
 }
 
+/// Where a run without --apply keeps what it would have written: outside the repository.
+fn last_path(repo: &Path) -> PathBuf {
+    let base = std::env::var_os("XDG_CACHE_HOME").map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".cache"))).unwrap_or_else(std::env::temp_dir);
+    base.join("parallelworld").join(format!("discover-last-{}.json", sha(&[&repo.display().to_string()])))
+}
+
+fn digest(path: &Path) -> String {
+    std::fs::read(path).map(|b| sha(&[&String::from_utf8_lossy(&b)])).unwrap_or_default()
+}
+
+/// Keep the result of a run without --apply: the declaration it would write, the blind readings
+/// of the kept places (made on a copy of the record), and what the files were when they were read.
+fn keep_last(repo: &Path, facts_path: &Path, fin: &[Value], kept: &[(String, String)], record: &Path) -> R<()> {
+    let work = scratch("pw-last-");
+    let path = work.join(FACTS);
+    write_json(&path, &json!(fin))?;
+    let ids: HashMap<String, String> = kernel::declared(&path)?.into_iter().map(|f| (f.name, f.h)).collect();
+    let _ = std::fs::remove_dir_all(&work);
+    let wanted: HashSet<(String, String)> = kept.iter().filter_map(|(n, at)| Some((ids.get(n)?.clone(), at.clone()))).collect();
+    let readings: Vec<Value> = std::fs::read_to_string(record).unwrap_or_default().lines().filter_map(|l| serde_json::from_str::<Value>(l).ok())
+        .filter(|e| s(e, "type") == "reading" && s(e, "actor").starts_with("proposed-") && wanted.contains(&(s(e, "h").to_string(), s(e, "place").to_string())))
+        .collect();
+    let files: Map<String, Value> = kept.iter().map(|(_, at)| at.split("::").next().unwrap_or("").to_string())
+        .map(|f| (f.clone(), json!(digest(&repo.join(&f))))).collect();
+    let last = json!({ "repo": repo.display().to_string(), "facts": digest(facts_path), "files": files, "write": fin,
+                       "kept": kept.iter().map(|(n, at)| json!([n, at])).collect::<Vec<_>>(), "readings": readings });
+    let to = last_path(repo);
+    std::fs::create_dir_all(to.parent().unwrap()).map_err(|e| format!("{}: {}", to.display(), e))?;
+    std::fs::write(&to, serde_json::to_string(&last).unwrap()).map_err(|e| format!("{}: {}", to.display(), e))
+}
+
+/// pw discover --apply-last: write what the last run without --apply kept, searching nothing.
+fn write_last(repo: &Path, lean_dir: &Path) -> R<i32> {
+    let from = last_path(repo);
+    let text = std::fs::read_to_string(&from).map_err(|_| "there is no result of a run without --apply to write here: run pw discover first".to_string())?;
+    let last: Value = serde_json::from_str(&text).map_err(|e| format!("{}: {}", from.display(), e))?;
+    let path = repo.join(FACTS);
+    if digest(&path) != s(&last, "facts") {
+        return Err(format!("{} has changed since that run: its result may not fit it any more. Run pw discover again", FACTS));
+    }
+    let moved: Vec<&String> = last["files"].as_object().into_iter().flatten().filter(|(f, d)| digest(&repo.join(f)) != d.as_str().unwrap_or("")).map(|(f, _)| f).collect();
+    if !moved.is_empty() {
+        return Err(format!("{} changed since that run, so what was read there may not be what it says now. Run pw discover again",
+                           moved.iter().map(|f| f.as_str()).collect::<Vec<_>>().join(", ")));
+    }
+    std::fs::write(&path, pretty(&last["write"])).map_err(|e| format!("{}: {}", path.display(), e))?;
+    let declared = kernel::declared(&path)?;
+    let judge = Judge { always: false, gate: Gate::new(lean_dir.to_path_buf()) };
+    kernel::premises(&declared, &judge, FACTS)?;
+    let readings = list(&last, "readings");
+    kernel::with_record(&repo.join(LOG), "discover", |st| { kernel::sync(st, &declared, FACTS); st.adopt(&readings) })?;
+    let _ = std::fs::remove_file(&from);
+    for k in list(&last, "kept") {
+        println!("kept: {} at {}", k[0].as_str().unwrap_or(""), k[1].as_str().unwrap_or(""));
+    }
+    println!("written to {} as that run showed it, with its {} blind reading(s) in the record; nothing was searched again. Then: pw maintain", FACTS, readings.len());
+    Ok(0)
+}
+
 /// pw-facts.json as Python's json.dump(..., ensure_ascii=False, indent=1) wrote it, and a newline.
 fn pretty(v: &Value) -> String {
     use serde::Serialize;
@@ -1038,7 +1098,7 @@ fn pretty(v: &Value) -> String {
     String::from_utf8(out).expect("JSON is UTF-8") + "\n"
 }
 
-const USAGE: &str = "pw discover [--repo DIR] [--lean-dir DIR] [--model M] [--confirm-model M] [--budget 5] [--new] [--only repair|further|new] [--no-controls] [--seed N] [--apply]";
+const USAGE: &str = "pw discover [--repo DIR] [--lean-dir DIR] [--model M] [--confirm-model M] [--budget 5] [--new] [--only repair|further|new] [--no-controls] [--seed N] [--apply | --apply-last]";
 
 pub const HELP: &str = "pw discover: have an agent look after the places of the declared facts
 
@@ -1056,6 +1116,8 @@ pub const HELP: &str = "pw discover: have an agent look after the places of the 
   --no-controls          tell the agent every known place, hiding none as a control
   --seed N               which known places are hidden as controls
   --apply                write the places a blind reader confirmed into pw-facts.json
+  --apply-last           write what the last run without --apply kept, as it showed it, without
+                         searching again (if pw-facts.json and those files have not changed since)
 ";
 
 pub fn command(args: &[String]) -> R<i32> {
@@ -1065,18 +1127,22 @@ pub fn command(args: &[String]) -> R<i32> {
     }
     let (o, rest) = crate::agent_opts(args, USAGE)?;
     let budget = if args.iter().any(|a| a == "--budget") { o.budget } else { 5.0 };
-    let (mut want_new, mut only, mut controls, mut seed, mut apply) = (false, None::<String>, true, None::<u64>, false);
+    let (mut want_new, mut only, mut controls, mut seed, mut apply, mut apply_last) = (false, None::<String>, true, None::<u64>, false, false);
     for (k, v) in rest {
         let flag = |on: &mut bool, to: bool| if v.is_empty() { *on = to; Ok(()) } else { Err(format!("unknown argument {}; {}", v, USAGE)) };
         match k.as_str() {
             "--new" => flag(&mut want_new, true)?,
             "--no-controls" => flag(&mut controls, false)?,
             "--apply" => flag(&mut apply, true)?,
+            "--apply-last" => flag(&mut apply_last, true)?,
             "--only" if ["repair", "further", "new"].contains(&v.as_str()) => only = Some(v),
             "--only" => return Err(format!("--only is one of repair, further, new; {}", USAGE)),
             "--seed" => seed = Some(v.parse::<i64>().map_err(|_| "--seed is a number".to_string())? as u64),
             _ => return Err(format!("unknown argument {}; {}", k, USAGE)),
         }
+    }
+    if apply_last {
+        return write_last(&o.repo, &o.lean_dir);
     }
     agent::ready()?;
     let (repo, lean_dir, model) = (&o.repo, &o.lean_dir, &o.model);
@@ -1190,6 +1256,9 @@ pub fn command(args: &[String]) -> R<i32> {
                 println!("   {} {}{}  {} {}{}", mark, s(p, "at"), moved, if truthy(p.get("some")) { "lists in part" } else { "says" },
                          cut(&pyjson(&p["value"], false), 100), if truthy(p.get("read")) { "  (computed)" } else { "" });
                 println!("        {}", cut(s(p, "quote"), 160));
+                if let Some(rd) = p.get("read").filter(|r| r.is_object()) {
+                    println!("        read: {}", pyjson(rd, false));          // as it would go into pw-facts.json
+                }
                 println!("        {}", cut(&v.why, 300));
             }
             let whole: Vec<Value> = places.iter().filter(|p| by[&(name, s(p, "at"))].kept && !truthy(p.get("some"))).map(|p| (*p).clone()).collect();
@@ -1208,8 +1277,12 @@ pub fn command(args: &[String]) -> R<i32> {
             kernel::premises(&declared, &judge, FACTS)?;
             kernel::with_record(&record, "discover", |st| { kernel::sync(st, &declared, FACTS); Ok(()) })?;
             println!("written to {}; their blind readings are in the record. Then: pw maintain", FACTS);
+        } else if !apply && !kept.is_empty() {
+            keep_last(repo, &path, &fin, &kept, &record)?;
+            println!("nothing was written. To write the kept places as shown, without searching again: pw discover --apply-last");
+            println!("(that takes this result as long as {} and the files of those places are as they are now; --apply searches again, and costs again)", FACTS);
         } else if !apply {
-            println!("nothing was written (--apply writes the kept places to {})", FACTS);
+            println!("nothing was written: no place was kept");
         }
     } else {
         println!("\nnothing proposed{}", if failed { " (but the search was incomplete: this does not mean there is nothing)" } else { "" });

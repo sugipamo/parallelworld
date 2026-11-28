@@ -15,6 +15,9 @@ use std::io::{BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+/// The files the steps write, which belong in the repository.
+const KEPT: [&str; 5] = ["pw-facts.json", "pw-log.jsonl", "pw-calibration.json", ".gitattributes", ".github/workflows/facts.yml"];
+
 struct Step<'a> {
     what: &'a str,
     args: Vec<String>,
@@ -74,6 +77,8 @@ pub fn command(args: &[String]) -> R<i32> {
         i += 1;
     }
     let repo = std::fs::canonicalize(&repo).map_err(|e| format!("{}: {}", repo.display(), e))?;
+    // what the steps may write, as it was before: at the end, what changed is what there is to commit
+    let before: Vec<Option<Vec<u8>>> = KEPT.iter().map(|f| std::fs::read(repo.join(f)).ok()).collect();
     let r = repo.display().to_string();
     let with = |cmd: &str, extra: &[&str], default_budget: f64| -> (Vec<String>, f64) {
         let mut a: Vec<String> = [cmd, "--repo", &r, "--model", &model].iter().map(|x| x.to_string()).collect();
@@ -155,7 +160,12 @@ pub fn command(args: &[String]) -> R<i32> {
     println!("\n5. The check, as CI runs it: pw check");
     let code = run(&["check".into(), "--repo".into(), r.clone()])?;
     if code == 0 {
-        println!("\nDone. Commit pw-facts.json, pw-log.jsonl, pw-calibration.json, .gitattributes and .github/workflows/facts.yml.");
+        let changed: Vec<&str> = KEPT.iter().zip(&before).filter(|(f, b)| std::fs::read(repo.join(f)).ok() != **b).map(|(f, _)| *f).collect();
+        if changed.is_empty() {
+            println!("\nDone. Nothing changed: there is nothing to commit.");
+        } else {
+            println!("\nDone. Commit what changed: {}.", changed.join(", "));
+        }
     } else if code == 1 {
         println!("\nWhat the check says above needs a person (or another step it names). pw start goes on from there when run again.");
     }

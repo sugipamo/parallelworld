@@ -451,5 +451,7 @@ def test_start_takes_each_step_not_done_yet_and_goes_on_from_where_it_stopped(pw
     r = start("--yes")
     assert len(sessions()) >= 1 and "5. The check" in r.stdout, r.stdout + r.stderr
     assert "FAIL" not in r.stdout and r.returncode == 0 and "Done." in r.stdout, r.stdout
+    assert "Commit what changed: pw-log.jsonl." in r.stdout, r.stdout
     r = start()
     assert "Every place is read as it is now" in r.stdout and r.returncode == 0 and sessions() == []
+    assert "Done. Nothing changed: there is nothing to commit." in r.stdout and "Commit" not in r.stdout       # (#23)

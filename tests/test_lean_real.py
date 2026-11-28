@@ -947,3 +947,53 @@ def test_proofs_checked_together_are_each_checked(gate):
     # a proof that passes alone only by what another one leaves behind does not pass: nothing is left behind
     leak = [("holds", P("True"), "have h : (1 : Nat) = 1 := rfl\ntrivial"), ("holds", P("(1 : Nat) = 2"), "exact h")]
     assert [v["ok"] for v in gate.check_many(leak)] == [True, False]
+
+
+def test_a_value_read_by_its_structure_is_written_back_as_the_file_writes_it(tmp_path):
+    """A key of a TOML, JSON or YAML file, a Python literal: the value is replaced where it stands,
+    with the file's own spelling and nothing else, and read back (#22)."""
+    import json
+    cargo = '[package]\nname = "app"   # the crate\nversion = "9.9.9"\n\n[dependencies]\nfoo = { version = "9.9.9" }\n'
+    (tmp_path / "Cargo.toml").write_text(cargo)
+    (tmp_path / "package.json").write_text('{\n  "name": "app",\n  "version": "0.1.0",\n  "other": "0.1.0"\n}\n')
+    (tmp_path / "conf.yaml").write_text("app:\n  version: 0.1.0   # kept in step\n  workers: 4\n")
+    (tmp_path / "app.py").write_text('VERSION = "0.1.0"\nWORKERS = 4\n')
+    (tmp_path / "doc.md").write_text("## Version\n\nThis is version 0.1.0.\n")
+    facts = [{"name": "version", "type": "String", "instructions": [{"is": "0.2.0", "by": "alice"}], "places": [
+                 {"at": "Cargo.toml", "read": {"data": "package.version"}},
+                 {"at": "package.json", "read": {"data": "version"}},
+                 {"at": "conf.yaml", "read": {"data": "app.version"}},
+                 {"at": "app.py::VERSION", "read": {"python": "value"}},
+                 "doc.md::Version"]},
+             {"name": "workers", "type": "Nat", "instructions": [{"is": 8, "by": "alice"}], "places": [
+                 {"at": "conf.yaml", "read": {"data": "app.workers", "as": "nat"}}, {"at": "app.py::WORKERS", "read": {"python": "value", "as": "nat"}},
+                 {"at": "app.py", "read": {"find": r"WORKERS = (\d+)", "as": "nat"}}]}]       # (two places of one fact in one file)
+    (tmp_path / "pw-facts.json").write_text(json.dumps(facts))
+    k = Kernel(str(tmp_path / "pw-log.jsonl"), gate=LeanGate())
+    k.sync_facts(str(tmp_path / "pw-facts.json"))
+    h = next(h for h, f in k.state().facts.items() if f["name"] == "version")
+    k.read_place(h, "doc.md::Version", '"0.1.0"', cwd=str(tmp_path), quote="This is version 0.1.0.")
+    got = propagate(str(tmp_path), facts)
+    assert {(w["at"], w["how"]) for w in got["written"]} == {(a, "read back with its way of reading") for a in
+                                                             ("Cargo.toml", "package.json", "conf.yaml", "app.py::VERSION", "app.py::WORKERS")} | {("app.py", "read back with its pattern")}
+    files = {p: new for p, (_, new) in got["files"].items()}
+    assert files["Cargo.toml"] == cargo.replace('version = "9.9.9"\n\n', 'version = "0.2.0"\n\n')       # the dependency's 9.9.9 is not the one read
+    assert files["package.json"] == '{\n  "name": "app",\n  "version": "0.2.0",\n  "other": "0.1.0"\n}\n'
+    assert files["conf.yaml"] == "app:\n  version: 0.2.0   # kept in step\n  workers: 8\n"
+    assert files["app.py"] == 'VERSION = "0.2.0"\nWORKERS = 8\n'
+    assert [b["at"] for b in got["by hand"]] == ["doc.md::Version"]
+    shown = propagate(str(tmp_path), facts, json_out=False)
+    assert "(or: pw propagate --agent" in shown                                                     # the next step is named (#22)
+
+    # where replacing the value would change something else too, nothing is written
+    (tmp_path / "package.json").write_text('{"version": "0.1.0", "list": ["0.1.0"]}\n')
+    facts[0]["places"] = [{"at": "package.json", "read": {"data": "version"}}, "doc.md::Version"]
+    (tmp_path / "pw-facts.json").write_text(json.dumps(facts))
+    got = propagate(str(tmp_path), facts)
+    assert json.loads(got["files"]["package.json"][1]) == {"version": "0.2.0", "list": ["0.1.0"]}
+    (tmp_path / "list.py").write_text('L = ["0.1.0"]\n')
+    facts[0]["places"] = [{"at": "package.json", "read": {"data": "list"}}, {"at": "list.py::L", "read": {"python": "value"}}]
+    facts[0]["type"], facts[0]["instructions"] = "List String", [{"is": ["0.2.0"], "by": "alice"}]
+    (tmp_path / "pw-facts.json").write_text(json.dumps(facts))
+    got = propagate(str(tmp_path), facts)
+    assert "package.json" not in got["files"] and "not a list" in next(b["why"] for b in got["by hand"] if b["at"] == "package.json")
