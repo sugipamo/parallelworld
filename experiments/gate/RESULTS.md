@@ -36,3 +36,7 @@ python experiments/gate/run.py --out experiments/gate/results/after.json
 - 試した値は手で考えた 39 個。網羅ではない。
 - 読み手を実際にそそのかせるかは、この実験では見ていない（`experiments/hard/` で、読み手あての文面を 4 種類試し、12 回とも従わなかった）。
 - 上に挙げた型以外の事実（たとえば構造体）を宣言した場合、読み手の値は従来どおり拒否リストだけを通る。
+
+## その後：Rust 版で（0.16.0）
+
+読み手の値を受け取る処理を Rust 版に移したあと、同じ 39 通りの値を回し直した。受け取るか断るか、事実がどう判定されるか、読みが成り立つか、害があるかの 4 つが、39 通りとも以前の結果（`results/after.json`）と同じだった（`python experiments/gate/run.py`）。

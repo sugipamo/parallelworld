@@ -49,3 +49,22 @@ N 個の事実を持つリポジトリを作る（どの事実も、コードと
 
 - cold（記録に無い等式を新しく証明する）は、いまも 1 件ごとに Lean を起動する。どのタクティクで通るかを順に試すので、まとめにくい。`pw.check` は記録に書かないので、パターンで読む値が変わったあとは、記録に残すまで毎回この道を通る。
 - 測ったのは自然数の等式だけ。長い一覧どうしの比較は 1 件がもっと重い。
+
+## その後：Rust 版で（0.16.0）
+
+判定と記録を Rust 版に移したあと、同じ作り方のリポジトリで測り直した。`--lean always` が以前と同じ条件（比較を全部 Lean に通す）、`--lean needed` がいまの既定（書き下した値はそのまま比べる。ここでは何も Lean に通さない）。
+
+```
+python experiments/scale/run.py --sizes 5 20 50 --lean always --out experiments/scale/results/rust-always.json
+python experiments/scale/run.py --sizes 5 20 50 --lean needed --out experiments/scale/results/rust-needed.json
+```
+
+| 事実 | cold | warm | verify | one | cold（needed） | warm（needed） |
+|------|------|------|--------|-----|---------------|---------------|
+| 5 | 2.1 | 0.3 | 0.5 | 0.9 | 0.1 | 0.0 |
+| 20 | 7.5 | 0.3 | 0.6 | 1.0 | 0.0 | 0.1 |
+| 50 | 18.4 | 0.3 | 0.7 | 0.9 | 0.1 | 0.1 |
+
+- 記録に証明がそろった状態の確認（warm）は、事実の数によらず 0.3 秒（Python 版では 50 個で 1.6 秒）。CI の `--verify` は 50 個で 0.7 秒（同 12.6 秒、まとめて通すようにしてからは 2.3 秒）。
+- cold は Lean の実行がほとんどで、Python 版とほぼ同じ。
+- いまの既定では、定義のない宣言は Lean を呼ばずに 0.1 秒で確かめ終わる。

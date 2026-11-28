@@ -44,8 +44,9 @@ sys.path.insert(0, ROOT)
 
 from pw import maintain                             # noqa: E402
 from pw.check import FACTS                          # noqa: E402
-from pw.kernel import CALIBRATION, LOG, RULES, Kernel, KernelError      # noqa: E402
-from pw.lean_gate import LEAN_DIR, LeanGate         # noqa: E402
+from pw.core import Kernel
+from pw.kernel import CALIBRATION, LOG, RULES, KernelError      # noqa: E402
+from pw.core import LEAN_DIR, LeanGate         # noqa: E402
 
 
 def git(repo, *args, binary=False):

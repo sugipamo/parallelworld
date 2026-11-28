@@ -30,8 +30,9 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, ROOT)
 
-from pw.kernel import INSTRUCTIONS, Kernel, KernelError, pattern      # noqa: E402
-from pw.lean_gate import GateError, LeanGate                           # noqa: E402
+from pw.core import Kernel
+from pw.kernel import INSTRUCTIONS, KernelError, pattern      # noqa: E402
+from pw.core import GateError, LeanGate                           # noqa: E402
 
 MODEL = "claude-opus-5-5"
 

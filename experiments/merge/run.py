@@ -24,8 +24,9 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, ROOT)
 
-from pw.kernel import INSTRUCTIONS, Kernel      # noqa: E402
-from pw.lean_gate import LeanGate               # noqa: E402
+from pw.core import Kernel
+from pw.kernel import INSTRUCTIONS      # noqa: E402
+from pw.core import LeanGate               # noqa: E402
 
 MODEL = "claude-opus-5-5"
 LIMIT = {"name": "limit", "type": "Nat", "gloss": "the largest number of atoms that is solved",

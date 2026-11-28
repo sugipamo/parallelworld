@@ -254,6 +254,9 @@ pub fn op(req: &Value) -> Option<R<Value>> {
         "anchored" => Ok(json!(anchored(s(req, "quote"), s(req, "subject"), cwd))),
         "question" => { let (t, a) = question(&req["fact"], &req["place"]); Ok(json!([t, a])) }
         "measurements" => measurements(cwd, req.get("instructions").and_then(Value::as_str)).map(|v| json!(v)),
+        // what a Rust file says, aside from layout and comments (its tokens), or why it does not parse
+        "rust_tokens" => syn::parse_file(text).map(|f| { let mut t = proc_macro2::TokenStream::new(); quote::ToTokens::to_tokens(&f, &mut t); json!(t.to_string()) })
+            .map_err(|e| format!("the file does not parse as Rust: {}", e)),
         "interval" => { let (lo, hi) = interval(req["k"].as_f64().unwrap_or(0.0), req["n"].as_f64().unwrap_or(0.0)); Ok(json!([lo, hi])) }
         _ => return None,
     })

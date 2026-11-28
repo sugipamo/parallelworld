@@ -110,13 +110,16 @@ pub fn yaml_value(text: &str) -> R<Value> {
 
 // ---- Rust ----------------------------------------------------------------------------------------
 
+/// The items a name names: `NAME` a const, static, fn, enum, struct, trait, type or mod;
+/// `impl NAME` the impl blocks of that type (whatever trait they implement); `a::b` inside mod a.
 fn items_named<'a>(items: &'a [syn::Item], path: &str) -> Vec<&'a syn::Item> {
+    let (blocks, path) = match path.strip_prefix("impl ") { Some(rest) => (true, rest.trim()), None => (false, path) };
     let mut scope: Vec<&syn::Item> = items.iter().collect();
     let steps: Vec<&str> = path.split("::").collect();
     for (n, step) in steps.iter().enumerate() {
         let here: Vec<&syn::Item> = scope.iter().filter(|i| item_name(i).as_deref() == Some(*step)).cloned().collect();
         if n + 1 == steps.len() {
-            return here;
+            return here.into_iter().filter(|i| matches!(i, syn::Item::Impl(_)) == blocks).collect();
         }
         scope = here.iter().filter_map(|i| match i { syn::Item::Mod(m) => m.content.as_ref().map(|(_, c)| c), _ => None }).flatten().collect();
     }
@@ -210,6 +213,14 @@ pub fn read_rust(rd: &Value, text: &str) -> R<Lit> {
             }
             expr_lit(exprs[0], name)
         }
+        "fields" => {
+            let structs: Vec<&syn::ItemStruct> = found.iter().filter_map(|i| match i { syn::Item::Struct(s) => Some(s), _ => None }).collect();
+            if structs.len() != 1 {
+                return Err(format!("{} is not one struct", pyrepr(name)));
+            }
+            Ok(Lit::Many(serde_fields(structs[0]).into_iter().map(|n| json!(n)).collect()))
+        }
+        "arms" => Ok(Lit::Many(found.iter().flat_map(|i| arm_strings(i)).map(|n| json!(n)).collect())),
         "strings" => {
             let mut out = vec![];
             for i in &found {
@@ -232,6 +243,55 @@ pub fn read_rust(rd: &Value, text: &str) -> R<Lit> {
             Ok(Lit::Many(names.into_iter().map(|n| json!(n)).collect()))
         }
     }
+}
+
+/// A struct's fields as serde writes and reads them: `rename` applied, `skip` left out.
+fn serde_fields(st: &syn::ItemStruct) -> Vec<String> {
+    let mut out = vec![];
+    for f in &st.fields {
+        let Some(ident) = &f.ident else { continue };
+        let (mut name, mut skip) = (ident.to_string().trim_start_matches("r#").to_string(), false);
+        for a in f.attrs.iter().filter(|a| a.path().is_ident("serde")) {
+            let _ = a.parse_nested_meta(|m| {
+                if m.path.is_ident("rename") {
+                    if let Ok(v) = m.value() { if let Ok(s) = v.parse::<syn::LitStr>() { name = s.value(); } }
+                } else if m.path.is_ident("skip") || m.path.is_ident("skip_deserializing") {
+                    skip = true;
+                } else if let Ok(v) = m.value() {
+                    let _ = v.parse::<syn::Expr>();          // (another key = value: not ours)
+                }
+                Ok(())
+            });
+        }
+        if !skip {
+            out.push(name);
+        }
+    }
+    out
+}
+
+/// The string literals the arms of `match` expressions in an item match on.
+fn arm_strings(item: &syn::Item) -> Vec<String> {
+    use syn::visit::Visit;
+    struct Arms(Vec<String>);
+    fn pat(p: &syn::Pat, out: &mut Vec<String>) {
+        match p {
+            syn::Pat::Lit(l) => if let syn::Lit::Str(s) = &l.lit { out.push(s.value()) },
+            syn::Pat::Or(o) => o.cases.iter().for_each(|c| pat(c, out)),
+            syn::Pat::Paren(x) => pat(&x.pat, out),
+            syn::Pat::Ident(i) => if let Some((_, sub)) = &i.subpat { pat(sub, out) },
+            _ => {}
+        }
+    }
+    impl<'a> Visit<'a> for Arms {
+        fn visit_arm(&mut self, arm: &'a syn::Arm) {
+            pat(&arm.pat, &mut self.0);
+            syn::visit::visit_arm(self, arm);
+        }
+    }
+    let mut v = Arms(vec![]);
+    v.visit_item(item);
+    v.0
 }
 
 /// The lines of the items a Rust way of reading takes, as they stand (for a blind reader).

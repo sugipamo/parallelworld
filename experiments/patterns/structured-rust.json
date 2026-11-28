@@ -1,0 +1,5 @@
+{
+ "miclow|src/config.rs": {"at": "src/config.rs", "read": {"rust": "fields", "item": "TaskConfig", "sort": true}},
+ "miclow|src/system_response_channel.rs": {"at": "src/system_response_channel.rs", "read": {"rust": "strings", "item": "impl SystemResponseStatus", "sort": true}},
+ "miclow|src/system_control_command.rs": {"at": "src/system_control_command.rs", "read": {"rust": "arms", "item": "system_control_command_to_handler", "sort": true}}
+}

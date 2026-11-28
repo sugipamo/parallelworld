@@ -35,8 +35,9 @@ from concurrent.futures import ThreadPoolExecutor
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, ROOT)
 
-from pw.kernel import LOG, Kernel                    # noqa: E402
-from pw.lean_gate import LEAN_DIR, LeanGate          # noqa: E402
+from pw.core import Kernel
+from pw.kernel import LOG                    # noqa: E402
+from pw.core import LEAN_DIR, LeanGate          # noqa: E402
 from pw import maintain                              # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))

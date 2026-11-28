@@ -18,9 +18,10 @@ kinds of edit, each made on a copy of its file:
      different form. The pattern should read the new value. It can instead be loud, or
      read the old value ("missed": the place changed and the check does not see it).
 
-Where the file's language can be parsed here (Python, TOML, JSON), a rewrite of kind A is
-kept only if the file still parses and means the same; other files are not checked, and the
-edits made to them are the ones that are plainly harmless (see `SAFE`).
+Where the file's language can be parsed here (Python, TOML, JSON, Rust), a rewrite of kind A is
+kept only if the file still parses and means the same, and an edit of kind B only if it still
+parses; other files are not checked, and the edits made to them are the ones that are plainly
+harmless (see `SAFE`).
 """
 import argparse
 import ast
@@ -220,6 +221,9 @@ def means(path, text):
         return tomllib.loads(text)
     if path.endswith(".json"):
         return json.loads(text)
+    if path.endswith(".rs"):                      # (its tokens: layout and comments aside; raises if it is not Rust)
+        from pw.kernel import _ask
+        return _ask("rust_tokens", text=text)
     return None
 
 
@@ -354,7 +358,7 @@ def main():
             facts = json.load(fh)
         for fact in facts:
             for place in fact["places"]:
-                if isinstance(place, dict) and "read" in place:
+                if isinstance(place, dict) and {"find", "find_all"} & set(place.get("read") or {}):     # (the places read by a pattern)
                     name = os.path.basename(repo)
                     other = alt.get(f"{name}|{place['at']}|{fact['name']}") or alt.get(f"{name}|{place['at']}")
                     for r in trial(repo, fact, place, other):

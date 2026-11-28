@@ -190,8 +190,8 @@ pub fn reader(read: &Value, at: &str) -> R<Value> {
             return Err(format!("{}: \"rust\" reads a whole .rs file; name the item with \"item\"", at));
         }
         let take = r["rust"].as_str().unwrap_or("");
-        if !["value", "strings", "names"].contains(&take) {
-            return Err(format!("\"rust\" is one of value, strings, names; not {}", pyrepr(take)));
+        if !["value", "strings", "names", "fields", "arms"].contains(&take) {
+            return Err(format!("\"rust\" is one of value, strings, names, fields, arms; not {}", pyrepr(take)));
         }
         let item = r.get("item").and_then(Value::as_str).filter(|i| !i.is_empty()).ok_or("\"rust\" needs \"item\": the name of a const, static, fn, enum, struct, impl or mod (a::b inside mods)")?;
         return Ok(json!({ "language": "rust", "take": take, "item": item, "as": kind, "sort": flag(r, "sort"), "unique": flag(r, "unique") }));

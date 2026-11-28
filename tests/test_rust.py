@@ -262,7 +262,8 @@ def test_a_rust_file_is_read_by_its_items(pw):
     read = lambda **r: compute(reader({"as": "string", **r}, "src/lib.rs"), text)
     assert read(rust="value", item="LIMIT", **{"as": "nat"}) == "14" and read(rust="value", item="NEG", **{"as": "int"}) == "(-3)"
     assert read(rust="value", item="NAMES", sort=True) == '["a", "b"]'
-    assert read(rust="names", item="Mode") == '["Fast", "Safe"]' and read(rust="names", item="Config") == '["limit", "mode", "new", "check"]'
+    assert read(rust="names", item="Mode") == '["Fast", "Safe"]' and read(rust="names", item="Config") == '["limit", "mode"]'
+    assert read(rust="names", item="impl Config") == '["new", "check"]'                 # a type, and its impl blocks, apart
     assert read(rust="names", item="tools") == '["read", "not_stated", "X"]' and read(rust="value", item="tools::X", **{"as": "nat"}) == "1"
     assert read(rust="strings", item="names") == '["x", "{}", "y"]'
     reformatted = text.replace("pub const LIMIT: u32 = 14;", "pub const LIMIT: u32 =\n    14; // the most")
@@ -326,3 +327,17 @@ def test_without_the_build_the_check_could_not_be_made(tmp_path):
     for mod in ("pw.check", "pw.confirm"):
         r = subprocess.run([sys.executable, "-m", mod, "--repo", str(tmp_path)], capture_output=True, text=True, env=env)
         assert r.returncode == 2 and r.stderr.startswith("pw: the Rust build of this tool is not there"), (mod, r)
+
+
+def test_rust_struct_fields_as_serde_has_them_and_the_strings_a_match_takes(pw):
+    from pw.kernel import compute, reader
+    text = ('#[derive(Deserialize)]\npub struct TaskConfig {\n    #[serde(rename = "task_name")]\n    pub name: String,\n'
+            '    #[serde(default)]\n    pub view: bool,\n    // not in the file\n    #[serde(skip)]\n    pub internal: bool,\n}\n'
+            'impl std::fmt::Display for Status {\n    fn fmt(&self, f: &mut F) -> R { match self { Status::A => write!(f, "ok"), Status::B => write!(f, "error") } }\n}\n'
+            'pub enum Status { A, B }\n'
+            'fn route(key: &str) -> u8 {\n    match key {\n        "system.status" => 1,\n        "system.stop" | "system.halt" => 2,\n'
+            '        _ if key.starts_with("system.") => 3,\n        _ => 0,\n    }\n}\n')
+    read = lambda **r: compute(reader({"sort": True, **r}, "src/lib.rs"), text)
+    assert read(rust="fields", item="TaskConfig") == '["task_name", "view"]'
+    assert read(rust="strings", item="impl Status") == '["error", "ok"]'
+    assert read(rust="arms", item="route") == '["system.halt", "system.status", "system.stop"]'    # (a guard is not a string it matches)

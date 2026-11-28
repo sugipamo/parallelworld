@@ -118,8 +118,11 @@ What to report for a place
                             may be * (every entry) or name[key=value]; add "keys": true for the keys
     {"rust": "value", "item": "LIMIT"}   the literal of a const or static in a .rs file, named whole
                             (inside a mod: "tools::LIMIT"); "strings" for every string literal in an
-                            item (macros included); "names" for an enum's variants, a struct's fields,
-                            the fns of an impl or trait, the items of a mod
+                            item (macros included; "item": "impl Status" for a type's impl blocks);
+                            "names" for an enum's variants, a struct's fields, the items of a mod
+                            ("impl Config": the fns of its impls); "fields" for a struct's fields as
+                            serde has them (rename applied, skip left out: configuration keys);
+                            "arms" for the strings the arms of a match in the item take
     {"table": "Mode"}       every cell of that column of the one table in a Markdown place that has
                             it; with "row": "safe", the one cell of the row whose first cell is safe
   with "as" (string, nat, int, permille), and "sort": true for a list, as needed.

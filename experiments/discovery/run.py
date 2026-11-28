@@ -40,8 +40,9 @@ sys.path.insert(0, ROOT)
 
 from pw import discover                                    # noqa: E402
 from pw.check import FACTS                                 # noqa: E402
-from pw.kernel import LOG, Kernel, locate                  # noqa: E402
-from pw.lean_gate import LEAN_DIR, LeanGate                # noqa: E402
+from pw.core import Kernel
+from pw.kernel import LOG, locate                  # noqa: E402
+from pw.core import LEAN_DIR, LeanGate                # noqa: E402
 
 BEFORE = "2ce25a5"       # the commit whose pw-facts.json is the hand-written declaration
 SUBJECT = "e11f8fe"      # the repository as it is searched: its state when this was measured. The

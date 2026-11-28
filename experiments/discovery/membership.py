@@ -21,7 +21,7 @@ sys.path.insert(0, ROOT)
 
 from pw import discover                                    # noqa: E402
 from pw.kernel import LOG                                  # noqa: E402
-from pw.lean_gate import LEAN_DIR                          # noqa: E402
+from pw.core import LEAN_DIR                          # noqa: E402
 
 BEFORE = "2ce25a5"       # the commit whose pw-facts.json is the hand-written declaration
 SUBJECT = "e11f8fe"      # the repository the proposals were made about; some of those places have since been removed

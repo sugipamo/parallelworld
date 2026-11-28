@@ -1,0 +1,26 @@
+[
+ {
+  "facts": 5,
+  "lean": "needed",
+  "cold": 0.1,
+  "warm": 0.0,
+  "verify": 0.3,
+  "one": 0.0
+ },
+ {
+  "facts": 20,
+  "lean": "needed",
+  "cold": 0.0,
+  "warm": 0.1,
+  "verify": 0.3,
+  "one": 0.1
+ },
+ {
+  "facts": 50,
+  "lean": "needed",
+  "cold": 0.1,
+  "warm": 0.1,
+  "verify": 0.3,
+  "one": 0.1
+ }
+]
