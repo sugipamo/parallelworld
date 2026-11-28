@@ -37,9 +37,15 @@ fn thousands(n: usize) -> String {
     out
 }
 
+/// The command that runs agent sessions: PW_CLAUDE (a test stands in for it there), else `claude`.
+pub fn claude() -> String {
+    std::env::var("PW_CLAUDE").ok().filter(|x| !x.is_empty()).unwrap_or_else(|| "claude".into())
+}
+
 /// Stop before any session is paid for, if a reader could not answer.
 pub fn ready() -> R<()> {
-    let found = std::env::var_os("PATH").map_or(false, |p| std::env::split_paths(&p).any(|d| d.join("claude").is_file()));
+    let c = claude();
+    let found = Path::new(&c).is_file() || std::env::var_os("PATH").map_or(false, |p| std::env::split_paths(&p).any(|d| d.join(&c).is_file()));
     if !found {
         return Err("Nothing was read. the `claude` command is not on PATH: it runs the readers' sessions.".into());
     }
@@ -78,7 +84,7 @@ pub fn session(prompt: &str, model: &str, budget: f64, env: &[(&str, String)], t
     let cfg = work.join("mcp.json");
     let _ = std::fs::write(&cfg, json!({ "mcpServers": { "pw": { "command": me(), "args": ["mcp"], "env": envs } } }).to_string());
     let allowed: Vec<String> = tools.iter().map(|t| format!("mcp__pw__{}", t)).collect();
-    let r = Command::new("claude")
+    let r = Command::new(claude())
         .args(["-p", prompt, "--model", model, "--tools", "", "--mcp-config"]).arg(&cfg)
         .args(["--strict-mcp-config", "--allowedTools", &allowed.join(","), "--output-format", "json", "--max-budget-usd", &budget.to_string()])
         .current_dir(cwd.unwrap_or(&work)).output();

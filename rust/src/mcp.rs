@@ -38,6 +38,37 @@ fn tools() -> Value {
     ])
 }
 
+/// The tools an editing agent answers through (pw propagate): one new text, or why there is none.
+fn edit_tools() -> Value {
+    let id = json!({ "title": "Id", "type": "integer" });
+    json!([
+        { "name": "rewrite", "description": "Give the complete new text of passage `id`, with the value changed and nothing else.",
+          "inputSchema": { "type": "object", "properties": { "id": id, "text": { "title": "Text", "type": "string" } }, "required": ["id", "text"] } },
+        { "name": "cannot", "description": "Say that passage `id` cannot be made to state the new value without changing what else it says.",
+          "inputSchema": { "type": "object", "properties": { "id": id, "why": { "title": "Why", "type": "string" } }, "required": ["id", "why"] } },
+    ])
+}
+
+/// What an agent's tool call said, kept as a line of PW_OUT for the command that started it to read.
+pub fn note(entry: &Value) {
+    if let Some(path) = env("PW_OUT") {
+        use std::io::Write;
+        if let Ok(mut fh) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+            let _ = writeln!(fh, "{}", crate::util::pyjson(entry, false));
+        }
+    }
+}
+
+fn call_edit(name: &str, args: &Value) -> Value {
+    let id = args.get("id").cloned().unwrap_or(Value::Null);
+    match name {
+        "rewrite" => note(&json!({ "id": id, "text": args.get("text").and_then(Value::as_str).unwrap_or("") })),
+        "cannot" => note(&json!({ "id": id, "cannot": crate::util::norm(args.get("why").and_then(Value::as_str).unwrap_or("")).chars().take(400).collect::<String>() })),
+        other => return json!({ "error": format!("ValueError: no tool {}", other) }),
+    }
+    json!({ "noted": id })
+}
+
 fn env(name: &str) -> Option<String> {
     std::env::var(name).ok()
 }
@@ -70,6 +101,11 @@ fn call(name: &str, args: &Value) -> Value {
 }
 
 pub fn serve() -> i32 {
+    // which tools: a reader's (the default), an editing agent's (PW_TOOLS=edit), a searching agent's (find)
+    let set = env("PW_TOOLS").unwrap_or_else(|| "read".into());
+    if set != "read" {
+        note(&json!({ "started": true }));
+    }
     let stdin = std::io::stdin();
     let mut out = std::io::stdout();
     for line in stdin.lock().lines() {
@@ -84,9 +120,10 @@ pub fn serve() -> i32 {
                 "serverInfo": { "name": "pw", "version": env!("CARGO_PKG_VERSION") },
             })),
             "ping" => Ok(json!({})),
-            "tools/list" => Ok(json!({ "tools": tools() })),
+            "tools/list" => Ok(json!({ "tools": match set.as_str() { "edit" => edit_tools(), "find" => crate::discover::find_tools(), _ => tools() } })),
             "tools/call" => {
-                let r = call(params.get("name").and_then(Value::as_str).unwrap_or(""), params.get("arguments").unwrap_or(&json!({})));
+                let (name, args) = (params.get("name").and_then(Value::as_str).unwrap_or(""), params.get("arguments").cloned().unwrap_or(json!({})));
+                let r = match set.as_str() { "edit" => call_edit(name, &args), "find" => crate::discover::call_find(name, &args), _ => call(name, &args) };
                 Ok(json!({ "content": [{ "type": "text", "text": serde_json::to_string_pretty(&r).unwrap() }], "structuredContent": r, "isError": false }))
             }
             _ => Err(json!({ "code": -32601, "message": "Method not found" })),

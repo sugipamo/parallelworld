@@ -1,6 +1,7 @@
 //! pw check: hold every declared fact against the files as they are now.
 mod agent;
 mod calibrate;
+mod discover;
 mod kernel;
 mod lean;
 mod mcp;
@@ -662,6 +663,7 @@ fn main() {
         Some("mcp") => Ok(mcp::serve()),
         Some("maintain") => maintain(&args[1..]),
         Some("calibrate") => calibrate(&args[1..]),
+        Some("discover") => discover::command(&args[1..]),
         Some("init") => init(&args[1..]),
         Some("version") => {
             println!("parallelworld {}", env!("CARGO_PKG_VERSION"));
