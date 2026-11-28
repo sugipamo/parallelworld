@@ -390,7 +390,7 @@ def test_a_declared_place_that_cannot_be_read_is_said_and_can_be_repaired(run, t
     assert (repo / "pw-log.jsonl").read_text() == record and json.loads((repo / "pw-facts.json").read_text()) == facts   # (without --apply: only looked)
 
     r, _ = run(fix, "--only", "repair", "--apply")
-    assert "written to pw-facts.json; their blind readings are in the record. Then: python -m pw.maintain" in r.stdout and r.returncode == 0
+    assert "written to pw-facts.json; their blind readings are in the record. Then: pw maintain" in r.stdout and r.returncode == 0
     merged = [{"name": "limit", "type": "Nat", "places": ["guide.md::Bounds", {"at": "app.py::MAX_ATOMS", "read": {"as": "nat", "find": r"MAX_ATOMS = (\d+)"}}]},
               facts[1]]
     assert (repo / "pw-facts.json").read_text() == json.dumps(merged, ensure_ascii=False, indent=1) + "\n"

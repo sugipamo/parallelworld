@@ -5,6 +5,7 @@
 ## 0.17.0
 
 - **Python のパッケージをなくした。** エージェントを使う側（maintain・calibrate・discover・propagate）も実行ファイル `pw` に入れた。`python -m pw.X` は `pw X` になる（`pw maintain`、`pw calibrate`、`pw discover`、`pw propagate`、`pw confirm`、`pw check`）。引数と出力と記録に書く行は、Python 版と同じ。`pip install` と `requirements-agent.txt`、`mcp` パッケージは要らなくなった。要るのは実行ファイル 1 つと、エージェントを使うなら `claude` の CLI。CI（アクション）は前から Python を使っていないので、何も変わらない。
+- `pw discover` の違いは 2 つ。探索役に隠す対照の箇所を選ぶ乱数が変わったので、同じ `--seed` でも前と違う箇所を隠す。探索役の道具の名前が `mcp__find__*` から `mcp__pw__*` になった（道具の中身と断りの文面は同じ）。負の整数を読むパターン（`(-?\d+)` を `int` で読む）を提案されると Python 版は落ちていたが、いまは受け付ける。
 - `pw start`：使い始めの手順を 1 つのコマンドで。済んでいないもの（`pw init`、宣言が空なら `pw discover --new --apply`、読み手がここで測られていなければ `pw calibrate`、`pw maintain`、`pw check`）を順に行う。エージェントを呼ぶ手順の前に、何をして 1 セッションにいくらまで使うかを言い、`--yes` か、端末での返事がなければ止まる（何も使わない）。もう一度回せば、止まったところから続ける。
 - `pw calibrate` は、このリポジトリの文面だけでは書き換えが 27 件に届かないとき、実行ファイルに同梱した文面（`rust/calibration/passages.json`）で補う（`--passages auto`。`repo` でこのリポジトリだけ、`bundled` で同梱のものだけ）。小さなリポジトリでも 1 回で基準を判定できる。
 - 事実に欠けているのが読み手の測定だけのとき、`pw check` は読み直し（`pw maintain`）ではなく測定（`pw calibrate --model …`）を勧める。測っていない読み手に読み直させても、その読みも数えられないので。

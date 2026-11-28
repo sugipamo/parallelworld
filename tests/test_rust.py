@@ -316,7 +316,7 @@ def test_help_is_asked_for_not_an_error(pw):
     for args in ([], ["--help"], ["-h"], ["help"]):
         r = subprocess.run([pw, *args], capture_output=True, text=True)
         assert r.returncode == 0 and all(f"pw {c}" in r.stdout for c in ("start", "check", "confirm", "init", "version", "maintain", "calibrate", "discover", "propagate")), args
-    for c in ("check", "confirm", "init", "start", "maintain", "calibrate", "propagate"):
+    for c in ("check", "confirm", "init", "start", "maintain", "calibrate", "propagate", "discover"):
         assert subprocess.run([pw, c, "--help"], capture_output=True, text=True).stdout.startswith(f"pw {c}:")
         assert subprocess.run([pw, "help", c], capture_output=True, text=True).stdout.startswith(f"pw {c}:")
 

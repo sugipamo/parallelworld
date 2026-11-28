@@ -707,7 +707,7 @@ fn main() {
     let usage = |which: Option<&str>| {
         print!("{}", match which { Some("check") => CHECK_USAGE, Some("confirm") => CONFIRM_USAGE, Some("init") => INIT_USAGE,
                                    Some("maintain") => MAINTAIN_USAGE, Some("calibrate") => CALIBRATE_USAGE, Some("propagate") => PROPAGATE_USAGE,
-                                   Some("start") => START_USAGE, _ => USAGE });
+                                   Some("start") => START_USAGE, Some("discover") => discover::HELP, _ => USAGE });
         std::process::exit(0)
     };
     match args.first().map(String::as_str) {

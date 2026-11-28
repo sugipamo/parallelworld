@@ -1,6 +1,6 @@
 //! Look after the places of the facts a project has declared (pw discover).
 //!
-//!     pw discover [--repo DIR] [--model claude-opus-5-5] [--budget 5] [--apply] [--new]
+//!     pw discover [--repo DIR] [--model M] [--budget 5] [--apply] [--new]
 //!
 //! The scope is what has been declared in pw-facts.json. For those facts an agent, which can read
 //! files and nothing else, is asked two things:
@@ -40,7 +40,7 @@
 //! With --apply the kept places are written into pw-facts.json and their blind readings are in the
 //! record. Without it everything runs against a copy of the record and is only printed. How many
 //! missing places this finds was measured by hiding declared ones: experiments/discovery/RESULTS.md.
-//! (Ported from pw/discover.py: the same prompts, tools, refusals and printed lines.)
+//! (Ported from the Python pw.discover: the same prompts, tools, refusals and printed lines.)
 use crate::agent::{self, list, s};
 use crate::calibrate::Rng;
 use crate::kernel::{self, Judge};
@@ -1040,13 +1040,13 @@ fn pretty(v: &Value) -> String {
 
 const USAGE: &str = "pw discover [--repo DIR] [--lean-dir DIR] [--model M] [--confirm-model M] [--budget 5] [--new] [--only repair|further|new] [--no-controls] [--seed N] [--apply]";
 
-const HELP: &str = "pw discover: have an agent look after the places of the declared facts
+pub const HELP: &str = "pw discover: have an agent look after the places of the declared facts
 
   --repo DIR             the repository (default: .); its pw-facts.json and pw-log.jsonl
   --lean-dir DIR         the Lean project (default: the one next to this tool, or PW_LEAN_DIR)
-  --model M              the model that searches (default: claude-opus-5-5)
+  --model M              the model that searches (default: the same as pw maintain's)
   --confirm-model M      the model that is shown each proposed place alone; it should be a measured
-                         reader (default: claude-sonnet-5-5)
+                         reader (default: pw maintain's second model)
   --budget DOLLARS       per session (default: 5)
   --new                  also have the agent propose things that are not declared yet. Without this,
                          only what is declared is looked after
@@ -1207,7 +1207,7 @@ pub fn command(args: &[String]) -> R<i32> {
             let judge = Judge { always: false, gate: Gate::new(lean_dir.clone()) };
             kernel::premises(&declared, &judge, FACTS)?;
             kernel::with_record(&record, "discover", |st| { kernel::sync(st, &declared, FACTS); Ok(()) })?;
-            println!("written to {}; their blind readings are in the record. Then: python -m pw.maintain", FACTS);
+            println!("written to {}; their blind readings are in the record. Then: pw maintain", FACTS);
         } else if !apply {
             println!("nothing was written (--apply writes the kept places to {})", FACTS);
         }
