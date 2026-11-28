@@ -48,7 +48,7 @@ impl Rng {
     fn below(&mut self, n: usize) -> usize {
         (self.next() % n as u64) as usize
     }
-    fn choice<'a, T>(&mut self, xs: &'a [T]) -> &'a T {
+    pub fn choice<'a, T>(&mut self, xs: &'a [T]) -> &'a T {
         &xs[self.below(xs.len())]
     }
     fn shuffle<T>(&mut self, xs: &mut [T]) {
