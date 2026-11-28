@@ -2,6 +2,10 @@
 
 使う側（このリポジトリを固定して使っているリポジトリ）で何かが要る変更、判定が変わる変更だけを書く。`rust/Cargo.toml` の版は、読み手の指示文（`pw/reader.txt`）が変わるか、同じ宣言と記録に対する判定が変わるときに、0.x の x を上げる。
 
+## 0.17.1
+
+- `pw start` は、事実を提案させる手順の 1 セッションの上限を $3 と言っていたが、`pw discover` の既定は $5。いまは $5 と言う。
+
 ## 0.17.0
 
 - **Python のパッケージをなくした。** エージェントを使う側（maintain・calibrate・discover・propagate）も実行ファイル `pw` に入れた。`python -m pw.X` は `pw X` になる（`pw maintain`、`pw calibrate`、`pw discover`、`pw propagate`、`pw confirm`、`pw check`）。引数と出力と記録に書く行は、Python 版と同じ。`pip install` と `requirements-agent.txt`、`mcp` パッケージは要らなくなった。要るのは実行ファイル 1 つと、エージェントを使うなら `claude` の CLI。CI（アクション）は前から Python を使っていないので、何も変わらない。

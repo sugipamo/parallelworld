@@ -98,7 +98,7 @@ pub fn command(args: &[String]) -> R<i32> {
     // 2. facts
     if declared(&repo)?.is_empty() {
         agent::ready()?;
-        let (a, b) = with("discover", &["--new", "--apply"], 3.0);
+        let (a, b) = with("discover", &["--new", "--apply"], 5.0);
         let step = Step { what: "nothing is declared yet: have an agent propose facts, each place it names checked against the file",
                           args: a, cost: format!("Agent sessions: a few, each spending at most ${} (--budget); each says what it spent.", cents(b)) };
         if !agreed(&step, yes) {
