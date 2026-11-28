@@ -34,7 +34,8 @@ jobs:
   release:
     runs-on: ubuntu-24.04
     permissions:
-      contents: write          # to publish the release and commit rust/release.txt; nothing else
+      contents: write          # to publish the release and commit rust/release.txt
+      actions: write           # to start the checks on that commit (a push made here starts no workflow by itself)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1        # v7.0.1
         with:
@@ -104,7 +105,11 @@ jobs:
             git add rust/release.txt
             git diff --cached --quiet && { echo "named already"; exit 0; }
             git commit -q -m "Name the published executable: v$VERSION" -m "Built from $GITHUB_SHA by the release workflow."
-            git push -q origin main && exit 0
+            if git push -q origin main; then
+              # the commit a user pins is this one: have it checked as any other push is
+              gh workflow run decisions.yml --repo "$GITHUB_REPOSITORY" --ref main
+              exit 0
+            fi
             sleep $((attempt * 5))
           done
           exit 1
