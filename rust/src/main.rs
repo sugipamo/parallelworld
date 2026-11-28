@@ -1,4 +1,6 @@
 //! pw check: hold every declared fact against the files as they are now.
+mod agent;
+mod calibrate;
 mod kernel;
 mod lean;
 mod mcp;
@@ -584,6 +586,63 @@ as an action pinned to a commit (by default the commit of this tool's checkout).
 that is there.
 ";
 
+/// Options the agent commands share, from the command line.
+fn agent_opts(args: &[String], usage: &str) -> R<(agent::Opts, Vec<(String, String)>)> {
+    let mut o = agent::Opts { repo: PathBuf::from("."), lean_dir: lean::lean_dir(), model: "claude-opus-5-5".into(), second: "claude-sonnet-5-5".into(), budget: 3.0 };
+    let mut rest = vec![];
+    let mut i = 0;
+    while i < args.len() {
+        let flag = args[i].clone();
+        let mut value = |what: &str| { i += 1; args.get(i).cloned().ok_or(format!("{} needs {}", flag, what)) };
+        match flag.as_str() {
+            "--repo" => o.repo = PathBuf::from(value("a directory")?),
+            "--lean-dir" => o.lean_dir = PathBuf::from(value("a directory")?),
+            "--model" => o.model = value("a model")?,
+            "--second-model" | "--confirm-model" => o.second = value("a model, or \"\" for none")?,
+            "--budget" => o.budget = value("an amount in dollars")?.parse().map_err(|_| "--budget is an amount in dollars".to_string())?,
+            x if x.starts_with("--") => {
+                // the command's own options: --flag or --flag VALUE
+                let v = args.get(i + 1).filter(|v| !v.starts_with("--")).cloned();
+                if v.is_some() { i += 1; }
+                rest.push((x.to_string(), v.unwrap_or_default()));
+            }
+            other => return Err(format!("unknown argument {}; {}", other, usage)),
+        }
+        i += 1;
+    }
+    o.repo = std::fs::canonicalize(&o.repo).map_err(|e| format!("{}: {}", o.repo.display(), e))?;
+    Ok((o, rest))
+}
+
+fn maintain(args: &[String]) -> R<i32> {
+    let usage = "pw maintain [--repo DIR] [--model M] [--second-model M] [--budget DOLLARS]";
+    let (o, rest) = agent_opts(args, usage)?;
+    if let Some((x, _)) = rest.first() {
+        return Err(format!("unknown argument {}; {}", x, usage));
+    }
+    agent::maintain(&o)
+}
+
+fn calibrate(args: &[String]) -> R<i32> {
+    let usage = "pw calibrate [--repo DIR] [--model M] [--per-place 5] [--decoys 30] [--twice 2] [--seed 0] [--budget 2] [--parallel 4] [--passages auto|repo|bundled]";
+    let (o, rest) = agent_opts(args, usage)?;
+    let mut c = calibrate::CalOpts { repo: o.repo, lean_dir: o.lean_dir, model: o.model, per_place: 5, decoys: 30, twice: 2, seed: 0,
+                                     budget: if args.iter().any(|a| a == "--budget") { o.budget } else { 2.0 }, parallel: 4, passages: "auto".into() };
+    for (k, v) in rest {
+        let num = |v: &str| v.parse::<u64>().map_err(|_| format!("{} is a number", k));
+        match k.as_str() {
+            "--per-place" => c.per_place = num(&v)? as usize,
+            "--decoys" => c.decoys = num(&v)? as usize,
+            "--twice" => c.twice = num(&v)? as usize,
+            "--seed" => c.seed = num(&v)?,
+            "--parallel" => c.parallel = num(&v)? as usize,
+            "--passages" if ["auto", "repo", "bundled"].contains(&v.as_str()) => c.passages = v,
+            _ => return Err(format!("unknown argument {}; {}", k, usage)),
+        }
+    }
+    calibrate::calibrate(&c)
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let help = |a: &[String]| a.iter().any(|x| x == "--help" || x == "-h");
@@ -601,6 +660,8 @@ fn main() {
     let result = match args.first().map(String::as_str) {
         Some("confirm") => confirm(&args[1..]),
         Some("mcp") => Ok(mcp::serve()),
+        Some("maintain") => maintain(&args[1..]),
+        Some("calibrate") => calibrate(&args[1..]),
         Some("init") => init(&args[1..]),
         Some("version") => {
             println!("parallelworld {}", env!("CARGO_PKG_VERSION"));

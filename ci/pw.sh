@@ -18,7 +18,7 @@ here=$(cd "$(dirname "$0")/.." && pwd)
 # The source an executable is made from: every file compiled into it, by path and content.
 source_digest() {
     (cd "$here" && { find rust/src -name '*.rs'; printf '%s\n' rust/Cargo.toml rust/Cargo.lock rust/build.rs pw/reader.txt pw/rules.json \
-        lean/lean-toolchain lean/Gamma.lean lean/lakefile.toml lean/lake-manifest.json; } \
+        rust/calibration/passages.json lean/lean-toolchain lean/Gamma.lean lean/lakefile.toml lean/lake-manifest.json; } \
         | LC_ALL=C sort | while read -r f; do printf '%s\000' "$f"; cat "$f"; printf '\000'; done) | sha256sum | cut -c1-64
 }
 

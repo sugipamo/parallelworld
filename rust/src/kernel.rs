@@ -90,9 +90,48 @@ impl State {
     }
 }
 
+/// What a blind reader is told (pw/reader.txt): a reader is a model together with these instructions.
+pub const READER: &str = include_str!("../../pw/reader.txt");
+
+impl State {
+    /// The fact as the record last claimed it (with "text" and "asked").
+    pub fn fact(&self, h: &str) -> Option<&Value> {
+        self.facts.get(h)
+    }
+
+    /// Has `model`, shown only this place, read it as it is now (the content the computed reading
+    /// `m` is of), answering the question asked now, under the instructions readers are given now?
+    pub fn read_blind_already(&self, h: &str, at: &str, m: &str, model: &str) -> bool {
+        let (Some(fact), Some(computed)) = (self.facts.get(h), self.models.get(m)) else { return false };
+        let Some(place) = fact["places"].as_array().into_iter().flatten().find(|p| s(p, "at") == at) else { return false };
+        let asked = crate::text::question(fact, place).1;
+        let under = Some(instructions_id());
+        self.readings.get(h).into_iter().flatten().any(|(p, x)| {
+            let Some(info) = self.models.get(x) else { return false };
+            p == at && info.binding.is_none() && info.subject == computed.subject
+                && info.asked.get(&asked).map_or(false, |w| w.models.contains(model) && w.under.get(model).map_or(false, |u| u.contains(&under)))
+        })
+    }
+
+    /// What was read of a fact, in the order it was read (the values, as written), and why it was declined.
+    pub fn said(&self, h: &str) -> (Vec<String>, Vec<String>) {
+        let read = self.readings.get(h).into_iter().flatten().filter_map(|(_, m)| self.models.get(m).and_then(|x| self.objs.get(&x.obj)).cloned()).collect();
+        let declined = self.declined.get(h).into_iter().flatten().map(|d| s(d, "why").to_string()).collect();
+        (read, declined)
+    }
+
+    /// Has `model` read this reading blind, as an answer to the question the place is asked now?
+    pub fn read_by_model(&self, h: &str, at: &str, m: &str, model: &str) -> bool {
+        let (Some(fact), Some(info)) = (self.facts.get(h), self.models.get(m)) else { return false };
+        let Some(place) = fact["places"].as_array().into_iter().flatten().find(|p| s(p, "at") == at) else { return false };
+        let asked = crate::text::question(fact, place).1;
+        info.asked.get(&asked).map_or(false, |w| w.models.contains(model))
+    }
+}
+
 /// The id of the instructions a blind reader is given (pw/reader.txt): a reading counts per model and instructions.
 pub fn instructions_id() -> String {
-    sha(&[include_str!("../../pw/reader.txt")])
+    sha(&[READER])
 }
 
 /// Python's str() of a value read off a place, to look for it in the place's words.
@@ -965,6 +1004,11 @@ fn measured(cwd: &Path, rules: &Value) -> R<HashSet<(String, Option<String>)>> {
             sign * (if *end == 0 { lo } else { hi }) >= sign * bar[*name].as_f64().unwrap_or(f64::NAN)
         })
     }).map(|(who, _)| who).collect())
+}
+
+/// Does `model`, with the instructions readers are given now, meet this repository's bar?
+pub fn counts_here(cwd: &Path, model: &str) -> bool {
+    rules(cwd).and_then(|r| measured(cwd, &r)).map_or(false, |m| m.contains(&(model.to_string(), Some(instructions_id()))))
 }
 
 fn counted(w: &Who, measured: &HashSet<(String, Option<String>)>) -> BTreeSet<String> {
