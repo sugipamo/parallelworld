@@ -194,8 +194,19 @@ fn show(report: &Value, warn: bool) -> bool {
             "contested" => println!("       the record holds proofs both that the values agree and that they differ; one is not Lean's: python -m pw.check --verify"),
             "uncovered" => println!("       Lean could settle neither that the values are the same nor that they differ"),
             _ if !ok => {
+                // where every loose reading was read blind by readers not measured here, reading again does not help: measuring does
+                let loose: Vec<&Value> = places.iter().filter(|p| !p["stands"].as_bool().unwrap_or(false)).collect();
+                let mut unmeasured: Vec<String> = loose.iter().flat_map(|p| list(p, "unmeasured readers")).filter_map(|m| m.as_str().map(String::from))
+                    .filter(|m| !m.starts_with("a reader whose")).collect();
+                unmeasured.sort();
+                unmeasured.dedup();
                 println!("       the places agree, but a reading does not stand by the rules (pw-rules.json):");
-                println!("       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)");
+                if !unmeasured.is_empty() && loose.iter().all(|p| !list(p, "unmeasured readers").is_empty()) {
+                    println!("       it was read blind, by a reader not measured here: measure it first, reading again would not count either");
+                    println!("       {}", unmeasured.iter().map(|m| format!("python -m pw.calibrate --model {}", m)).collect::<Vec<_>>().join("; "));
+                } else {
+                    println!("       python -m pw.maintain (a blind reading) or python -m pw.confirm (a person)");
+                }
             }
             _ => {}
         }
